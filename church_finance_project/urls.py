@@ -19,6 +19,7 @@ from django.urls import path, include
 from django.views.generic import TemplateView # For a simple home page
 from church_finances.admin_site import church_admin_site
 from church_finances.views_health import health_check
+from church_finances.railway_health import railway_health_check
 
 urlpatterns = [
     path('admin/', church_admin_site.urls),
@@ -26,4 +27,5 @@ urlpatterns = [
     path('', TemplateView.as_view(template_name='home.html'), name='home'), # Simple home page
     path('finances/', include('church_finances.urls')), # Include your app's URLs
     path('health/', health_check, name='health_check'), # Health check endpoint
+    path('healthz', railway_health_check, name='railway_health'), # Railway-specific health check
 ]
