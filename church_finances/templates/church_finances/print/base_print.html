@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Print Report{% endblock %} - {{ church.name }}</title>
+    <style>
+        @page {
+            size: letter portrait;
+            margin: 2cm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 100%;
+            margin: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+        }
+        .church-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
+        }
+        .report-title {
+            font-size: 20px;
+            margin: 10px 0;
+        }
+        .report-period {
+            font-size: 16px;
+            color: #666;
+        }
+        .print-date {
+            font-size: 12px;
+            color: #999;
+            text-align: right;
+            margin-top: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        .totals {
+            margin-top: 30px;
+            border-top: 2px solid #333;
+            padding-top: 20px;
+        }
+        .total-row {
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+        @media print {
+            .no-print {
+                display: none;
+            }
+            body {
+                font-size: 12pt;
+            }
+            table {
+                page-break-inside: auto;
+            }
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+            thead {
+                display: table-header-group;
+            }
+            .footer {
+                position: fixed;
+                bottom: 0;
+                width: 100%;
+            }
+            .print-date {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+            }
+        }
+    </style>
+    {% block extra_style %}{% endblock %}
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="church-name">{{ church.name }}</h1>
+            <h2 class="report-title">{% block report_title %}{% endblock %}</h2>
+            <div class="report-period">{% block report_period %}{% endblock %}</div>
+            <div class="print-date">Generated on: {{ print_date|date:"F j, Y g:i A" }}</div>
+        </div>
+
+        {% block content %}{% endblock %}
+
+        <div class="footer">
+            {{ church.name }} - Financial Report
+            <br>
+            {{ church.address }}
+        </div>
+    </div>
+</body>
+</html>

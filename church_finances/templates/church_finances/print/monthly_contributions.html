@@ -1,0 +1,126 @@
+{% extends "church_finances/print/base_print.html" %}
+
+{% block extra_head %}
+<style>
+    @media print {
+        .no-print {
+            display: none;
+        }
+        body {
+            padding: 0;
+            margin: 0;
+        }
+        @page {
+            margin: 2cm;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-8">
+    <!-- Print Controls - Only visible on screen -->
+    <div class="no-print mb-8 flex justify-between items-center">
+        <div class="flex space-x-4">
+            <form class="flex space-x-4" method="get">
+                <select name="month" class="rounded border-gray-300">
+                    <option value="1" {% if month == 1 %}selected{% endif %}>January</option>
+                    <option value="2" {% if month == 2 %}selected{% endif %}>February</option>
+                    <option value="3" {% if month == 3 %}selected{% endif %}>March</option>
+                    <option value="4" {% if month == 4 %}selected{% endif %}>April</option>
+                    <option value="5" {% if month == 5 %}selected{% endif %}>May</option>
+                    <option value="6" {% if month == 6 %}selected{% endif %}>June</option>
+                    <option value="7" {% if month == 7 %}selected{% endif %}>July</option>
+                    <option value="8" {% if month == 8 %}selected{% endif %}>August</option>
+                    <option value="9" {% if month == 9 %}selected{% endif %}>September</option>
+                    <option value="10" {% if month == 10 %}selected{% endif %}>October</option>
+                    <option value="11" {% if month == 11 %}selected{% endif %}>November</option>
+                    <option value="12" {% if month == 12 %}selected{% endif %}>December</option>
+                </select>
+                <select name="year" class="rounded border-gray-300">
+                    {% for y in "543210"|make_list %}
+                    {% with year_option=current_year|add:y %}
+                    <option value="{{ year_option }}" {% if year_option == year %}selected{% endif %}>
+                        {{ year_option }}
+                    </option>
+                    {% endwith %}
+                    {% endfor %}
+                </select>
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">
+                    Update
+                </button>
+            </form>
+            <button onclick="window.print()" class="bg-green-500 text-white px-4 py-2 rounded">
+                Print Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Report Header -->
+    <div class="text-center mb-8">
+        <h1 class="text-2xl font-bold">{{ church.name }}</h1>
+        <h2 class="text-xl">Monthly Contribution Report</h2>
+        <p class="text-gray-600">{{ month }} {{ year }}</p>
+        <p class="text-sm text-gray-500">Generated on {{ print_date|date:"F d, Y H:i" }}</p>
+    </div>
+
+    <!-- Contributions Table -->
+    {% if contributions %}
+    <table class="min-w-full bg-white border border-gray-300 mb-8">
+        <thead>
+            <tr>
+                <th class="border px-4 py-2">Date</th>
+                <th class="border px-4 py-2">Member</th>
+                <th class="border px-4 py-2">Type</th>
+                <th class="border px-4 py-2">Method</th>
+                <th class="border px-4 py-2">Amount</th>
+                <th class="border px-4 py-2">Reference</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for contribution in contributions %}
+            <tr>
+                <td class="border px-4 py-2">{{ contribution.date|date:"M d, Y" }}</td>
+                <td class="border px-4 py-2">{{ contribution.member.user.get_full_name }}</td>
+                <td class="border px-4 py-2">{{ contribution.get_contribution_type_display }}</td>
+                <td class="border px-4 py-2">{{ contribution.get_payment_method_display }}</td>
+                <td class="border px-4 py-2 text-right">${{ contribution.amount|floatformat:2 }}</td>
+                <td class="border px-4 py-2">{{ contribution.reference_number|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="font-bold">
+                <td colspan="4" class="border px-4 py-2 text-right">Total Tithes:</td>
+                <td class="border px-4 py-2 text-right">${{ totals.tithe|floatformat:2 }}</td>
+                <td class="border px-4 py-2"></td>
+            </tr>
+            <tr class="font-bold">
+                <td colspan="4" class="border px-4 py-2 text-right">Total Offerings:</td>
+                <td class="border px-4 py-2 text-right">${{ totals.offering|floatformat:2 }}</td>
+                <td class="border px-4 py-2"></td>
+            </tr>
+            <tr class="font-bold">
+                <td colspan="4" class="border px-4 py-2 text-right">Total Contributions:</td>
+                <td class="border px-4 py-2 text-right">${{ totals.total|floatformat:2 }}</td>
+                <td class="border px-4 py-2"></td>
+            </tr>
+        </tfoot>
+    </table>
+    {% else %}
+    <p class="text-center text-gray-500">No contributions recorded for this period.</p>
+    {% endif %}
+
+    <!-- Signatures Section -->
+    <div class="mt-16 grid grid-cols-2 gap-8">
+        <div class="border-t pt-4">
+            <p class="text-center">_____________________</p>
+            <p class="text-center text-sm text-gray-600">Treasurer's Signature</p>
+        </div>
+        <div class="border-t pt-4">
+            <p class="text-center">_____________________</p>
+            <p class="text-center text-sm text-gray-600">Pastor's Signature</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

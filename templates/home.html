@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Church Books - Complete Church Management Solution{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="bg-gradient-to-b from-[#6e003d] to-purple-900 text-white">
+    <div class="container mx-auto px-4 py-16 md:py-24">
+        <div class="text-center max-w-4xl mx-auto">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6">Simplify Your Church Management</h1>
+            <p class="text-xl md:text-2xl mb-8 text-gray-200">All-in-one solution for managing your church's finances, members, and operations</p>
+            {% if not user.is_authenticated %}
+                <div class="space-x-4">
+                    <a href="{% url 'subscription' %}" class="inline-block bg-white text-[#6e003d] font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition duration-300">
+                        Get Started
+                    </a>
+                    <a href="{% url 'login' %}" class="inline-block bg-transparent border-2 border-white text-white font-bold py-3 px-8 rounded-full hover:bg-white hover:text-[#6e003d] transition duration-300">
+                        Sign In
+                    </a>
+                </div>
+            {% else %}
+                <a href="{% url 'dashboard' %}" class="inline-block bg-white text-[#6e003d] font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition duration-300">
+                    Go to Dashboard
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="py-16 bg-gray-50">
+    <div class="container mx-auto px-4">
+        <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Everything Your Church Needs</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Financial Management -->
+            <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300">
+                <div class="text-[#6e003d] text-4xl mb-4">💰</div>
+                <h3 class="text-xl font-bold mb-3">Financial Management</h3>
+                <p class="text-gray-600">Track donations, manage expenses, and generate financial reports with ease.</p>
+            </div>
+            <!-- Member Management -->
+            <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300">
+                <div class="text-[#6e003d] text-4xl mb-4">👥</div>
+                <h3 class="text-xl font-bold mb-3">Member Management</h3>
+                <p class="text-gray-600">Maintain detailed member records, track attendance, and manage church roles.</p>
+            </div>
+            <!-- Reporting -->
+            <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300">
+                <div class="text-[#6e003d] text-4xl mb-4">📊</div>
+                <h3 class="text-xl font-bold mb-3">Advanced Reporting</h3>
+                <p class="text-gray-600">Generate comprehensive reports for better decision-making and transparency.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Benefits Section -->
+<div class="py-16 bg-white">
+    <div class="container mx-auto px-4">
+        <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Why Choose Church Books?</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div class="text-center">
+                <div class="text-4xl mb-4">🔒</div>
+                <h3 class="text-lg font-bold mb-2">Secure & Private</h3>
+                <p class="text-gray-600">Your data is protected with enterprise-grade security</p>
+            </div>
+            <div class="text-center">
+                <div class="text-4xl mb-4">⚡</div>
+                <h3 class="text-lg font-bold mb-2">Easy to Use</h3>
+                <p class="text-gray-600">Intuitive interface designed for everyone</p>
+            </div>
+            <div class="text-center">
+                <div class="text-4xl mb-4">💼</div>
+                <h3 class="text-lg font-bold mb-2">Professional</h3>
+                <p class="text-gray-600">Built specifically for church management</p>
+            </div>
+            <div class="text-center">
+                <div class="text-4xl mb-4">📱</div>
+                <h3 class="text-lg font-bold mb-2">Always Available</h3>
+                <p class="text-gray-600">Access from any device, anywhere</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Call to Action -->
+<div class="bg-[#6e003d] text-white py-16">
+    <div class="container mx-auto px-4 text-center">
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">Ready to Transform Your Church Management?</h2>
+        <p class="text-xl mb-8">Join thousands of churches already using Church Books</p>
+        {% if not user.is_authenticated %}
+            <div class="space-x-4">
+                <a href="{% url 'subscription' %}" class="inline-block bg-white text-[#6e003d] font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition duration-300">
+                    Start Your Account
+                </a>
+            </div>
+        {% else %}
+            <a href="{% url 'dashboard' %}" class="inline-block bg-white text-[#6e003d] font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition duration-300">
+                Go to Dashboard
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Testimonial Section -->
+<div class="py-16 bg-gray-50">
+    <div class="container mx-auto px-4">
+        <div class="max-w-3xl mx-auto text-center">
+            <h2 class="text-3xl md:text-4xl font-bold mb-12">Trusted by Churches Worldwide</h2>
+            <div class="bg-white p-8 rounded-xl shadow-lg">
+                <p class="text-xl text-gray-600 italic mb-6">"Church Books has revolutionized how we manage our church operations. The financial tracking and member management features are invaluable."</p>
+                <p class="font-bold text-gray-800">Pastor James Wilson</p>
+                <p class="text-gray-600">Grace Community Church</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+

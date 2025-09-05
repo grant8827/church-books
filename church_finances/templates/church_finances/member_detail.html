@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Member Information Card -->
+        <div class="bg-white shadow-md rounded-lg overflow-hidden mb-8">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-800">Member Details</h2>
+                    <div class="space-x-2">
+                        <a href="{% url 'member_edit' member.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                            Edit
+                        </a>
+                        {% if member.is_active %}
+                        <a href="{% url 'member_deactivate' member.id %}" 
+                           onclick="return confirm('Are you sure you want to deactivate this member?')"
+                           class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700">
+                            Deactivate
+                        </a>
+                        {% else %}
+                        <a href="{% url 'member_activate' member.id %}" 
+                           class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
+                            Activate
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Personal Information</h3>
+                        <dl class="space-y-3">
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Name</dt>
+                                <dd class="text-base text-gray-900">{{ member.user.get_full_name }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Email</dt>
+                                <dd class="text-base text-gray-900">{{ member.user.email }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Phone</dt>
+                                <dd class="text-base text-gray-900">{{ member.phone_number|default:"Not provided" }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Address</dt>
+                                <dd class="text-base text-gray-900">{{ member.address|default:"Not provided"|linebreaksbr }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Status</dt>
+                                <dd>
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {% if member.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                        {{ member.is_active|yesno:"Active,Inactive" }}
+                                    </span>
+                                </dd>
+                            </div>
+                        </dl>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Church Information</h3>
+                        <dl class="space-y-3">
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Member Since</dt>
+                                <dd class="text-base text-gray-900">{{ member.membership_date|date:"F j, Y" }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Role</dt>
+                                <dd class="text-base text-gray-900">{{ member.get_role_display }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Baptism Date</dt>
+                                <dd class="text-base text-gray-900">{{ member.baptism_date|date:"F j, Y"|default:"Not provided" }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Marital Status</dt>
+                                <dd class="text-base text-gray-900">{{ member.get_marital_status_display|default:"Not provided" }}</dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+
+                {% if member.notes %}
+                <div class="mt-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Notes</h3>
+                    <p class="text-gray-700">{{ member.notes|linebreaksbr }}</p>
+                </div>
+                {% endif %}
+
+                <div class="mt-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Emergency Contact</h3>
+                    <dl class="space-y-3">
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Name</dt>
+                            <dd class="text-base text-gray-900">{{ member.emergency_contact_name|default:"Not provided" }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Phone</dt>
+                            <dd class="text-base text-gray-900">{{ member.emergency_contact_phone|default:"Not provided" }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contributions History -->
+        <div class="bg-white shadow-md rounded-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h3 class="text-lg font-medium text-gray-900">Contribution History</h3>
+            </div>
+            {% if contributions %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reference</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for contribution in contributions %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ contribution.date|date:"M d, Y" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                    {% if contribution.contribution_type == 'tithe' %}bg-green-100 text-green-800
+                                    {% elif contribution.contribution_type == 'offering' %}bg-blue-100 text-blue-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ contribution.get_contribution_type_display }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${{ contribution.amount }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ contribution.get_payment_method_display }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ contribution.reference_number|default:"-" }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-6 text-center text-gray-500">
+                No contributions recorded yet.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,69 @@
+from django.urls import path
+from django.contrib.auth import views as auth_views
+from . import views
+from . import views_subscription
+
+urlpatterns = [
+    # Subscription URLs
+    path('subscription/', views_subscription.subscription_view, name='subscription'),
+    path('subscription/select/', views_subscription.subscription_select, name='subscription_select'),
+    # Password Reset URLs
+    path('password_reset/', auth_views.PasswordResetView.as_view(
+        template_name='church_finances/password_reset/password_reset_form.html',
+        email_template_name='church_finances/password_reset/password_reset_email.html',
+        success_url='/password_reset/done/'
+    ), name='password_reset'),
+    path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(
+        template_name='church_finances/password_reset/password_reset_done.html'
+    ), name='password_reset_done'),
+    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
+        template_name='church_finances/password_reset/password_reset_confirm.html'
+    ), name='password_reset_confirm'),
+    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(
+        template_name='church_finances/password_reset/password_reset_complete.html'
+    ), name='password_reset_complete'),
+    # Member management URLs
+    path("members/", views.member_list_view, name="member_list"),
+    path("members/add/", views.member_add_view, name="member_add"),
+    path("members/<int:pk>/", views.member_detail_view, name="member_detail"),
+    path("members/<int:pk>/edit/", views.member_edit_view, name="member_edit"),
+    path("members/<int:pk>/activate/", views.member_activate_view, name="member_activate"),
+    path("members/<int:pk>/deactivate/", views.member_deactivate_view, name="member_deactivate"),
+    
+    # Contribution management URLs
+    path("contributions/", views.contribution_list_view, name="contribution_list"),
+    path("contributions/add/", views.contribution_add_view, name="contribution_add"),
+    path("contributions/<int:pk>/", views.contribution_detail_view, name="contribution_detail"),
+    path("contributions/<int:pk>/edit/", views.contribution_edit_view, name="contribution_edit"),
+    path("contributions/print/monthly/", views.contribution_print_monthly, name="contribution_print_monthly"),
+    path("contributions/print/yearly/", views.contribution_print_yearly, name="contribution_print_yearly"),
+    # Transaction print views
+    path("transactions/print/monthly/", views.transaction_print_monthly, name="transaction_print_monthly"),
+    path("transactions/print/yearly/", views.transaction_print_yearly, name="transaction_print_yearly"),
+    path("register/", views.register_view, name="register"),
+    path("dashboard/register-staff/", views.dashboard_user_register_view, name="dashboard_user_register"),
+    path("login/", views.user_login_view, name="login"),
+    path("logout/", views.user_logout_view, name="logout"),
+    path("dashboard/", views.dashboard_view, name="dashboard"),
+    path("transactions/", views.transaction_list_view, name="transaction_list"),
+    path("transactions/add/", views.transaction_create_view, name="transaction_create"),
+    path(
+        "transactions/<int:pk>/",
+        views.transaction_detail_view,
+        name="transaction_detail",
+    ),
+    path(
+        "transactions/<int:pk>/edit/",
+        views.transaction_update_view,
+        name="transaction_update",
+    ),
+    path(
+        "transactions/<int:pk>/delete/",
+        views.transaction_delete_view,
+        name="transaction_delete",
+    ),
+    # Church approval URLs
+    path("churches/pending/", views.church_approval_list, name="church_approval_list"),
+    path("churches/<int:church_id>/approve/", views.approve_church, name="approve_church"),
+    path("churches/<int:church_id>/reject/", views.reject_church, name="reject_church"),
+]

@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-3xl mx-auto">
+        <div class="bg-white shadow-md rounded-lg overflow-hidden">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-800">Contribution Details</h2>
+                    <a href="{% url 'contribution_edit' contribution.id %}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                        Edit
+                    </a>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6 space-y-6">
+                <!-- Member Information -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Member Information</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-600">Name</p>
+                            <p class="text-base">{{ contribution.member.user.get_full_name }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contribution Details -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Contribution Details</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-600">Date</p>
+                            <p class="text-base">{{ contribution.date|date:"F d, Y" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Type</p>
+                            <p class="text-base">{{ contribution.get_contribution_type_display }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Amount</p>
+                            <p class="text-base font-semibold">${{ contribution.amount }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Payment Method</p>
+                            <p class="text-base">{{ contribution.get_payment_method_display }}</p>
+                        </div>
+                        {% if contribution.reference_number %}
+                        <div>
+                            <p class="text-sm text-gray-600">Reference Number</p>
+                            <p class="text-base">{{ contribution.reference_number }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if contribution.notes %}
+                <!-- Notes -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Notes</h3>
+                    <p class="text-base text-gray-700">{{ contribution.notes|linebreaksbr }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Metadata -->
+                <div class="border-t pt-4 mt-6">
+                    <div class="grid grid-cols-2 gap-4 text-sm text-gray-500">
+                        <div>
+                            <p>Recorded by: {{ contribution.recorded_by.get_full_name }}</p>
+                            <p>Created: {{ contribution.created_at|date:"F d, Y H:i" }}</p>
+                        </div>
+                        <div>
+                            <p>Last updated: {{ contribution.updated_at|date:"F d, Y H:i" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                <div class="flex justify-between">
+                    <a href="{% url 'contribution_list' %}" class="text-gray-600 hover:text-gray-800">
+                        ← Back to Contributions
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

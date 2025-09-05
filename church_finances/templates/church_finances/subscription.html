@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Choose Your Plan - Church Books{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 py-12">
+    <div class="container mx-auto px-4">
+        <!-- Pricing Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">Choose Your Plan</h1>
+            <p class="text-xl text-gray-600">Select the best package for your church's needs</p>
+        </div>
+
+        <!-- Pricing Cards -->
+        <div class="flex flex-col md:flex-row justify-center items-center gap-8 max-w-6xl mx-auto">
+            <!-- Standard Package -->
+            <div class="w-full md:w-1/2 bg-white rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-shadow duration-300">
+                <div class="text-center">
+                    <h2 class="text-2xl font-bold text-gray-900">Standard Package</h2>
+                    <p class="text-gray-600 mb-4">Yearly Subscription</p>
+                    <div class="text-4xl font-bold text-[#6e003d] mb-6">
+                        $10,000
+                    </div>
+                </div>
+                <div class="space-y-4 mb-8">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span>Member Management</span>
+                    </div>
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span>Financial Tracking</span>
+                    </div>
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span>Basic Dashboard</span>
+                    </div>
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span>Transaction Management</span>
+                    </div>
+                    <div class="flex items-center text-gray-400">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        <span>Report Printing</span>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <form method="post" action="{% url 'subscription_select' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="package" value="standard">
+                        <button type="submit" class="w-full bg-[#6e003d] text-white py-3 px-6 rounded-lg hover:bg-[#8e005d] transition duration-300">
+                            Select Standard Plan
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Premium Package -->
+            <div class="w-full md:w-1/2 bg-white rounded-2xl shadow-xl p-8 border-2 border-[#6e003d] hover:shadow-2xl transition-shadow duration-300">
+                <div class="absolute -top-5 right-10 bg-[#6e003d] text-white px-4 py-1 rounded-full text-sm">
+                    RECOMMENDED
+                </div>
+                <div class="text-center">
+                    <h2 class="text-2xl font-bold text-gray-900">Premium Package</h2>
+                    <p class="text-gray-600 mb-4">Yearly Subscription</p>
+
+                    <div class="text-4xl font-bold text-[#6e003d] mb-6">
+                        $15,000
+                    </div>
+                </div>
+                <div class="space-y-4 mb-8">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span>Everything in Standard</span>
+                    </div>
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span>Advanced Reports</span>
+                    </div>
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span>Report Printing</span>
+                    </div>
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span>Priority Support</span>
+                    </div>
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span>Full Feature Access</span>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <form method="post" action="{% url 'subscription_select' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="package" value="premium">
+                        <button type="submit" class="w-full bg-[#6e003d] text-white py-3 px-6 rounded-lg hover:bg-[#8e005d] transition duration-300">
+                            Select Premium Plan
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Offline Payment Instructions -->
+        <div class="mt-12 text-center max-w-2xl mx-auto bg-white p-6 rounded-lg shadow">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">Offline Payment Process</h3>
+            <ol class="text-left text-gray-600 space-y-2 mb-6">
+                <li>1. Select your preferred package above</li>
+                <li>2. You will be directed to register your church details</li>
+                <li>3. Our team will contact you with payment instructions</li>
+                <li>4. Once payment is confirmed, your account will be activated</li>
+            </ol>
+            <p class="text-sm text-gray-500">For any questions about the payment process, please contact our support team.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

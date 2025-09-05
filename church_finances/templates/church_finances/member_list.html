@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">Church Members</h2>
+        <a href="{% url 'member_add' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            Add New Member
+        </a>
+    </div>
+
+    {% if members %}
+    <div class="bg-white shadow-md rounded-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for member in members %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">{{ member.user.get_full_name }}</div>
+                            <div class="text-sm text-gray-500">Member since: {{ member.membership_date|date:"M d, Y" }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ member.phone_number }}</div>
+                            <div class="text-sm text-gray-500">{{ member.user.email }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {% if member.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ member.is_active|yesno:"Active,Inactive" }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <a href="{% url 'member_detail' member.id %}" class="text-blue-600 hover:text-blue-900 mr-3">View</a>
+                            <a href="{% url 'member_edit' member.id %}" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
+                            {% if member.is_active %}
+                            <a href="{% url 'member_deactivate' member.id %}" class="text-red-600 hover:text-red-900" onclick="return confirm('Are you sure you want to deactivate this member?')">Deactivate</a>
+                            {% else %}
+                            <a href="{% url 'member_activate' member.id %}" class="text-green-600 hover:text-green-900">Activate</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-8">
+        <p class="text-gray-500">No members found.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
