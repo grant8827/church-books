@@ -18,10 +18,12 @@ from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import TemplateView # For a simple home page
 from church_finances.admin_site import church_admin_site
+from church_finances.views_health import health_check
 
 urlpatterns = [
     path('admin/', church_admin_site.urls),
     path('accounts/', include('django.contrib.auth.urls')), # Django's built-in auth URLs
     path('', TemplateView.as_view(template_name='home.html'), name='home'), # Simple home page
     path('finances/', include('church_finances.urls')), # Include your app's URLs
+    path('health/', health_check, name='health_check'), # Health check endpoint
 ]

@@ -31,10 +31,10 @@ SECRET_KEY = os.environ.get('SECRET_KEY', "django-insecure-zdk_gm_9vek_n8$o-68f*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,web-production-ffeb6.up.railway.app,*.up.railway.app').split(',')
 
 # CSRF and Session Settings
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,https://localhost:8000,http://127.0.0.1:8000,https://web-production-ffeb6.up.railway.app').split(',')
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,https://localhost:8000,http://127.0.0.1:8000,https://web-production-ffeb6.up.railway.app,https://*.up.railway.app').split(',')
 CSRF_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
 SESSION_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
 CSRF_COOKIE_SAMESITE = 'Lax'
