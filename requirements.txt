@@ -6,3 +6,5 @@ sqlparse==0.5.3
 gunicorn==21.2.0
 whitenoise==6.6.0
 python-dotenv==1.0.0
+cryptography==42.0.5
+mysqlclient==2.2.3
