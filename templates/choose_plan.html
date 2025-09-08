@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}Choose Your Plan - Church Books{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+    <div class="text-center mb-12">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">Choose Your Plan</h1>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+            Select the plan that best fits your church's needs. You can always upgrade or downgrade later.
+        </p>
+    </div>
+
+    <div class="max-w-4xl mx-auto">
+        <form method="post" class="space-y-8">
+            {% csrf_token %}
+            
+            <!-- Plan Selection -->
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="border-2 border-gray-200 rounded-lg p-6 hover:border-blue-500 transition-colors cursor-pointer plan-option" data-plan="starter">
+                    <input type="radio" name="plan" value="starter" id="starter" class="sr-only">
+                    <label for="starter" class="cursor-pointer">
+                        <div class="text-center">
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">Starter</h3>
+                            <div class="text-3xl font-bold text-gray-900 mb-2">$29<span class="text-lg text-gray-600">/month</span></div>
+                            <p class="text-gray-600 mb-4">Up to 100 members</p>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>✓ Basic financial tracking</li>
+                                <li>✓ Monthly reports</li>
+                                <li>✓ Email support</li>
+                            </ul>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="border-2 border-blue-500 rounded-lg p-6 hover:border-blue-600 transition-colors cursor-pointer plan-option bg-blue-50" data-plan="professional">
+                    <input type="radio" name="plan" value="professional" id="professional" class="sr-only" checked>
+                    <label for="professional" class="cursor-pointer">
+                        <div class="text-center">
+                            <div class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium mb-2 inline-block">Recommended</div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">Professional</h3>
+                            <div class="text-3xl font-bold text-gray-900 mb-2">$79<span class="text-lg text-gray-600">/month</span></div>
+                            <p class="text-gray-600 mb-4">Up to 500 members</p>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>✓ Advanced financial tracking</li>
+                                <li>✓ Custom reports</li>
+                                <li>✓ Online giving integration</li>
+                                <li>✓ Priority support</li>
+                            </ul>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="border-2 border-gray-200 rounded-lg p-6 hover:border-blue-500 transition-colors cursor-pointer plan-option" data-plan="enterprise">
+                    <input type="radio" name="plan" value="enterprise" id="enterprise" class="sr-only">
+                    <label for="enterprise" class="cursor-pointer">
+                        <div class="text-center">
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">Enterprise</h3>
+                            <div class="text-3xl font-bold text-gray-900 mb-2">$199<span class="text-lg text-gray-600">/month</span></div>
+                            <p class="text-gray-600 mb-4">Unlimited members</p>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>✓ Full financial suite</li>
+                                <li>✓ Multi-location support</li>
+                                <li>✓ API access</li>
+                                <li>✓ Dedicated manager</li>
+                            </ul>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Church Information -->
+            <div class="bg-gray-50 rounded-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Church Information</h3>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="church_name" class="block text-sm font-medium text-gray-700 mb-2">Church Name *</label>
+                        <input type="text" id="church_name" name="church_name" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label for="denomination" class="block text-sm font-medium text-gray-700 mb-2">Denomination</label>
+                        <input type="text" id="denomination" name="denomination" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label for="members_count" class="block text-sm font-medium text-gray-700 mb-2">Number of Members</label>
+                        <select id="members_count" name="members_count" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select range</option>
+                            <option value="1-50">1-50 members</option>
+                            <option value="51-100">51-100 members</option>
+                            <option value="101-250">101-250 members</option>
+                            <option value="251-500">251-500 members</option>
+                            <option value="501-1000">501-1000 members</option>
+                            <option value="1000+">1000+ members</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                        <input type="tel" id="phone" name="phone" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Person -->
+            <div class="bg-gray-50 rounded-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Primary Contact</h3>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="contact_name" class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                        <input type="text" id="contact_name" name="contact_name" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label for="contact_title" class="block text-sm font-medium text-gray-700 mb-2">Title/Position</label>
+                        <input type="text" id="contact_title" name="contact_title" 
+                               placeholder="e.g., Pastor, Financial Secretary" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label for="contact_email" class="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
+                        <input type="email" id="contact_email" name="contact_email" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label for="contact_phone" class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                        <input type="tel" id="contact_phone" name="contact_phone" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Options -->
+            <div class="space-y-4">
+                <div class="flex items-center">
+                    <input type="checkbox" id="trial" name="trial" value="yes" checked 
+                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                    <label for="trial" class="ml-2 text-sm text-gray-700">Start with a 30-day free trial</label>
+                </div>
+                
+                <div class="flex items-center">
+                    <input type="checkbox" id="newsletter" name="newsletter" value="yes" 
+                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                    <label for="newsletter" class="ml-2 text-sm text-gray-700">Subscribe to our newsletter for church management tips and updates</label>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="text-center pt-6">
+                <button type="submit" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-8 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 text-lg">
+                    Get Started with Church Books
+                </button>
+                <p class="text-sm text-gray-500 mt-3">
+                    By clicking "Get Started", you agree to our Terms of Service and Privacy Policy
+                </p>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Plan selection functionality
+    const planOptions = document.querySelectorAll('.plan-option');
+    const radioInputs = document.querySelectorAll('input[name="plan"]');
+
+    planOptions.forEach((option, index) => {
+        option.addEventListener('click', () => {
+            // Remove selected styling from all options
+            planOptions.forEach(opt => {
+                opt.classList.remove('border-blue-500', 'bg-blue-50');
+                opt.classList.add('border-gray-200');
+            });
+            
+            // Add selected styling to clicked option
+            option.classList.remove('border-gray-200');
+            option.classList.add('border-blue-500', 'bg-blue-50');
+            
+            // Check the corresponding radio button
+            radioInputs[index].checked = true;
+        });
+    });
+</script>
+{% endblock %}

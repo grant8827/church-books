@@ -19,7 +19,7 @@
                     <h2 class="text-2xl font-bold text-gray-900">Standard Package</h2>
                     <p class="text-gray-600 mb-4">Yearly Subscription</p>
                     <div class="text-4xl font-bold text-[#6e003d] mb-6">
-                        $10,000
+                      $100usd
                     </div>
                 </div>
                 <div class="space-y-4 mb-8">
@@ -67,7 +67,7 @@
 
             <!-- Premium Package -->
             <div class="w-full md:w-1/2 bg-white rounded-2xl shadow-xl p-8 border-2 border-[#6e003d] hover:shadow-2xl transition-shadow duration-300">
-                <div class="absolute -top-5 right-10 bg-[#6e003d] text-white px-4 py-1 rounded-full text-sm">
+                <div class="absolute-top-5 text-center right-10 bg-[#6e003d] text-white px-4 py-1 rounded-full text-sm">
                     RECOMMENDED
                 </div>
                 <div class="text-center">
@@ -75,7 +75,7 @@
                     <p class="text-gray-600 mb-4">Yearly Subscription</p>
 
                     <div class="text-4xl font-bold text-[#6e003d] mb-6">
-                        $15,000
+                        $150usd
                     </div>
                 </div>
                 <div class="space-y-4 mb-8">
@@ -124,14 +124,37 @@
 
         <!-- Offline Payment Instructions -->
         <div class="mt-12 text-center max-w-2xl mx-auto bg-white p-6 rounded-lg shadow">
-            <h3 class="text-xl font-bold text-gray-900 mb-4">Offline Payment Process</h3>
-            <ol class="text-left text-gray-600 space-y-2 mb-6">
-                <li>1. Select your preferred package above</li>
-                <li>2. You will be directed to register your church details</li>
-                <li>3. Our team will contact you with payment instructions</li>
-                <li>4. Once payment is confirmed, your account will be activated</li>
-            </ol>
-            <p class="text-sm text-gray-500">For any questions about the payment process, please contact our support team.</p>
+            <h3 class="text-xl font-bold text-gray-900 mb-4">Secure Payment with PayPal</h3>
+            <div class="text-left text-gray-600 space-y-2 mb-6">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>Secure payment processing with PayPal</span>
+                </div>
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>Automatic account activation upon payment</span>
+                </div>
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>Yearly subscription with easy cancellation</span>
+                </div>
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>Start using Church Books immediately after payment</span>
+                </div>
+            </div>
+            <p class="text-sm text-gray-500">Powered by PayPal for secure transactions. No credit card required - pay with your PayPal account or any major credit/debit card.</p>
+                   <h3 class="text-xl font-bold text-gray-900 mt-8 mb-4">Offline Payment</h3>
+                   <p>If you prefer to pay via check or bank transfer, please contact our <a class="text-blue-500 hover:underline" href="{% url 'contact' %}">support team</a></p>
+
         </div>
     </div>
 </div>

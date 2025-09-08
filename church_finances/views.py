@@ -19,6 +19,60 @@ from datetime import datetime
 from calendar import monthrange
 from collections import defaultdict
 
+# Static page views
+def about_view(request):
+    """
+    Display the About page
+    """
+    return render(request, 'about.html')
+
+def contact_view(request):
+    """
+    Display the Contact page and handle contact form submissions
+    """
+    if request.method == 'POST':
+        # Handle contact form submission
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        church_name = request.POST.get('church_name', '')
+        subject = request.POST.get('subject')
+        message = request.POST.get('message')
+        
+        # In a real application, you would send an email here
+        # For now, we'll just show a success message
+        success(request, f"Thank you, {name}! Your message has been sent. We'll get back to you soon.")
+        return redirect('contact')
+    
+    return render(request, 'contact.html')
+
+def pricing_view(request):
+    """
+    Display the Pricing page
+    """
+    return render(request, 'pricing.html')
+
+def choose_plan_view(request):
+    """
+    Display the Choose Your Plan page and handle plan selection
+    """
+    if request.method == 'POST':
+        # Handle plan selection form submission
+        plan = request.POST.get('plan')
+        church_name = request.POST.get('church_name')
+        contact_name = request.POST.get('contact_name')
+        contact_email = request.POST.get('contact_email')
+        
+        # Store the selected plan in session
+        request.session['selected_package'] = plan
+        request.session['church_name'] = church_name
+        request.session['contact_name'] = contact_name
+        request.session['contact_email'] = contact_email
+        
+        success(request, f"Thank you for choosing the {plan.title()} plan! Please complete your registration.")
+        return redirect('register')
+    
+    return render(request, 'choose_plan.html')
+
 def is_superadmin(user):
     return user.is_superuser
 
@@ -843,3 +897,9 @@ def transaction_print_yearly(request):
     }
     
     return render(request, "church_finances/print/yearly_transactions.html", context)
+
+def pending_approval_view(request):
+    """
+    Display the pending approval page
+    """
+    return render(request, "church_finances/pending_approval.html")

@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block title %}Church Registration - Offline Payment - Church Books{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 py-12">
+    <div class="container mx-auto px-4">
+        <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-8">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Church Registration</h1>
+                <p class="text-gray-600">{{ selected_package|title }} Package - ${{ package_price }} USD (Offline Payment)</p>
+                <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p class="text-yellow-800 text-sm">
+                        <strong>Note:</strong> Your account will be in pending status until payment is received and approved by our admin team.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Church Registration Form -->
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- Church Information -->
+                <div class="border-b border-gray-200 pb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Church Information</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="church_name" class="block text-sm font-medium text-gray-700 mb-2">Church Name *</label>
+                            <input type="text" 
+                                   id="church_name" 
+                                   name="church_name" 
+                                   required 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6e003d] focus:border-transparent">
+                        </div>
+                        
+                        <div>
+                            <label for="pastor_name" class="block text-sm font-medium text-gray-700 mb-2">Pastor Name *</label>
+                            <input type="text" 
+                                   id="pastor_name" 
+                                   name="pastor_name" 
+                                   required 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6e003d] focus:border-transparent">
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <label for="church_address" class="block text-sm font-medium text-gray-700 mb-2">Church Address *</label>
+                        <textarea id="church_address" 
+                                  name="church_address" 
+                                  required 
+                                  rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6e003d] focus:border-transparent"></textarea>
+                    </div>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="border-b border-gray-200 pb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="church_email" class="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
+                            <input type="email" 
+                                   id="church_email" 
+                                   name="church_email" 
+                                   required 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6e003d] focus:border-transparent">
+                        </div>
+                        
+                        <div>
+                            <label for="church_phone" class="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                            <input type="tel" 
+                                   id="church_phone" 
+                                   name="church_phone" 
+                                   required 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6e003d] focus:border-transparent">
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <label for="church_website" class="block text-sm font-medium text-gray-700 mb-2">Website (Optional)</label>
+                        <input type="url" 
+                               id="church_website" 
+                               name="church_website" 
+                               placeholder="https://" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6e003d] focus:border-transparent">
+                    </div>
+                </div>
+
+                <!-- Package Summary -->
+                <div class="bg-gray-50 p-6 rounded-lg">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-3">Package Summary</h3>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-700">{{ selected_package|title }} Package (Yearly)</span>
+                        <span class="text-2xl font-bold text-[#6e003d]">${{ package_price }} USD</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2">Payment Method: Offline (Check/Bank Transfer)</p>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="text-center">
+                    <button type="submit" 
+                            class="w-full bg-[#6e003d] text-white py-3 px-6 rounded-lg hover:bg-[#8e005d] transition duration-300 font-semibold">
+                        Submit Registration for Approval
+                    </button>
+                    <p class="text-sm text-gray-500 mt-2">
+                        You will receive payment instructions after submission
+                    </p>
+                </div>
+
+                <!-- Cancel Link -->
+                <div class="text-center">
+                    <a href="{% url 'subscription' %}" 
+                       class="inline-block text-gray-600 hover:text-gray-800 transition duration-300">
+                        ← Back to Package Selection
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

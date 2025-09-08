@@ -7,4 +7,5 @@ gunicorn==21.2.0
 whitenoise==6.6.0
 python-dotenv==1.0.0
 cryptography==42.0.5
-# Removed mysqlclient as PyMySQL will be used instead
+paypalrestsdk==1.13.3
+requests==2.31.0

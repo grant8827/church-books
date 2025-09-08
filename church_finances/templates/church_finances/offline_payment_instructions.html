@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment Instructions - Church Books{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 py-12">
+    <div class="container mx-auto px-4">
+        <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl p-8">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Registration Submitted Successfully!</h1>
+                <p class="text-gray-600">Thank you {{ church.name }} for choosing Church Books</p>
+            </div>
+
+            <!-- Status Alert -->
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                    <div>
+                        <h3 class="text-yellow-800 font-semibold">Account Status: Pending Approval</h3>
+                        <p class="text-yellow-700 text-sm">Your account will be activated once payment is received and verified by our team.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Instructions -->
+            <div class="space-y-8">
+                <!-- Package Details -->
+                <div class="bg-gray-50 p-6 rounded-lg">
+                    <h2 class="text-xl font-bold text-gray-900 mb-4">Package Details</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-600">Church Name</p>
+                            <p class="font-semibold">{{ church.name }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Package</p>
+                            <p class="font-semibold">{{ church.subscription_type|title }} Package</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Amount Due</p>
+                            <p class="font-semibold text-[#6e003d] text-xl">${{ package_price }} USD</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Billing Period</p>
+                            <p class="font-semibold">Yearly Subscription</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Methods -->
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900 mb-6">Payment Methods</h2>
+                    
+                    <!-- Check Payment -->
+                    <div class="border border-gray-200 rounded-lg p-6 mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Option 1: Check Payment</h3>
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <p class="font-semibold text-blue-900 mb-2">Make check payable to:</p>
+                            <div class="text-blue-800">
+                                <p><strong>Church Books LLC</strong></p>
+                                <p>1234 Finance Street</p>
+                                <p>Suite 100</p>
+                                <p>Church City, CC 12345</p>
+                            </div>
+                            <p class="text-blue-700 text-sm mt-3">
+                                <strong>Important:</strong> Please write "{{ church.name }} - {{ church.subscription_type|title }} Package" in the memo line
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Bank Transfer -->
+                    <div class="border border-gray-200 rounded-lg p-6 mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Option 2: Bank Transfer</h3>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-green-800">
+                                <div>
+                                    <p class="text-sm text-green-600">Bank Name</p>
+                                    <p class="font-semibold">First National Bank</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-green-600">Account Name</p>
+                                    <p class="font-semibold">Church Books LLC</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-green-600">Routing Number</p>
+                                    <p class="font-semibold">123456789</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-green-600">Account Number</p>
+                                    <p class="font-semibold">987654321</p>
+                                </div>
+                            </div>
+                            <p class="text-green-700 text-sm mt-3">
+                                <strong>Reference:</strong> {{ church.name }} - Registration #{{ church.id }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- PayPal Alternative -->
+                    <div class="border border-gray-200 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Option 3: Pay Online Instead</h3>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <p class="text-purple-800 mb-3">
+                                If you'd prefer to pay online with PayPal or credit card, you can cancel this registration and choose the online payment option.
+                            </p>
+                            <a href="{% url 'subscription' %}" 
+                               class="inline-block bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition duration-300">
+                                Pay Online with PayPal
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Next Steps -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                    <h2 class="text-xl font-bold text-blue-900 mb-4">Next Steps</h2>
+                    <div class="space-y-3 text-blue-800">
+                        <div class="flex items-start">
+                            <span class="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full text-sm flex items-center justify-center mr-3 mt-0.5">1</span>
+                            <p>Submit your payment using one of the methods above</p>
+                        </div>
+                        <div class="flex items-start">
+                            <span class="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full text-sm flex items-center justify-center mr-3 mt-0.5">2</span>
+                            <p>Our team will verify your payment within 1-2 business days</p>
+                        </div>
+                        <div class="flex items-start">
+                            <span class="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full text-sm flex items-center justify-center mr-3 mt-0.5">3</span>
+                            <p>You'll receive an email confirmation once your account is approved</p>
+                        </div>
+                        <div class="flex items-start">
+                            <span class="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full text-sm flex items-center justify-center mr-3 mt-0.5">4</span>
+                            <p>Log in and start managing your church finances!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="text-center bg-gray-50 p-6 rounded-lg">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Questions about your payment?</h3>
+                    <p class="text-gray-600 mb-4">Our support team is here to help</p>
+                    <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+                        <a href="{% url 'contact' %}" 
+                           class="inline-block bg-[#6e003d] text-white px-6 py-2 rounded hover:bg-[#8e005d] transition duration-300">
+                            Contact Support
+                        </a>
+                        <p class="text-gray-600">Email: support@churchbooks.com</p>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="text-center space-y-4">
+                    <a href="{% url 'login' %}" 
+                       class="inline-block bg-gray-600 text-white px-8 py-3 rounded-lg hover:bg-gray-700 transition duration-300">
+                        Go to Login Page
+                    </a>
+                    <p class="text-sm text-gray-500">
+                        Save this page for your payment reference. You can bookmark this page or print these instructions.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-print functionality (optional)
+function printInstructions() {
+    window.print();
+}
+</script>
+{% endblock %}

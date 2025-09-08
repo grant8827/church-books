@@ -4,9 +4,22 @@ from . import views
 from . import views_subscription
 
 urlpatterns = [
+    # Static page URLs
+    path('about/', views.about_view, name='about'),
+    path('contact/', views.contact_view, name='contact'),
+    path('pricing/', views.pricing_view, name='pricing'),
+    path('choose-plan/', views.choose_plan_view, name='choose_plan'),
+    
     # Subscription URLs
     path('subscription/', views_subscription.subscription_view, name='subscription'),
     path('subscription/select/', views_subscription.subscription_select, name='subscription_select'),
+    path('pending-approval/', views.pending_approval_view, name='pending_approval'),
+    
+    # PayPal URLs
+    path('paypal/create-subscription/', views_subscription.create_paypal_subscription, name='paypal_create_subscription'),
+    path('subscription/success/', views_subscription.paypal_success, name='paypal_success'),
+    path('subscription/cancel/', views_subscription.paypal_cancel, name='paypal_cancel'),
+    path('paypal/webhook/', views_subscription.paypal_webhook, name='paypal_webhook'),
     # Password Reset URLs
     path('password_reset/', auth_views.PasswordResetView.as_view(
         template_name='church_finances/password_reset/password_reset_form.html',

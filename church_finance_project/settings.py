@@ -34,7 +34,7 @@ DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 ALLOWED_HOSTS = ['*'] # Allow all hosts for Railway deployment
 
 # CSRF and Session Settings
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,https://localhost:8000,http://127.0.0.1:8000,https://web-production-ffeb6.up.railway.app,https://*.up.railway.app').split(',')
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,https://localhost:8000,http://127.0.0.1:8000,https://web-production-ffeb6.up.railway.app,https://*.up.railway.app,https://churchbooksmanagement.com/').split(',')
 CSRF_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
 SESSION_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
 CSRF_COOKIE_SAMESITE = 'Lax'
@@ -177,3 +177,15 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For developm
 # EMAIL_USE_TLS = True
 # EMAIL_HOST_USER = 'your-email@gmail.com'
 # EMAIL_HOST_PASSWORD = 'your-app-specific-password'
+
+# PayPal Configuration
+PAYPAL_CLIENT_ID = os.environ.get('PAYPAL_CLIENT_ID', 'your_paypal_client_id')
+PAYPAL_CLIENT_SECRET = os.environ.get('PAYPAL_CLIENT_SECRET', 'your_paypal_client_secret')
+PAYPAL_MODE = os.environ.get('PAYPAL_MODE', 'sandbox')  # 'sandbox' or 'live'
+
+# PayPal URLs - Use your actual domain
+PAYPAL_BASE_URL = os.environ.get('PAYPAL_BASE_URL', 'http://127.0.0.1:8000')
+
+# PayPal Subscription Plan IDs (These need to be created in PayPal dashboard)
+PAYPAL_STANDARD_PLAN_ID = os.environ.get('PAYPAL_STANDARD_PLAN_ID', 'P-XXXXXXXXXXXXXXXXXXXX')
+PAYPAL_PREMIUM_PLAN_ID = os.environ.get('PAYPAL_PREMIUM_PLAN_ID', 'P-XXXXXXXXXXXXXXXXXXXX')

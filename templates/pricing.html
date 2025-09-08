@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+
+{% block title %}Pricing - Church Books{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+    <div class="text-center mb-12">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">Choose Your Plan</h1>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+            Simple, transparent pricing that grows with your church. No hidden fees, no surprises.
+        </p>
+    </div>
+
+    <!-- Pricing Toggle -->
+    <div class="flex justify-center mb-12">
+        <div class="bg-gray-100 rounded-lg p-1">
+            <div class="flex">
+                <button id="monthly-btn" class="px-6 py-2 rounded-md font-medium text-sm transition-colors bg-blue-600 text-white">
+                    Monthly
+                </button>
+                <button id="annual-btn" class="px-6 py-2 rounded-md font-medium text-sm transition-colors text-gray-700 hover:text-gray-900">
+                    Annual (Save 20%)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pricing Cards -->
+    <div class="grid md:grid-cols-3 gap-8 mb-12">
+        <!-- Starter Plan -->
+        <div class="border border-gray-200 rounded-lg p-8 relative">
+            <div class="text-center">
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Starter</h3>
+                <p class="text-gray-600 mb-6">Perfect for small churches getting started</p>
+                <div class="mb-6">
+                    <span class="text-4xl font-bold text-gray-900 monthly-price">$29</span>
+                    <span class="text-4xl font-bold text-gray-900 annual-price hidden">$23</span>
+                    <span class="text-gray-600">/month</span>
+                </div>
+            </div>
+            
+            <ul class="space-y-4 mb-8">
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Up to 100 members
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Basic financial tracking
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Monthly reports
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Email support
+                </li>
+            </ul>
+            
+            <a href="{% url 'choose_plan' %}" class="block w-full text-center bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">
+                Choose Starter
+            </a>
+        </div>
+
+        <!-- Professional Plan -->
+        <div class="border-2 border-blue-600 rounded-lg p-8 relative">
+            <div class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                <span class="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium">Most Popular</span>
+            </div>
+            
+            <div class="text-center">
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Professional</h3>
+                <p class="text-gray-600 mb-6">Best for growing churches</p>
+                <div class="mb-6">
+                    <span class="text-4xl font-bold text-gray-900 monthly-price">$79</span>
+                    <span class="text-4xl font-bold text-gray-900 annual-price hidden">$63</span>
+                    <span class="text-gray-600">/month</span>
+                </div>
+            </div>
+            
+            <ul class="space-y-4 mb-8">
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Up to 500 members
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Advanced financial tracking
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Custom reports & analytics
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Online giving integration
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Priority phone support
+                </li>
+            </ul>
+            
+            <a href="{% url 'choose_plan' %}" class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">
+                Choose Professional
+            </a>
+        </div>
+
+        <!-- Enterprise Plan -->
+        <div class="border border-gray-200 rounded-lg p-8 relative">
+            <div class="text-center">
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Enterprise</h3>
+                <p class="text-gray-600 mb-6">For large churches and organizations</p>
+                <div class="mb-6">
+                    <span class="text-4xl font-bold text-gray-900 monthly-price">$199</span>
+                    <span class="text-4xl font-bold text-gray-900 annual-price hidden">$159</span>
+                    <span class="text-gray-600">/month</span>
+                </div>
+            </div>
+            
+            <ul class="space-y-4 mb-8">
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Unlimited members
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Full financial suite
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Multi-location support
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    API access
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Dedicated account manager
+                </li>
+            </ul>
+            
+            <a href="{% url 'choose_plan' %}" class="block w-full text-center bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">
+                Choose Enterprise
+            </a>
+        </div>
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="border-t pt-12">
+        <h2 class="text-3xl font-bold text-gray-900 text-center mb-8">Frequently Asked Questions</h2>
+        <div class="grid md:grid-cols-2 gap-8">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Can I change plans later?</h3>
+                <p class="text-gray-600">Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately with prorated billing.</p>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Is there a free trial?</h3>
+                <p class="text-gray-600">Yes, we offer a 30-day free trial for all plans. No credit card required to start.</p>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">What payment methods do you accept?</h3>
+                <p class="text-gray-600">We accept all major credit cards, ACH transfers, and PayPal for your convenience.</p>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Is my data secure?</h3>
+                <p class="text-gray-600">Absolutely. We use bank-level encryption and security measures to protect your church's sensitive information.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA Section -->
+    <div class="bg-blue-50 rounded-lg p-8 mt-12 text-center">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">Still have questions?</h2>
+        <p class="text-gray-600 mb-6">Our team is here to help you choose the right plan for your church.</p>
+        <div class="space-x-4">
+            <a href="{% url 'contact' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">
+                Contact Sales
+            </a>
+            <a href="#" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">
+                Schedule Demo
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Pricing toggle functionality
+    const monthlyBtn = document.getElementById('monthly-btn');
+    const annualBtn = document.getElementById('annual-btn');
+    const monthlyPrices = document.querySelectorAll('.monthly-price');
+    const annualPrices = document.querySelectorAll('.annual-price');
+
+    monthlyBtn.addEventListener('click', () => {
+        monthlyBtn.classList.add('bg-blue-600', 'text-white');
+        monthlyBtn.classList.remove('text-gray-700', 'hover:text-gray-900');
+        annualBtn.classList.add('text-gray-700', 'hover:text-gray-900');
+        annualBtn.classList.remove('bg-blue-600', 'text-white');
+        
+        monthlyPrices.forEach(price => price.classList.remove('hidden'));
+        annualPrices.forEach(price => price.classList.add('hidden'));
+    });
+
+    annualBtn.addEventListener('click', () => {
+        annualBtn.classList.add('bg-blue-600', 'text-white');
+        annualBtn.classList.remove('text-gray-700', 'hover:text-gray-900');
+        monthlyBtn.classList.add('text-gray-700', 'hover:text-gray-900');
+        monthlyBtn.classList.remove('bg-blue-600', 'text-white');
+        
+        annualPrices.forEach(price => price.classList.remove('hidden'));
+        monthlyPrices.forEach(price => price.classList.add('hidden'));
+    });
+</script>
+{% endblock %}
