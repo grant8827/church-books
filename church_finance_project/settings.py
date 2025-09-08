@@ -34,7 +34,7 @@ DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 ALLOWED_HOSTS = ['*'] # Allow all hosts for Railway deployment
 
 # CSRF and Session Settings
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,https://localhost:8000,http://127.0.0.1:8000,https://web-production-ffeb6.up.railway.app,https://*.up.railway.app,https://churchbooksmanagement.com/').split(',')
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,https://localhost:8000,http://127.0.0.1:8000,http://127.0.0.1:8083,http://localhost:8083,https://web-production-ffeb6.up.railway.app,https://*.up.railway.app,https://churchbooksmanagement.com/').split(',')
 CSRF_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
 SESSION_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
 CSRF_COOKIE_SAMESITE = 'Lax'

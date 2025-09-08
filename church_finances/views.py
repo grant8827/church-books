@@ -168,8 +168,25 @@ def approve_church(request, church_id):
         error(request, f"Church '{church.name}' is already approved.")
     else:
         church.is_approved = True
+        church.subscription_status = 'active'
         church.save()
-        success(request, f"Church '{church.name}' has been approved.")
+        
+        # Find and activate any inactive users associated with this church
+        from .models import ChurchMember
+        church_members = ChurchMember.objects.filter(church=church)
+        
+        activated_users = []
+        for member in church_members:
+            if not member.user.is_active:
+                member.user.is_active = True
+                member.user.save()
+                activated_users.append(member.user.username)
+        
+        success_msg = f"Church '{church.name}' has been approved."
+        if activated_users:
+            success_msg += f" Activated user accounts: {', '.join(activated_users)}"
+        
+        success(request, success_msg)
     return redirect('church_approval_list')
 
 @user_passes_test(is_superadmin)

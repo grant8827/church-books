@@ -7,9 +7,10 @@ from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.utils import timezone
+from django.contrib.auth.models import User
 from datetime import timedelta
 import json
-from .models import Church, PayPalSubscription
+from .models import Church, PayPalSubscription, ChurchMember
 from .paypal_service import PayPalService
 
 def subscription_view(request):
@@ -50,15 +51,61 @@ def create_paypal_subscription(request):
     """
     if request.method == "POST":
         try:
+            # Check if this is an offline payment request
+            payment_method = request.POST.get('payment_method', '')
+            
             # Get form data
             first_name = request.POST.get('first_name', '')
             last_name = request.POST.get('last_name', '')
             email = request.POST.get('email', '')
+            username = request.POST.get('username', '')
+            password = request.POST.get('password', '')
+            password_confirm = request.POST.get('password_confirm', '')
             church_name = request.POST.get('church_name', '')
             church_address = request.POST.get('church_address', '')
             church_phone = request.POST.get('church_phone', '')
             church_email = request.POST.get('church_email', '')
             church_website = request.POST.get('church_website', '')
+            
+            # Debug: Print received data
+            print(f"DEBUG: Received form data:")
+            print(f"Username: {username}")
+            print(f"Email: {email}")
+            print(f"First Name: {first_name}")
+            print(f"Last Name: {last_name}")
+            print(f"Church Name: {church_name}")
+            
+            # Validate required fields
+            if not username or not password or not email:
+                messages.error(request, "Username, password, and email are required.")
+                return render(request, 'church_finances/paypal_subscription_form.html', {
+                    'selected_package': request.session.get('selected_package'),
+                    'package_price': request.session.get('package_price'),
+                })
+            
+            # Validate password confirmation
+            if password != password_confirm:
+                messages.error(request, "Passwords do not match.")
+                return render(request, 'church_finances/paypal_subscription_form.html', {
+                    'selected_package': request.session.get('selected_package'),
+                    'package_price': request.session.get('package_price'),
+                })
+            
+            # Check if username already exists
+            if User.objects.filter(username=username).exists():
+                messages.error(request, "Username already exists. Please choose a different username.")
+                return render(request, 'church_finances/paypal_subscription_form.html', {
+                    'selected_package': request.session.get('selected_package'),
+                    'package_price': request.session.get('package_price'),
+                })
+            
+            # Check if email already exists
+            if User.objects.filter(email=email).exists():
+                messages.error(request, "An account with this email already exists.")
+                return render(request, 'church_finances/paypal_subscription_form.html', {
+                    'selected_package': request.session.get('selected_package'),
+                    'package_price': request.session.get('package_price'),
+                })
             
             # Get selected package from session
             selected_package = request.session.get('selected_package')
@@ -67,6 +114,20 @@ def create_paypal_subscription(request):
             if not selected_package or not plan_id:
                 messages.error(request, "Please select a subscription package first.")
                 return redirect('subscription')
+            
+            print(f"DEBUG: Creating user account for {username}")
+            
+            # Create user account (inactive until payment is confirmed)
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+                is_active=False  # Activate after payment confirmation
+            )
+            
+            print(f"DEBUG: User created successfully with ID: {user.id}")
             
             # Create church record (not approved yet)
             church = Church.objects.create(
@@ -80,32 +141,69 @@ def create_paypal_subscription(request):
                 is_approved=False
             )
             
-            # Create PayPal subscription
-            paypal_service = PayPalService()
-            payer_info = {
-                'first_name': first_name,
-                'last_name': last_name,
-                'email': email
-            }
+            print(f"DEBUG: Church created successfully with ID: {church.id}")
             
-            # Use simple plan identifiers
-            plan_identifier = f"church_books_{selected_package}_plan"
+            # Create ChurchMember relationship
+            church_member = ChurchMember.objects.create(
+                user=user,
+                church=church,
+                role='admin'  # First user is the admin
+            )
+            print(f"DEBUG: ChurchMember created successfully with ID: {church_member.id}")
             
-            result = paypal_service.create_subscription(plan_identifier, payer_info, church.id)
+            # Store user ID with church for later activation
+            request.session['pending_user_id'] = user.id
+            request.session['church_id'] = church.id
             
-            if result['success']:
-                # Store subscription ID for later reference
-                request.session['pending_subscription_id'] = result['subscription_id']
-                request.session['church_id'] = church.id
+            # Check if this is offline payment
+            if payment_method == 'offline':
+                # For offline payment, create records and redirect to pending approval
+                messages.success(request, f"Registration submitted successfully! Your church account '{church_name}' and user login '{username}' are pending admin approval and offline payment confirmation.")
                 
-                # Redirect to PayPal for approval
-                return redirect(result['approval_url'])
-            else:
-                church.delete()  # Clean up if PayPal subscription creation failed
-                messages.error(request, f"Failed to create subscription: {result['error']}")
-                return redirect('subscription')
+                # Clear session data
+                request.session.pop('selected_package', None)
+                request.session.pop('package_price', None)
+                request.session.pop('paypal_plan_id', None)
+                
+                # Redirect to pending approval page
+                return redirect('pending_approval')
+            
+            # Create PayPal subscription for online payment
+            try:
+                paypal_service = PayPalService()
+                payer_info = {
+                    'first_name': first_name,
+                    'last_name': last_name,
+                    'email': email
+                }
+                
+                # Use simple plan identifiers
+                plan_identifier = f"church_books_{selected_package}_plan"
+                
+                result = paypal_service.create_subscription(plan_identifier, payer_info, church.id)
+                
+                if result['success']:
+                    # Store subscription ID for later reference
+                    request.session['pending_subscription_id'] = result['subscription_id']
+                    
+                    # Redirect to PayPal for approval
+                    return redirect(result['approval_url'])
+                else:
+                    # Clean up if PayPal subscription creation failed
+                    church.delete()
+                    user.delete()
+                    messages.error(request, f"Failed to create subscription: {result['error']}")
+                    return redirect('subscription')
+            except Exception as e:
+                # If PayPal fails, redirect to offline payment option
+                print(f"PayPal service error: {str(e)}")
+                messages.warning(request, "PayPal service temporarily unavailable. Please use offline payment option or try again later.")
+                church.delete()
+                user.delete()
+                return redirect('pending_approval')
                 
         except Exception as e:
+            print(f"DEBUG: Exception occurred: {str(e)}")
             messages.error(request, f"An error occurred: {str(e)}")
             return redirect('subscription')
     
@@ -179,15 +277,29 @@ def paypal_success(request):
                         church.subscription_end_date = timezone.now() + timedelta(days=365)
                         church.save()
                         
+                        # Activate the user account if it exists
+                        pending_user_id = request.session.get('pending_user_id')
+                        if pending_user_id:
+                            try:
+                                user = User.objects.get(id=pending_user_id)
+                                user.is_active = True
+                                user.save()
+                                messages.success(request, f"Payment successful! Your church account and user login '{user.username}' have been approved and activated.")
+                            except User.DoesNotExist:
+                                messages.success(request, "Payment successful! Your church account has been approved and activated.")
+                        else:
+                            messages.success(request, "Payment successful! Your church account has been approved and activated.")
+                        
                         # Clear session data
                         request.session.pop('selected_package', None)
                         request.session.pop('package_price', None)
                         request.session.pop('paypal_plan_id', None)
                         request.session.pop('pending_subscription_id', None)
                         request.session.pop('church_id', None)
+                        request.session.pop('pending_user_id', None)
                         
-                        messages.success(request, "Payment successful! Your church account has been approved and activated.")
-                        return redirect('login')
+                        # Redirect to dashboard after payment
+                        return redirect('dashboard')
                     else:
                         messages.error(request, "Could not find church record.")
                         return redirect('subscription')
@@ -218,10 +330,25 @@ def paypal_cancel(request):
         except Church.DoesNotExist:
             pass
     
+    # Clean up pending user account
+    pending_user_id = request.session.get('pending_user_id')
+    if pending_user_id:
+        try:
+            user = User.objects.get(id=pending_user_id)
+            user.delete()
+        except User.DoesNotExist:
+            pass
+    
     # Clear session data
     request.session.pop('selected_package', None)
     request.session.pop('package_price', None)
     request.session.pop('paypal_plan_id', None)
+    request.session.pop('pending_subscription_id', None)
+    request.session.pop('church_id', None)
+    request.session.pop('pending_user_id', None)
+    
+    messages.warning(request, "Subscription cancelled. You can try again anytime.")
+    return redirect('subscription')
     request.session.pop('pending_subscription_id', None)
     request.session.pop('church_id', None)
     
