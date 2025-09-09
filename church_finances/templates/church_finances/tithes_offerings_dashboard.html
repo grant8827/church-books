@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+
+{% block title %}Tithes & Offerings Dashboard - Church Books{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Tithes & Offerings Dashboard</h1>
+                    <p class="text-gray-600 mt-2">
+                        {% if context_type == 'admin' %}
+                            {{ church.name }} - Admin View ({{ current_year }})
+                        {% else %}
+                            {{ member.user.first_name }} {{ member.user.last_name }} - Personal View ({{ current_year }})
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="flex space-x-3">
+                    {% if context_type == 'member' %}
+                        <a href="{% url 'quick_tithe_entry' %}" 
+                           class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Quick Entry
+                        </a>
+                        <a href="{% url 'member_contributions' %}" 
+                           class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            My Contributions
+                        </a>
+                    {% elif context_type == 'admin' %}
+                        <a href="{% url 'bulk_contribution_entry' %}" 
+                           class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h2m5 0h2a2 2 0 002-2V7a2 2 0 00-2-2h-2m-5 4v6m0 0l3-3m-3 3l-3-3"></path>
+                            </svg>
+                            Bulk Entry
+                        </a>
+                        <a href="{% url 'contribution_add' %}" 
+                           class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Add Contribution
+                        </a>
+                        <a href="{% url 'contribution_list' %}" 
+                           class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h6m3 0a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v6a2 2 0 002 2h6m7 0a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v6a2 2 0 002 2h6"></path>
+                            </svg>
+                            All Contributions
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
+            <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                <div class="text-3xl font-bold text-blue-600">${{ totals.tithe|floatformat:2 }}</div>
+                <div class="text-sm text-gray-600 mt-1">Tithes</div>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                <div class="text-3xl font-bold text-green-600">${{ totals.offering|floatformat:2 }}</div>
+                <div class="text-sm text-gray-600 mt-1">Offerings</div>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                <div class="text-3xl font-bold text-purple-600">${{ totals.special_offering|floatformat:2 }}</div>
+                <div class="text-sm text-gray-600 mt-1">Special</div>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                <div class="text-3xl font-bold text-orange-600">${{ totals.building_fund|floatformat:2 }}</div>
+                <div class="text-sm text-gray-600 mt-1">Building Fund</div>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                <div class="text-3xl font-bold text-red-600">${{ totals.missions|floatformat:2 }}</div>
+                <div class="text-sm text-gray-600 mt-1">Missions</div>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                <div class="text-3xl font-bold text-gray-600">${{ totals.other|floatformat:2 }}</div>
+                <div class="text-sm text-gray-600 mt-1">Other</div>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md text-center border-2 border-indigo-200">
+                <div class="text-3xl font-bold text-indigo-600">${{ totals.total|floatformat:2 }}</div>
+                <div class="text-sm text-gray-600 mt-1">Total {{ current_year }}</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Monthly Trend Chart -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-6">Monthly Trend (Last 12 Months)</h3>
+                    <div class="space-y-4">
+                        {% for month_data in monthly_trend %}
+                            <div class="flex items-center">
+                                <div class="text-sm text-gray-600 w-20">{{ month_data.month }}</div>
+                                <div class="flex-1 mx-4">
+                                    <div class="bg-gray-200 rounded-full h-6 relative overflow-hidden">
+                                        {% if month_data.percentage %}
+                                            <div class="bg-gradient-to-r from-blue-500 to-green-500 h-6 rounded-full transition-all duration-500" 
+                                                 style="width: {{ month_data.percentage }}%"></div>
+                                        {% endif %}
+                                        <div class="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white">
+                                            ${{ month_data.total|floatformat:0 }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-sm text-gray-500 w-24 text-right">
+                                    T: ${{ month_data.tithe|floatformat:0 }}
+                                </div>
+                                <div class="text-sm text-gray-500 w-24 text-right">
+                                    O: ${{ month_data.offering|floatformat:0 }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-4 text-xs text-gray-500 flex justify-end">
+                        T = Tithes, O = Offerings
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar -->
+            <div class="space-y-6">
+                <!-- Recent Contributions -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Contributions</h3>
+                    <div class="space-y-3">
+                        {% for contribution in recent_contributions %}
+                            <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {% if context_type == 'admin' %}
+                                            {{ contribution.member.user.first_name }} {{ contribution.member.user.last_name }}
+                                        {% endif %}
+                                        <span class="{% if context_type == 'admin' %}text-xs {% else %}text-sm {% endif %}text-gray-600">
+                                            {{ contribution.get_contribution_type_display }}
+                                        </span>
+                                    </div>
+                                    <div class="text-xs text-gray-500">{{ contribution.date }}</div>
+                                </div>
+                                <div class="text-sm font-semibold text-gray-900">
+                                    ${{ contribution.amount }}
+                                </div>
+                            </div>
+                        {% empty %}
+                            <p class="text-gray-500 text-sm">No recent contributions</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {% if context_type == 'admin' and top_contributors %}
+                <!-- Top Contributors -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Contributors {{ current_year }}</h3>
+                    <div class="space-y-3">
+                        {% for contributor in top_contributors|slice:":5" %}
+                            <div class="flex justify-between items-center py-2">
+                                <div class="text-sm font-medium text-gray-900">
+                                    {{ contributor.member__user__first_name }} {{ contributor.member__user__last_name }}
+                                </div>
+                                <div class="text-sm font-semibold text-gray-900">
+                                    ${{ contributor.total|floatformat:2 }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Quick Stats -->
+                <div class="bg-gradient-to-br from-blue-50 to-green-50 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h3>
+                    <div class="space-y-3">
+                        {% if context_type == 'admin' %}
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-600">Total Members</span>
+                                <span class="text-sm font-semibold">{{ total_members }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-600">Avg per Member</span>
+                                <span class="text-sm font-semibold">
+                                    ${{ average_per_member|floatformat:2 }}
+                                </span>
+                            </div>
+                        {% endif %}
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">Contributions</span>
+                            <span class="text-sm font-semibold">{{ recent_contributions|length }}+ this year</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">Tithe %</span>
+                            <span class="text-sm font-semibold">
+                                {{ tithe_percentage }}%
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">Offering %</span>
+                            <span class="text-sm font-semibold">
+                                {{ offering_percentage }}%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {% if context_type == 'member' %}
+                <!-- Personal Actions -->
+                <div class="bg-green-50 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-green-900 mb-4">Personal Actions</h3>
+                    <div class="space-y-3">
+                        <a href="{% url 'contribution_statement_current' %}" target="_blank"
+                           class="block w-full bg-green-600 text-white text-center py-2 px-4 rounded-md hover:bg-green-700 text-sm font-medium">
+                            Download {{ current_year }} Statement
+                        </a>
+                        <a href="{% url 'member_contributions' %}" 
+                           class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md hover:bg-blue-700 text-sm font-medium">
+                            View Full History
+                        </a>
+                        <a href="{% url 'quick_tithe_entry' %}" 
+                           class="block w-full bg-purple-600 text-white text-center py-2 px-4 rounded-md hover:bg-purple-700 text-sm font-medium">
+                            Record New Contribution
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add animation to monthly trend bars
+    const bars = document.querySelectorAll('.bg-gradient-to-r');
+    bars.forEach((bar, index) => {
+        setTimeout(() => {
+            bar.style.width = bar.style.width || '0%';
+        }, index * 100);
+    });
+
+    // Add hover effects to contribution items
+    const contributionItems = document.querySelectorAll('.border-b');
+    contributionItems.forEach(item => {
+        item.addEventListener('mouseenter', function() {
+            this.classList.add('bg-blue-50');
+        });
+        item.addEventListener('mouseleave', function() {
+            this.classList.remove('bg-blue-50');
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}CSRF Error - Church Books{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 py-12">
+    <div class="max-w-2xl mx-auto">
+        <div class="bg-white rounded-lg shadow-md p-8">
+            <div class="text-center mb-8">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                    <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900">CSRF Verification Failed</h1>
+                <p class="text-gray-600 mt-2">Sorry, your request could not be processed due to a security error.</p>
+            </div>
+
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <h3 class="text-lg font-medium text-red-800 mb-2">What happened?</h3>
+                <p class="text-red-700">
+                    CSRF (Cross-Site Request Forgery) protection prevented your form submission. This usually happens when:
+                </p>
+                <ul class="list-disc list-inside text-red-700 mt-2 space-y-1">
+                    <li>You've been on the page for too long</li>
+                    <li>You have multiple tabs open with the same site</li>
+                    <li>Your browser cookies are disabled</li>
+                    <li>You submitted the form twice quickly</li>
+                </ul>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h3 class="text-lg font-medium text-blue-800 mb-2">How to fix this:</h3>
+                <ol class="list-decimal list-inside text-blue-700 space-y-1">
+                    <li>Go back to the previous page</li>
+                    <li>Refresh the page to get a new security token</li>
+                    <li>Fill out the form again</li>
+                    <li>Make sure to only click submit once</li>
+                </ol>
+            </div>
+
+            {% if debug_info %}
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                <h3 class="text-lg font-medium text-gray-800 mb-2">Debug Information:</h3>
+                <div class="text-sm text-gray-600 space-y-1">
+                    <p><strong>Reason:</strong> {{ reason }}</p>
+                    <p><strong>CSRF Cookie:</strong> {{ debug_info.csrf_cookie|default:"None" }}</p>
+                    <p><strong>Referer:</strong> {{ debug_info.referer|default:"None" }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="flex space-x-4">
+                <button onclick="history.back()" 
+                        class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    Go Back
+                </button>
+                <a href="{% url 'home' %}" 
+                   class="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-center">
+                    Home Page
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

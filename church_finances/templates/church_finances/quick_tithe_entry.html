@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+
+{% block title %}Quick Tithe Entry - Church Books{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Quick Tithe & Offering Entry</h1>
+                    <p class="text-gray-600 mt-2">{{ member.user.first_name }} {{ member.user.last_name }} - {{ church.name }}</p>
+                </div>
+                <a href="{% url 'member_contributions' %}" 
+                   class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back to Contributions
+                </a>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Quick Entry Form -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-6">Record New Contribution</h2>
+                
+                <form method="post" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <!-- Contribution Type -->
+                    <div>
+                        <label for="contribution_type" class="block text-sm font-medium text-gray-700 mb-2">
+                            Contribution Type *
+                        </label>
+                        <select name="contribution_type" id="contribution_type" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            {% for value, label in contribution_types %}
+                                <option value="{{ value }}" {% if value == 'tithe' %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Amount -->
+                    <div>
+                        <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">
+                            Amount *
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-2 text-gray-500">$</span>
+                            <input type="number" name="amount" id="amount" step="0.01" min="0.01" required
+                                   class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                   placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <!-- Payment Method -->
+                    <div>
+                        <label for="payment_method" class="block text-sm font-medium text-gray-700 mb-2">
+                            Payment Method *
+                        </label>
+                        <select name="payment_method" id="payment_method" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            {% for value, label in payment_methods %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Reference Number -->
+                    <div>
+                        <label for="reference_number" class="block text-sm font-medium text-gray-700 mb-2">
+                            Reference Number (Optional)
+                        </label>
+                        <input type="text" name="reference_number" id="reference_number"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="Check number, transaction ID, etc.">
+                        <p class="text-xs text-gray-500 mt-1">Enter check number, transaction ID, or other reference</p>
+                    </div>
+
+                    <!-- Notes -->
+                    <div>
+                        <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">
+                            Notes (Optional)
+                        </label>
+                        <textarea name="notes" id="notes" rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="Additional notes about this contribution..."></textarea>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="flex space-x-4">
+                        <button type="submit" 
+                                class="flex-1 bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-semibold">
+                            Record Contribution
+                        </button>
+                        <button type="reset" 
+                                class="px-6 py-3 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                            Clear
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Recent Contributions & Quick Tips -->
+            <div class="space-y-6">
+                <!-- Recent Contributions -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Contributions</h3>
+                    <div class="space-y-3">
+                        {% for contribution in recent_contributions %}
+                            <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {{ contribution.get_contribution_type_display }}
+                                    </div>
+                                    <div class="text-xs text-gray-500">
+                                        {{ contribution.date }} • {{ contribution.get_payment_method_display }}
+                                    </div>
+                                </div>
+                                <div class="text-sm font-semibold text-gray-900">
+                                    ${{ contribution.amount }}
+                                </div>
+                            </div>
+                        {% empty %}
+                            <p class="text-gray-500 text-sm">No recent contributions</p>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if recent_contributions %}
+                        <div class="mt-4 pt-4 border-t border-gray-200">
+                            <a href="{% url 'member_contributions' %}" 
+                               class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                View all contributions →
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Quick Tips -->
+                <div class="bg-blue-50 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-blue-900 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Quick Tips
+                    </h3>
+                    <ul class="space-y-2 text-sm text-blue-800">
+                        <li class="flex items-start">
+                            <span class="w-2 h-2 bg-blue-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                            <span>Record your tithes and offerings immediately to maintain accurate records</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="w-2 h-2 bg-blue-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                            <span>Add reference numbers for checks or online transactions for better tracking</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="w-2 h-2 bg-blue-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                            <span>Download your annual statement for tax purposes at the end of each year</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="w-2 h-2 bg-blue-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                            <span>Contact the church office if you notice any discrepancies in your records</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Current Year Summary -->
+                <div class="bg-green-50 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-green-900 mb-4">{{ current_year }} Summary</h3>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-800">
+                                {% with member_year_total=recent_contributions|length %}
+                                    {{ recent_contributions|length }}
+                                {% endwith %}
+                            </div>
+                            <div class="text-green-600">Contributions</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-lg font-medium text-green-800">
+                                <a href="{% url 'member_contributions' %}" class="hover:underline">
+                                    View Details →
+                                </a>
+                            </div>
+                            <div class="text-green-600">Full Report</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus on amount field
+    document.getElementById('amount').focus();
+    
+    // Show/hide reference number field based on payment method
+    const paymentMethod = document.getElementById('payment_method');
+    const referenceField = document.getElementById('reference_number');
+    const referenceContainer = referenceField.closest('div');
+    
+    function toggleReferenceField() {
+        const method = paymentMethod.value;
+        if (method === 'check' || method === 'bank_transfer' || method === 'card') {
+            referenceContainer.style.display = 'block';
+            if (method === 'check') {
+                referenceField.placeholder = 'Check number';
+            } else if (method === 'bank_transfer') {
+                referenceField.placeholder = 'Transaction ID';
+            } else if (method === 'card') {
+                referenceField.placeholder = 'Last 4 digits or reference';
+            }
+        } else {
+            referenceContainer.style.display = 'block'; // Always show for flexibility
+        }
+    }
+    
+    paymentMethod.addEventListener('change', toggleReferenceField);
+    toggleReferenceField(); // Initial call
+    
+    // Format amount input
+    const amountField = document.getElementById('amount');
+    amountField.addEventListener('blur', function() {
+        if (this.value) {
+            this.value = parseFloat(this.value).toFixed(2);
+        }
+    });
+    
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const amount = parseFloat(amountField.value);
+        if (isNaN(amount) || amount <= 0) {
+            e.preventDefault();
+            alert('Please enter a valid amount greater than $0.00');
+            amountField.focus();
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -40,6 +40,10 @@ SESSION_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SAMESITE = 'Lax'
 
+# CSRF debugging (only in development)
+if DEBUG:
+    CSRF_FAILURE_VIEW = 'church_finances.views.csrf_failure'
+
 
 # Application definition
 

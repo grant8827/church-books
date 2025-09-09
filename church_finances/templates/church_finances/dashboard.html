@@ -33,7 +33,7 @@
             <h3 class="text-xl font-semibold text-indigo-800 mb-2">Total Contributions</h3>
             <p class="text-4xl font-bold text-indigo-700">{{ total_contributions }}</p>
             <p class="text-sm text-indigo-600 mt-1">${{ this_month_contributions|floatformat:2 }} this month</p>
-            <a href="{% url 'contribution_list' %}" class="text-sm text-indigo-600 hover:text-indigo-800 mt-2 inline-block">View Contributions →</a>
+            <a href="{% url 'tithes_offerings_dashboard' %}" class="text-sm text-indigo-600 hover:text-indigo-800 mt-2 inline-block">Tithes & Offerings →</a>
         </div>
         <div class="bg-yellow-100 p-6 rounded-lg shadow-md border border-yellow-200 text-center">
             <h3 class="text-xl font-semibold text-yellow-800 mb-2">Transactions</h3>
@@ -43,8 +43,13 @@
         <div class="bg-teal-100 p-6 rounded-lg shadow-md border border-teal-200 text-center">
             <h3 class="text-xl font-semibold text-teal-800 mb-2">Quick Actions</h3>
             <div class="space-y-2 mt-2">
-                <a href="{% url 'member_add' %}" class="text-sm text-teal-600 hover:text-teal-800 block">Add Member →</a>
-                <a href="{% url 'contribution_add' %}" class="text-sm text-teal-600 hover:text-teal-800 block">Add Contribution →</a>
+                {% if user.churchmember and user.churchmember.role == 'member' %}
+                    <a href="{% url 'quick_tithe_entry' %}" class="text-sm text-teal-600 hover:text-teal-800 block">Quick Tithe →</a>
+                    <a href="{% url 'member_contributions' %}" class="text-sm text-teal-600 hover:text-teal-800 block">My Contributions →</a>
+                {% else %}
+                    <a href="{% url 'member_add' %}" class="text-sm text-teal-600 hover:text-teal-800 block">Add Member →</a>
+                    <a href="{% url 'bulk_contribution_entry' %}" class="text-sm text-teal-600 hover:text-teal-800 block">Bulk Entry →</a>
+                {% endif %}
                 <a href="{% url 'transaction_create' %}" class="text-sm text-teal-600 hover:text-teal-800 block">Add Transaction →</a>
             </div>
         </div>

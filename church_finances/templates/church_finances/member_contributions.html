@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+
+{% block title %}My Contributions - {{ year }} - Church Books{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">My Contributions</h1>
+                    <p class="text-gray-600 mt-2">{{ member.user.first_name }} {{ member.user.last_name }} - {{ year }}</p>
+                </div>
+                <div class="flex space-x-3">
+                    <!-- Year Selector -->
+                    <select onchange="location = this.value" class="px-4 py-2 border border-gray-300 rounded-md">
+                        {% for yr in available_years %}
+                            <option value="{% url 'member_contributions' %}?year={{ yr }}" {% if yr == year %}selected{% endif %}>
+                                {{ yr }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    
+                    <!-- Print Statement Button -->
+                    <a href="{% url 'contribution_statement_pdf' year %}" target="_blank" 
+                       class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                        </svg>
+                        Print Statement
+                    </a>
+                    
+                    <!-- Quick Entry Button -->
+                    <a href="{% url 'quick_tithe_entry' %}" 
+                       class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Quick Entry
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Summary Cards -->
+            <div class="lg:col-span-3">
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
+                    <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                        <div class="text-2xl font-bold text-blue-600">${{ totals.tithe|floatformat:2 }}</div>
+                        <div class="text-sm text-gray-600">Tithes</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                        <div class="text-2xl font-bold text-green-600">${{ totals.offering|floatformat:2 }}</div>
+                        <div class="text-sm text-gray-600">Offerings</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                        <div class="text-2xl font-bold text-purple-600">${{ totals.special_offering|floatformat:2 }}</div>
+                        <div class="text-sm text-gray-600">Special</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                        <div class="text-2xl font-bold text-orange-600">${{ totals.building_fund|floatformat:2 }}</div>
+                        <div class="text-sm text-gray-600">Building</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                        <div class="text-2xl font-bold text-red-600">${{ totals.missions|floatformat:2 }}</div>
+                        <div class="text-sm text-gray-600">Missions</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                        <div class="text-2xl font-bold text-gray-600">${{ totals.other|floatformat:2 }}</div>
+                        <div class="text-sm text-gray-600">Other</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-md text-center border-2 border-indigo-200">
+                        <div class="text-2xl font-bold text-indigo-600">${{ totals.total|floatformat:2 }}</div>
+                        <div class="text-sm text-gray-600">Total</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monthly Breakdown Chart -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Monthly Breakdown</h3>
+                    <div class="space-y-3">
+                        {% for month, data in monthly_totals.items %}
+                            <div class="flex items-center justify-between">
+                                <div class="text-sm text-gray-600 w-16">
+                                    {% if month == 1 %}Jan{% elif month == 2 %}Feb{% elif month == 3 %}Mar{% elif month == 4 %}Apr{% elif month == 5 %}May{% elif month == 6 %}Jun{% elif month == 7 %}Jul{% elif month == 8 %}Aug{% elif month == 9 %}Sep{% elif month == 10 %}Oct{% elif month == 11 %}Nov{% elif month == 12 %}Dec{% endif %}
+                                </div>
+                                <div class="flex-1 mx-4">
+                                    <div class="bg-gray-200 rounded-full h-4 relative">
+                                        {% if totals.total > 0 %}
+                                            <div class="bg-blue-600 h-4 rounded-full" style="width: {{ data.total|mul:100|div:totals.total|floatformat:1 }}%"></div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="text-sm font-semibold text-gray-900 w-20 text-right">
+                                    ${{ data.total|floatformat:2 }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Contributions -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Contributions</h3>
+                    <div class="space-y-3">
+                        {% for contribution in contributions|slice:":5" %}
+                            <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {{ contribution.get_contribution_type_display }}
+                                    </div>
+                                    <div class="text-xs text-gray-500">{{ contribution.date }}</div>
+                                </div>
+                                <div class="text-sm font-semibold text-gray-900">
+                                    ${{ contribution.amount }}
+                                </div>
+                            </div>
+                        {% empty %}
+                            <p class="text-gray-500 text-sm">No contributions yet</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Contributions List -->
+            <div class="lg:col-span-3">
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900">All Contributions - {{ year }}</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Method</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                {% for contribution in contributions %}
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            {{ contribution.date }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
+                                                {% if contribution.contribution_type == 'tithe' %}bg-blue-100 text-blue-800
+                                                {% elif contribution.contribution_type == 'offering' %}bg-green-100 text-green-800
+                                                {% elif contribution.contribution_type == 'special_offering' %}bg-purple-100 text-purple-800
+                                                {% elif contribution.contribution_type == 'building_fund' %}bg-orange-100 text-orange-800
+                                                {% elif contribution.contribution_type == 'missions' %}bg-red-100 text-red-800
+                                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                                {{ contribution.get_contribution_type_display }}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                                            ${{ contribution.amount }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {{ contribution.get_payment_method_display }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {{ contribution.reference_number|default:"-" }}
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                                            No contributions found for {{ year }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Add some basic interactivity
+document.addEventListener('DOMContentLoaded', function() {
+    // Add hover effects to contribution rows
+    const rows = document.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.classList.add('bg-blue-50');
+        });
+        row.addEventListener('mouseleave', function() {
+            this.classList.remove('bg-blue-50');
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -13,6 +13,7 @@ import json
 from .models import Church, PayPalSubscription, ChurchMember
 from .paypal_service import PayPalService
 
+@ensure_csrf_cookie
 def subscription_view(request):
     """
     Display subscription packages
@@ -45,6 +46,7 @@ def subscription_select(request):
             messages.error(request, "Invalid package selection.")
     return redirect('subscription')
 
+@ensure_csrf_cookie
 def create_paypal_subscription(request):
     """
     Create PayPal subscription

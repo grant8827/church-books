@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Annual Contribution Statement - {{ member.user.first_name }} {{ member.user.last_name }}</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 0.75in;
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 10px;
+                color: #666;
+            }
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+        }
+        
+        .church-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 5px;
+        }
+        
+        .church-info {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        .statement-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin: 10px 0;
+        }
+        
+        .member-info {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .member-info h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #2563eb;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+            background-color: #fff;
+        }
+        
+        .summary-table th {
+            background-color: #2563eb;
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .summary-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #dee2e6;
+            font-size: 11px;
+        }
+        
+        .summary-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .amount {
+            text-align: right;
+            font-weight: bold;
+        }
+        
+        .total-row {
+            background-color: #e3f2fd !important;
+            font-weight: bold;
+            border-top: 2px solid #2563eb;
+        }
+        
+        .total-row td {
+            font-size: 12px;
+            color: #2563eb;
+        }
+        
+        .monthly-breakdown {
+            margin-top: 30px;
+        }
+        
+        .monthly-breakdown h3 {
+            font-size: 14px;
+            color: #2563eb;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 5px;
+        }
+        
+        .monthly-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+        
+        .monthly-table th {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 8px 4px;
+            text-align: center;
+            font-size: 9px;
+        }
+        
+        .monthly-table td {
+            border: 1px solid #dee2e6;
+            padding: 6px 4px;
+            text-align: right;
+        }
+        
+        .month-name {
+            text-align: left !important;
+            font-weight: bold;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            font-size: 10px;
+            color: #666;
+        }
+        
+        .tax-notice {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 11px;
+        }
+        
+        .tax-notice h4 {
+            margin: 0 0 10px 0;
+            color: #856404;
+            font-size: 12px;
+        }
+        
+        .signature-section {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .signature-line {
+            width: 200px;
+            border-bottom: 1px solid #333;
+            margin-bottom: 5px;
+        }
+        
+        .print-info {
+            font-size: 9px;
+            color: #999;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="church-name">{{ church.name }}</div>
+        <div class="church-info">
+            {% if church.address %}{{ church.address }}<br>{% endif %}
+            {% if church.phone %}Phone: {{ church.phone }} | {% endif %}
+            {% if church.email %}Email: {{ church.email }}{% endif %}
+        </div>
+        <div class="statement-title">Annual Contribution Statement</div>
+        <div style="font-size: 14px; color: #666;">For Tax Year {{ year }}</div>
+    </div>
+
+    <!-- Member Information -->
+    <div class="member-info">
+        <h3>Member Information</h3>
+        <div class="info-row">
+            <span><strong>Name:</strong> {{ member.user.first_name }} {{ member.user.last_name }}</span>
+            <span><strong>Member ID:</strong> {{ member.id }}</span>
+        </div>
+        {% if member.address %}
+        <div class="info-row">
+            <span><strong>Address:</strong> {{ member.address }}</span>
+        </div>
+        {% endif %}
+        <div class="info-row">
+            <span><strong>Statement Date:</strong> {{ statement_date|date:"F d, Y" }}</span>
+            <span><strong>Tax Year:</strong> {{ year }}</span>
+        </div>
+    </div>
+
+    <!-- Summary Table -->
+    <table class="summary-table">
+        <thead>
+            <tr>
+                <th style="width: 40%;">Contribution Type</th>
+                <th style="width: 20%;">Number of Gifts</th>
+                <th style="width: 20%;">Total Amount</th>
+                <th style="width: 20%;">Tax Deductible</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for type_data in contribution_summary %}
+            <tr>
+                <td>{{ type_data.type_display }}</td>
+                <td style="text-align: center;">{{ type_data.count }}</td>
+                <td class="amount">${{ type_data.total|floatformat:2 }}</td>
+                <td class="amount">${{ type_data.total|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row">
+                <td><strong>TOTAL CONTRIBUTIONS</strong></td>
+                <td style="text-align: center;"><strong>{{ total_contributions }}</strong></td>
+                <td class="amount"><strong>${{ total_amount|floatformat:2 }}</strong></td>
+                <td class="amount"><strong>${{ total_amount|floatformat:2 }}</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Tax Notice -->
+    <div class="tax-notice">
+        <h4>Important Tax Information</h4>
+        <p>This statement summarizes your contributions to {{ church.name }} for the {{ year }} tax year. 
+        All contributions listed are tax-deductible to the extent allowed by law. Please consult your tax advisor 
+        for specific tax advice regarding your deductible contributions.</p>
+        <p><strong>Note:</strong> No goods or services were provided in exchange for these contributions unless otherwise noted.</p>
+    </div>
+
+    <!-- Monthly Breakdown -->
+    {% if monthly_breakdown %}
+    <div class="monthly-breakdown">
+        <h3>Monthly Breakdown for {{ year }}</h3>
+        <table class="monthly-table">
+            <thead>
+                <tr>
+                    <th>Month</th>
+                    <th>Tithes</th>
+                    <th>Offerings</th>
+                    <th>Special</th>
+                    <th>Building</th>
+                    <th>Missions</th>
+                    <th>Other</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for month_data in monthly_breakdown %}
+                <tr>
+                    <td class="month-name">{{ month_data.month }}</td>
+                    <td>${{ month_data.tithe|floatformat:2 }}</td>
+                    <td>${{ month_data.offering|floatformat:2 }}</td>
+                    <td>${{ month_data.special_offering|floatformat:2 }}</td>
+                    <td>${{ month_data.building_fund|floatformat:2 }}</td>
+                    <td>${{ month_data.missions|floatformat:2 }}</td>
+                    <td>${{ month_data.other|floatformat:2 }}</td>
+                    <td><strong>${{ month_data.total|floatformat:2 }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Signature Section -->
+    <div class="signature-section">
+        <div>
+            <div class="signature-line"></div>
+            <div style="font-size: 10px; margin-top: 5px;">Church Financial Secretary</div>
+        </div>
+        <div>
+            <div class="signature-line"></div>
+            <div style="font-size: 10px; margin-top: 5px;">Date</div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p><strong>{{ church.name }}</strong> - Annual Contribution Statement {{ year }}</p>
+        <p>This statement was generated on {{ statement_date|date:"F d, Y" }} and reflects all recorded contributions 
+        for the specified tax year. If you have any questions about this statement, please contact the church office.</p>
+        
+        <div class="print-info">
+            Generated by Church Books Management System | Statement ID: {{ member.id }}-{{ year }}-{{ statement_date|date:"Ymd" }}
+        </div>
+    </div>
+</body>
+</html>

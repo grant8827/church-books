@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+
+{% block title %}Bulk Contribution Entry - Church Books{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 py-8">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Bulk Contribution Entry</h1>
+                    <p class="text-gray-600 mt-2">{{ church.name }} - Enter multiple contributions at once</p>
+                </div>
+                <div class="flex space-x-3">
+                    <a href="{% url 'tithes_offerings_dashboard' %}" 
+                       class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Back to Dashboard
+                    </a>
+                    <a href="{% url 'contribution_add' %}" 
+                       class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Single Entry
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-6 bg-{{ message.tags }}-100 border border-{{ message.tags }}-400 text-{{ message.tags }}-700 px-4 py-3 rounded">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Entry Form -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <form method="post" id="bulk-contribution-form">
+                {% csrf_token %}
+                
+                <!-- Date and Service Information -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-blue-50 rounded-lg">
+                    <div>
+                        <label for="service_date" class="block text-sm font-medium text-gray-700 mb-2">Service Date</label>
+                        <input type="date" id="service_date" name="service_date" 
+                               value="{{ today }}" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="service_type" class="block text-sm font-medium text-gray-700 mb-2">Service Type</label>
+                        <select id="service_type" name="service_type" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select Service</option>
+                            <option value="Sunday Morning">Sunday Morning Service</option>
+                            <option value="Sunday Evening">Sunday Evening Service</option>
+                            <option value="Wednesday">Wednesday Prayer Meeting</option>
+                            <option value="Special Event">Special Event</option>
+                            <option value="Online">Online Service</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="default_payment_method" class="block text-sm font-medium text-gray-700 mb-2">Default Payment Method</label>
+                        <select id="default_payment_method" name="default_payment_method" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="cash">Cash</option>
+                            <option value="check">Check</option>
+                            <option value="online">Online</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Bulk Entry Table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full table-auto" id="contributions-table">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">Member</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Tithe</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Offering</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Special</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Building</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Missions</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Other</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Payment</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Total</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="contributions-body">
+                            <!-- Dynamic rows will be added here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Add Row and Submit Buttons -->
+                <div class="flex justify-between items-center mt-6">
+                    <button type="button" id="add-row-btn" 
+                            class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Add Row
+                    </button>
+                    
+                    <div class="flex space-x-3">
+                        <div class="text-lg font-semibold text-gray-700">
+                            Grand Total: $<span id="grand-total">0.00</span>
+                        </div>
+                        <button type="submit" 
+                                class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Save All Contributions
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Instructions -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-yellow-800 mb-3">Instructions</h3>
+            <ul class="list-disc list-inside space-y-2 text-yellow-700">
+                <li>Set the service date and default payment method above</li>
+                <li>Click "Add Row" to add contribution entries for members</li>
+                <li>Select a member and enter amounts for different contribution types</li>
+                <li>Amounts will automatically calculate the row total</li>
+                <li>You can override the payment method for individual entries if needed</li>
+                <li>Click "Save All Contributions" when finished to record all entries</li>
+                <li>Empty rows or rows with $0.00 total will be ignored</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+let rowCounter = 0;
+const members = {{ members_json|safe }};
+let grandTotal = 0;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Add initial row
+    addRow();
+    
+    // Add row button handler
+    document.getElementById('add-row-btn').addEventListener('click', addRow);
+    
+    // Form submission handler
+    document.getElementById('bulk-contribution-form').addEventListener('submit', function(e) {
+        const rows = document.querySelectorAll('#contributions-body tr');
+        let hasValidData = false;
+        
+        rows.forEach(row => {
+            const total = parseFloat(row.querySelector('.row-total').textContent.replace('$', '')) || 0;
+            if (total > 0) {
+                hasValidData = true;
+            }
+        });
+        
+        if (!hasValidData) {
+            e.preventDefault();
+            alert('Please enter at least one contribution with an amount greater than $0.00');
+            return false;
+        }
+        
+        if (!confirm(`Are you sure you want to save ${rows.length} contribution entries with a total of $${grandTotal.toFixed(2)}?`)) {
+            e.preventDefault();
+            return false;
+        }
+    });
+});
+
+function addRow() {
+    const tbody = document.getElementById('contributions-body');
+    const row = document.createElement('tr');
+    row.className = 'contribution-row';
+    
+    row.innerHTML = `
+        <td class="px-3 py-4">
+            <select name="contributions[${rowCounter}][member]" class="member-select w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" required>
+                <option value="">Select Member</option>
+                ${members.map(member => `<option value="${member.id}">${member.name}</option>`).join('')}
+            </select>
+        </td>
+        <td class="px-3 py-4">
+            <input type="number" name="contributions[${rowCounter}][tithe]" step="0.01" min="0" 
+                   class="contribution-input w-full px-2 py-1 border border-gray-300 rounded text-sm text-right" 
+                   data-type="tithe" placeholder="0.00">
+        </td>
+        <td class="px-3 py-4">
+            <input type="number" name="contributions[${rowCounter}][offering]" step="0.01" min="0" 
+                   class="contribution-input w-full px-2 py-1 border border-gray-300 rounded text-sm text-right" 
+                   data-type="offering" placeholder="0.00">
+        </td>
+        <td class="px-3 py-4">
+            <input type="number" name="contributions[${rowCounter}][special_offering]" step="0.01" min="0" 
+                   class="contribution-input w-full px-2 py-1 border border-gray-300 rounded text-sm text-right" 
+                   data-type="special_offering" placeholder="0.00">
+        </td>
+        <td class="px-3 py-4">
+            <input type="number" name="contributions[${rowCounter}][building_fund]" step="0.01" min="0" 
+                   class="contribution-input w-full px-2 py-1 border border-gray-300 rounded text-sm text-right" 
+                   data-type="building_fund" placeholder="0.00">
+        </td>
+        <td class="px-3 py-4">
+            <input type="number" name="contributions[${rowCounter}][missions]" step="0.01" min="0" 
+                   class="contribution-input w-full px-2 py-1 border border-gray-300 rounded text-sm text-right" 
+                   data-type="missions" placeholder="0.00">
+        </td>
+        <td class="px-3 py-4">
+            <input type="number" name="contributions[${rowCounter}][other]" step="0.01" min="0" 
+                   class="contribution-input w-full px-2 py-1 border border-gray-300 rounded text-sm text-right" 
+                   data-type="other" placeholder="0.00">
+        </td>
+        <td class="px-3 py-4">
+            <select name="contributions[${rowCounter}][payment_method]" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                <option value="">Use Default</option>
+                <option value="cash">Cash</option>
+                <option value="check">Check</option>
+                <option value="online">Online</option>
+                <option value="bank_transfer">Bank Transfer</option>
+            </select>
+        </td>
+        <td class="px-3 py-4">
+            <div class="row-total font-semibold text-gray-900">$0.00</div>
+        </td>
+        <td class="px-3 py-4">
+            <button type="button" onclick="removeRow(this)" 
+                    class="text-red-600 hover:text-red-800 p-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+            </button>
+        </td>
+    `;
+    
+    tbody.appendChild(row);
+    
+    // Add event listeners for this row
+    const contributionInputs = row.querySelectorAll('.contribution-input');
+    contributionInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            updateRowTotal(row);
+            updateGrandTotal();
+        });
+    });
+    
+    rowCounter++;
+}
+
+function removeRow(button) {
+    const row = button.closest('tr');
+    row.remove();
+    updateGrandTotal();
+}
+
+function updateRowTotal(row) {
+    const inputs = row.querySelectorAll('.contribution-input');
+    let total = 0;
+    
+    inputs.forEach(input => {
+        const value = parseFloat(input.value) || 0;
+        total += value;
+    });
+    
+    const totalElement = row.querySelector('.row-total');
+    totalElement.textContent = `$${total.toFixed(2)}`;
+    
+    // Highlight row if it has contributions
+    if (total > 0) {
+        row.classList.add('bg-green-50');
+    } else {
+        row.classList.remove('bg-green-50');
+    }
+}
+
+function updateGrandTotal() {
+    const allRowTotals = document.querySelectorAll('.row-total');
+    grandTotal = 0;
+    
+    allRowTotals.forEach(totalElement => {
+        const amount = parseFloat(totalElement.textContent.replace('$', '')) || 0;
+        grandTotal += amount;
+    });
+    
+    document.getElementById('grand-total').textContent = grandTotal.toFixed(2);
+}
+
+// Auto-set payment method from default
+document.getElementById('default_payment_method').addEventListener('change', function() {
+    const defaultMethod = this.value;
+    const paymentSelects = document.querySelectorAll('select[name*="[payment_method]"]');
+    paymentSelects.forEach(select => {
+        if (select.value === "") {
+            // Set placeholder text or handle default selection
+            select.style.opacity = '0.7';
+        }
+    });
+});
+</script>
+{% endblock %}

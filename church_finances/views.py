@@ -4,7 +4,7 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.models import User, Group
 from django.contrib.messages import success, error, info
 from django.db.models import Sum, Q
-from django.http import HttpResponseNotAllowed
+from django.http import HttpResponseNotAllowed, HttpResponse
 from django.utils import timezone
 from .models import Transaction, Church, ChurchMember, Contribution
 from .forms import (
@@ -15,9 +15,12 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.db import transaction
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
-from datetime import datetime
+from datetime import datetime, date
 from calendar import monthrange
 from collections import defaultdict
+import io
+from django.template.loader import get_template
+from xhtml2pdf import pisa
 
 # Static page views
 def about_view(request):
@@ -210,6 +213,27 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def csrf_failure(request, reason=""):
+    """
+    Custom CSRF failure view for debugging
+    """
+    logger.error(f"CSRF failure: {reason}")
+    logger.error(f"Request META: {request.META}")
+    logger.error(f"Cookies: {request.COOKIES}")
+    
+    context = {
+        'reason': reason,
+        'debug_info': {
+            'csrf_cookie': request.COOKIES.get('csrftoken', 'No CSRF cookie'),
+            'user_agent': request.META.get('HTTP_USER_AGENT', 'Unknown'),
+            'referer': request.META.get('HTTP_REFERER', 'No referer'),
+        }
+    }
+    return render(request, 'church_finances/csrf_failure.html', context, status=403)
+
+logger = logging.getLogger(__name__)
+
+@ensure_csrf_cookie
 @ensure_csrf_cookie
 def user_login_view(request):
     """
@@ -227,7 +251,13 @@ def user_login_view(request):
             success(request, f"Welcome back, {user.username}!")
             return redirect("dashboard")
         else:
-            error(request, "Invalid username or password.")
+            # More detailed error handling
+            if form.errors:
+                for field, field_errors in form.errors.items():
+                    for err_msg in field_errors:
+                        error(request, f"{field}: {err_msg}")
+            else:
+                error(request, "Invalid username or password.")
     else:
         form = AuthenticationForm()
     
@@ -547,6 +577,31 @@ def dashboard_view(request):
     """
     Displays a financial summary dashboard for the user's church.
     """
+    # Handle admin users who don't have church relationships
+    if request.user.is_superuser:
+        # For admin users, show all churches data or a special admin dashboard
+        total_income = (
+            Transaction.objects.filter(type="income")
+            .aggregate(Sum("amount"))["amount__sum"] or 0
+        )
+        total_expense = (
+            Transaction.objects.filter(type="expense")
+            .aggregate(Sum("amount"))["amount__sum"] or 0
+        )
+        net_balance = total_income - total_expense
+        recent_transactions = Transaction.objects.all()[:10]
+        
+        context = {
+            "total_income": total_income,
+            "total_expense": total_expense,
+            "net_balance": net_balance,
+            "recent_transactions": recent_transactions,
+            "church_role": "Administrator",
+            "is_admin": True,
+            "all_churches": Church.objects.all(),
+        }
+        return render(request, "church_finances/dashboard.html", context)
+    
     church = get_user_church(request.user)
     if not church:
         info(request, "Your church account is pending approval.")
@@ -566,7 +621,13 @@ def dashboard_view(request):
     recent_transactions = Transaction.objects.filter(church=church)[:10]
 
     # Get church member info
-    church_role = ChurchMember.objects.get(user=request.user, church=church).role
+    try:
+        church_member = ChurchMember.objects.get(user=request.user, church=church)
+        church_role = church_member.role
+    except ChurchMember.DoesNotExist:
+        # If no ChurchMember relationship exists, user shouldn't have access
+        info(request, "Your church membership is not properly configured. Please contact support.")
+        return render(request, "church_finances/pending_approval.html")
     
     # Get counts for dashboard cards
     total_members = ChurchMember.objects.filter(church=church, is_active=True).count()
@@ -920,3 +981,390 @@ def pending_approval_view(request):
     Display the pending approval page
     """
     return render(request, "church_finances/pending_approval.html")
+
+
+# ==================== ENHANCED TITHES & OFFERINGS MANAGEMENT ====================
+
+@login_required
+def member_contributions_view(request):
+    """
+    Member's personal contribution history and summary
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    try:
+        member = ChurchMember.objects.get(user=request.user, church=church)
+    except ChurchMember.DoesNotExist:
+        error(request, "Church membership not found.")
+        return redirect('dashboard')
+
+    # Get current year or requested year
+    year = request.GET.get('year', timezone.now().year)
+    try:
+        year = int(year)
+    except (ValueError, TypeError):
+        year = timezone.now().year
+
+    # Get member's contributions for the year
+    start_date = date(year, 1, 1)
+    end_date = date(year, 12, 31)
+    
+    contributions = Contribution.objects.filter(
+        member=member,
+        date__range=[start_date, end_date]
+    ).order_by('-date')
+
+    # Calculate totals by type
+    totals = {
+        'tithe': contributions.filter(contribution_type='tithe').aggregate(Sum('amount'))['amount__sum'] or 0,
+        'offering': contributions.filter(contribution_type='offering').aggregate(Sum('amount'))['amount__sum'] or 0,
+        'special_offering': contributions.filter(contribution_type='special_offering').aggregate(Sum('amount'))['amount__sum'] or 0,
+        'building_fund': contributions.filter(contribution_type='building_fund').aggregate(Sum('amount'))['amount__sum'] or 0,
+        'missions': contributions.filter(contribution_type='missions').aggregate(Sum('amount'))['amount__sum'] or 0,
+        'other': contributions.filter(contribution_type='other').aggregate(Sum('amount'))['amount__sum'] or 0,
+    }
+    totals['total'] = sum(totals.values())
+
+    # Monthly breakdown
+    monthly_totals = {}
+    for month in range(1, 13):
+        month_contributions = contributions.filter(date__month=month)
+        monthly_totals[month] = {
+            'total': month_contributions.aggregate(Sum('amount'))['amount__sum'] or 0,
+            'tithe': month_contributions.filter(contribution_type='tithe').aggregate(Sum('amount'))['amount__sum'] or 0,
+            'offering': month_contributions.filter(contribution_type='offering').aggregate(Sum('amount'))['amount__sum'] or 0,
+        }
+
+    context = {
+        'member': member,
+        'contributions': contributions,
+        'totals': totals,
+        'monthly_totals': monthly_totals,
+        'year': year,
+        'current_year': timezone.now().year,
+        'available_years': range(2020, timezone.now().year + 1),
+        'church': church,
+    }
+    
+    return render(request, "church_finances/member_contributions.html", context)
+
+@login_required
+def contribution_statement_pdf(request, year=None):
+    """
+    Generate annual contribution statement PDF for a member
+    """
+    church = get_user_church(request.user)
+    if not church:
+        return HttpResponse('Unauthorized', status=401)
+
+    try:
+        member = ChurchMember.objects.get(user=request.user, church=church)
+    except ChurchMember.DoesNotExist:
+        return HttpResponse('Member not found', status=404)
+
+    if year is None:
+        year = timezone.now().year
+    else:
+        year = int(year)
+
+    # Get contributions for the year
+    start_date = date(year, 1, 1)
+    end_date = date(year, 12, 31)
+    
+    contributions = Contribution.objects.filter(
+        member=member,
+        date__range=[start_date, end_date]
+    ).order_by('date')
+
+    # Calculate totals
+    totals = {
+        'tithe': contributions.filter(contribution_type='tithe').aggregate(Sum('amount'))['amount__sum'] or 0,
+        'offering': contributions.filter(contribution_type='offering').aggregate(Sum('amount'))['amount__sum'] or 0,
+        'special_offering': contributions.filter(contribution_type='special_offering').aggregate(Sum('amount'))['amount__sum'] or 0,
+        'building_fund': contributions.filter(contribution_type='building_fund').aggregate(Sum('amount'))['amount__sum'] or 0,
+        'missions': contributions.filter(contribution_type='missions').aggregate(Sum('amount'))['amount__sum'] or 0,
+        'other': contributions.filter(contribution_type='other').aggregate(Sum('amount'))['amount__sum'] or 0,
+    }
+    totals['total'] = sum(totals.values())
+
+    # Generate PDF
+    template = get_template('church_finances/print/contribution_statement.html')
+    context = {
+        'member': member,
+        'church': church,
+        'contributions': contributions,
+        'totals': totals,
+        'year': year,
+        'generated_date': timezone.now(),
+    }
+    
+    html = template.render(context)
+    result = io.BytesIO()
+    pdf = pisa.pisaDocument(io.BytesIO(html.encode("UTF-8")), result)
+    
+    if not pdf.err:
+        response = HttpResponse(result.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="contribution_statement_{year}_{member.user.username}.pdf"'
+        return response
+    
+    return HttpResponse('Error generating PDF', status=500)
+
+@login_required
+def quick_tithe_entry(request):
+    """
+    Quick tithe entry form for members
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    try:
+        member = ChurchMember.objects.get(user=request.user, church=church)
+    except ChurchMember.DoesNotExist:
+        error(request, "Church membership not found.")
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        amount = request.POST.get('amount')
+        contribution_type = request.POST.get('contribution_type', 'tithe')
+        payment_method = request.POST.get('payment_method', 'cash')
+        reference_number = request.POST.get('reference_number', '')
+        notes = request.POST.get('notes', '')
+        
+        try:
+            amount = float(amount)
+            if amount <= 0:
+                error(request, "Amount must be greater than zero.")
+                return redirect('quick_tithe_entry')
+                
+            contribution = Contribution.objects.create(
+                member=member,
+                church=church,
+                date=timezone.now().date(),
+                contribution_type=contribution_type,
+                amount=amount,
+                payment_method=payment_method,
+                reference_number=reference_number,
+                notes=notes,
+                recorded_by=request.user
+            )
+            
+            success(request, f"${amount} {contribution_type} recorded successfully!")
+            return redirect('member_contributions')
+            
+        except (ValueError, TypeError):
+            error(request, "Please enter a valid amount.")
+            return redirect('quick_tithe_entry')
+
+    # Recent contributions for reference
+    recent_contributions = Contribution.objects.filter(
+        member=member
+    ).order_by('-date')[:5]
+
+    context = {
+        'member': member,
+        'church': church,
+        'recent_contributions': recent_contributions,
+        'contribution_types': Contribution.CONTRIBUTION_TYPES,
+        'payment_methods': Contribution.PAYMENT_METHODS,
+    }
+    
+    return render(request, "church_finances/quick_tithe_entry.html", context)
+
+@login_required
+def tithes_offerings_dashboard(request):
+    """
+    Enhanced dashboard for tithes and offerings management
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    try:
+        member = ChurchMember.objects.get(user=request.user, church=church)
+    except ChurchMember.DoesNotExist:
+        error(request, "Church membership not found.")
+        return redirect('dashboard')
+
+    # Current year stats
+    current_year = timezone.now().year
+    start_date = date(current_year, 1, 1)
+    end_date = date(current_year, 12, 31)
+
+    if member.role in ['admin', 'treasurer', 'pastor']:
+        # Admin view - see all church contributions
+        contributions = Contribution.objects.filter(
+            church=church,
+            date__range=[start_date, end_date]
+        )
+        
+        # Top contributors (if admin/treasurer)
+        if member.role in ['admin', 'treasurer']:
+            top_contributors = Contribution.objects.filter(
+                church=church,
+                date__range=[start_date, end_date]
+            ).values('member__user__first_name', 'member__user__last_name').annotate(
+                total=Sum('amount')
+            ).order_by('-total')[:10]
+        else:
+            top_contributors = []
+            
+        context_type = 'admin'
+    else:
+        # Member view - see only their contributions
+        contributions = Contribution.objects.filter(
+            member=member,
+            date__range=[start_date, end_date]
+        )
+        top_contributors = []
+        context_type = 'member'
+
+    # Calculate totals
+    totals = {
+        'tithe': contributions.filter(contribution_type='tithe').aggregate(Sum('amount'))['amount__sum'] or 0,
+        'offering': contributions.filter(contribution_type='offering').aggregate(Sum('amount'))['amount__sum'] or 0,
+        'special_offering': contributions.filter(contribution_type='special_offering').aggregate(Sum('amount'))['amount__sum'] or 0,
+        'building_fund': contributions.filter(contribution_type='building_fund').aggregate(Sum('amount'))['amount__sum'] or 0,
+        'missions': contributions.filter(contribution_type='missions').aggregate(Sum('amount'))['amount__sum'] or 0,
+        'other': contributions.filter(contribution_type='other').aggregate(Sum('amount'))['amount__sum'] or 0,
+    }
+    totals['total'] = sum(totals.values())
+
+    # Recent contributions
+    recent_contributions = contributions.order_by('-date')[:10]
+
+    # Monthly trend (last 12 months)
+    monthly_trend = []
+    for i in range(12):
+        month_date = timezone.now().date().replace(day=1) - timezone.timedelta(days=30*i)
+        month_start = month_date.replace(day=1)
+        if month_date.month == 12:
+            month_end = month_date.replace(year=month_date.year+1, month=1, day=1) - timezone.timedelta(days=1)
+        else:
+            month_end = month_date.replace(month=month_date.month+1, day=1) - timezone.timedelta(days=1)
+            
+        month_contributions = contributions.filter(date__range=[month_start, month_end])
+        monthly_trend.append({
+            'month': month_date.strftime('%b %Y'),
+            'total': month_contributions.aggregate(Sum('amount'))['amount__sum'] or 0,
+            'tithe': month_contributions.filter(contribution_type='tithe').aggregate(Sum('amount'))['amount__sum'] or 0,
+            'offering': month_contributions.filter(contribution_type='offering').aggregate(Sum('amount'))['amount__sum'] or 0,
+        })
+    
+    monthly_trend.reverse()  # Show oldest to newest
+
+    # Calculate additional values for template
+    total_members_count = ChurchMember.objects.filter(church=church, is_active=True).count() if context_type == 'admin' else 0
+    
+    # Calculate percentages and averages
+    if totals['total'] > 0:
+        tithe_percentage = round((totals['tithe'] / totals['total']) * 100, 1)
+        offering_percentage = round((totals['offering'] / totals['total']) * 100, 1)
+    else:
+        tithe_percentage = 0
+        offering_percentage = 0
+        
+    if total_members_count > 0:
+        average_per_member = round(totals['total'] / total_members_count, 2)
+    else:
+        average_per_member = 0
+        
+    # Add percentage to monthly trend for chart display
+    max_month_total = max([month['total'] for month in monthly_trend] + [0])
+    for month in monthly_trend:
+        if max_month_total > 0:
+            month['percentage'] = round((month['total'] / max_month_total) * 100, 1)
+        else:
+            month['percentage'] = 0
+
+    context = {
+        'member': member,
+        'church': church,
+        'totals': totals,
+        'recent_contributions': recent_contributions,
+        'monthly_trend': monthly_trend,
+        'top_contributors': top_contributors,
+        'current_year': current_year,
+        'context_type': context_type,
+        'total_members': total_members_count,
+        'tithe_percentage': tithe_percentage,
+        'offering_percentage': offering_percentage,
+        'average_per_member': average_per_member,
+    }
+    
+    return render(request, "church_finances/tithes_offerings_dashboard.html", context)
+
+@login_required
+def bulk_contribution_entry(request):
+    """
+    Bulk entry form for contributions (admin/treasurer only)
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    try:
+        member = ChurchMember.objects.get(user=request.user, church=church)
+    except ChurchMember.DoesNotExist:
+        error(request, "Church membership not found.")
+        return redirect('dashboard')
+
+    # Check permissions
+    if member.role not in ['admin', 'treasurer']:
+        error(request, "You don't have permission to access bulk entry.")
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        contributions_data = request.POST.getlist('contributions')
+        success_count = 0
+        error_count = 0
+        
+        for contribution_json in contributions_data:
+            try:
+                import json
+                data = json.loads(contribution_json)
+                
+                # Validate and create contribution
+                contrib_member = ChurchMember.objects.get(id=data['member_id'], church=church)
+                
+                Contribution.objects.create(
+                    member=contrib_member,
+                    church=church,
+                    date=datetime.strptime(data['date'], '%Y-%m-%d').date(),
+                    contribution_type=data['contribution_type'],
+                    amount=float(data['amount']),
+                    payment_method=data['payment_method'],
+                    reference_number=data.get('reference_number', ''),
+                    notes=data.get('notes', ''),
+                    recorded_by=request.user
+                )
+                success_count += 1
+                
+            except Exception as e:
+                error_count += 1
+                
+        if success_count > 0:
+            success(request, f"Successfully recorded {success_count} contributions.")
+        if error_count > 0:
+            error(request, f"Failed to record {error_count} contributions.")
+            
+        return redirect('contribution_list')
+
+    # Get all church members for the dropdown
+    church_members = ChurchMember.objects.filter(church=church, is_active=True).order_by('user__first_name', 'user__last_name')
+
+    context = {
+        'member': member,
+        'church': church,
+        'church_members': church_members,
+        'contribution_types': Contribution.CONTRIBUTION_TYPES,
+        'payment_methods': Contribution.PAYMENT_METHODS,
+    }
+    
+    return render(request, "church_finances/bulk_contribution_entry.html", context)
