@@ -1412,3 +1412,37 @@ def bulk_contribution_entry(request):
     }
     
     return render(request, "church_finances/bulk_contribution_entry.html", context)
+
+
+def csrf_failure(request, reason=""):
+    """
+    Custom CSRF failure view for debugging CSRF issues in production
+    """
+    from django.conf import settings
+    
+    # Collect debug information
+    debug_info = {
+        'reason': reason,
+        'request_host': request.get_host(),
+        'request_scheme': request.scheme,
+        'full_url': request.build_absolute_uri(),
+        'csrf_trusted_origins': getattr(settings, 'CSRF_TRUSTED_ORIGINS', []),
+        'allowed_hosts': getattr(settings, 'ALLOWED_HOSTS', []),
+        'debug_mode': getattr(settings, 'DEBUG', False),
+        'user_agent': request.META.get('HTTP_USER_AGENT', 'Unknown'),
+        'referer': request.META.get('HTTP_REFERER', 'No referer'),
+        'method': request.method,
+    }
+    
+    # In production, log the error details
+    if not settings.DEBUG:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"CSRF Failure: {debug_info}")
+    
+    context = {
+        'debug_info': debug_info,
+        'is_debug': settings.DEBUG
+    }
+    
+    return render(request, 'church_finances/csrf_failure.html', context, status=403)

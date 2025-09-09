@@ -22,17 +22,20 @@ In your Railway project settings, add these environment variables:
 # Essential Configuration
 SECRET_KEY=*6^4ue1kw#!@zea9)$)(x^^*c#c!=qc64r=@*#blxz3q1-3av1
 DEBUG=False
-ALLOWED_HOSTS=your-app-name.up.railway.app
-CSRF_TRUSTED_ORIGINS=https://your-app-name.up.railway.app
+ALLOWED_HOSTS=churchbooksmanagement.com,www.churchbooksmanagement.com,your-app-name.up.railway.app
+CSRF_TRUSTED_ORIGINS=https://churchbooksmanagement.com,https://www.churchbooksmanagement.com,https://your-app-name.up.railway.app
 
 # PayPal Configuration (Optional)
 PAYPAL_CLIENT_ID=your_paypal_client_id
 PAYPAL_CLIENT_SECRET=your_paypal_client_secret
 PAYPAL_MODE=sandbox
-PAYPAL_BASE_URL=https://your-app-name.up.railway.app
+PAYPAL_BASE_URL=https://churchbooksmanagement.com
 ```
 
-> **Important**: Replace `your-app-name.up.railway.app` with your actual Railway domain
+> **Important**: 
+> - Replace `your-app-name.up.railway.app` with your actual Railway domain
+> - Make sure both `churchbooksmanagement.com` and `www.churchbooksmanagement.com` are included
+> - Use `https://` (not `http://`) for production domains
 
 #### 4. Deploy!
 Railway will automatically:

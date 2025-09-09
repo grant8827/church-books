@@ -31,12 +31,19 @@ SECRET_KEY = os.environ.get('SECRET_KEY', "django-insecure-zdk_gm_9vek_n8$o-68f*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['*'] # Allow all hosts for Railway deployment
+ALLOWED_HOSTS = [
+    'church-books-production.up.railway.app',
+    'churchbooksmanagement.com', 
+    'www.churchbooksmanagement.com',
+    '127.0.0.1',
+    'localhost'
+] if not DEBUG else ['*']  # Allow all hosts only in development
 
 # CSRF and Session Settings for Production
 CSRF_TRUSTED_ORIGINS = [
     'https://church-books-production.up.railway.app',
-    'https://churchbooksmanagement.com'
+    'https://churchbooksmanagement.com',  # Fixed: Added missing comma
+    'https://www.churchbooksmanagement.com',  # Added: Support www subdomain
     'https://*.up.railway.app',  # Wildcard for any Railway subdomain
     'http://127.0.0.1:8000',
     'http://localhost:8000',
@@ -49,10 +56,16 @@ additional_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
 if additional_origins:
     CSRF_TRUSTED_ORIGINS.extend([origin.strip() for origin in additional_origins.split(',') if origin.strip()])
 
+# CSRF Cookie settings
 CSRF_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
 SESSION_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SAMESITE = 'Lax'
+
+# Additional CSRF settings for custom domains
+CSRF_COOKIE_DOMAIN = None  # Let Django auto-detect
+CSRF_USE_SESSIONS = False  # Use cookies instead of sessions for CSRF tokens
+CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access to CSRF token if needed
 
 # Additional security settings for production
 if not DEBUG:
@@ -63,8 +76,11 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
-# CSRF debugging (only in development)
+# CSRF debugging and error handling
 if DEBUG:
+    CSRF_FAILURE_VIEW = 'church_finances.views.csrf_failure'
+else:
+    # Also enable in production for better error reporting
     CSRF_FAILURE_VIEW = 'church_finances.views.csrf_failure'
 
 
