@@ -20,7 +20,13 @@ from calendar import monthrange
 from collections import defaultdict
 import io
 from django.template.loader import get_template
-from xhtml2pdf import pisa
+
+# Conditional import for PDF generation
+try:
+    from xhtml2pdf import pisa
+    PDF_AVAILABLE = True
+except ImportError:
+    PDF_AVAILABLE = False
 
 # Static page views
 def about_view(request):
@@ -1056,6 +1062,11 @@ def contribution_statement_pdf(request, year=None):
     """
     Generate annual contribution statement PDF for a member
     """
+    # Check if PDF generation is available
+    if not PDF_AVAILABLE:
+        error(request, "PDF generation is currently unavailable. Please contact your administrator.")
+        return redirect('member_contributions')
+    
     church = get_user_church(request.user)
     if not church:
         return HttpResponse('Unauthorized', status=401)
@@ -1079,38 +1090,71 @@ def contribution_statement_pdf(request, year=None):
         date__range=[start_date, end_date]
     ).order_by('date')
 
-    # Calculate totals
-    totals = {
-        'tithe': contributions.filter(contribution_type='tithe').aggregate(Sum('amount'))['amount__sum'] or 0,
-        'offering': contributions.filter(contribution_type='offering').aggregate(Sum('amount'))['amount__sum'] or 0,
-        'special_offering': contributions.filter(contribution_type='special_offering').aggregate(Sum('amount'))['amount__sum'] or 0,
-        'building_fund': contributions.filter(contribution_type='building_fund').aggregate(Sum('amount'))['amount__sum'] or 0,
-        'missions': contributions.filter(contribution_type='missions').aggregate(Sum('amount'))['amount__sum'] or 0,
-        'other': contributions.filter(contribution_type='other').aggregate(Sum('amount'))['amount__sum'] or 0,
-    }
-    totals['total'] = sum(totals.values())
+    # Calculate contribution summary
+    contribution_summary = []
+    for contrib_type, display_name in Contribution.CONTRIBUTION_TYPES:
+        type_contributions = contributions.filter(contribution_type=contrib_type)
+        count = type_contributions.count()
+        total = type_contributions.aggregate(Sum('amount'))['amount__sum'] or 0
+        if count > 0:  # Only include types with contributions
+            contribution_summary.append({
+                'type': contrib_type,
+                'type_display': display_name,
+                'count': count,
+                'total': total
+            })
+
+    # Monthly breakdown
+    monthly_breakdown = []
+    for month in range(1, 13):
+        month_start = date(year, month, 1)
+        month_end = date(year, month, monthrange(year, month)[1])
+        month_contributions = contributions.filter(date__range=[month_start, month_end])
+        
+        month_data = {
+            'month': month_start.strftime('%B'),
+            'tithe': month_contributions.filter(contribution_type='tithe').aggregate(Sum('amount'))['amount__sum'] or 0,
+            'offering': month_contributions.filter(contribution_type='offering').aggregate(Sum('amount'))['amount__sum'] or 0,
+            'special_offering': month_contributions.filter(contribution_type='special_offering').aggregate(Sum('amount'))['amount__sum'] or 0,
+            'building_fund': month_contributions.filter(contribution_type='building_fund').aggregate(Sum('amount'))['amount__sum'] or 0,
+            'missions': month_contributions.filter(contribution_type='missions').aggregate(Sum('amount'))['amount__sum'] or 0,
+            'other': month_contributions.filter(contribution_type='other').aggregate(Sum('amount'))['amount__sum'] or 0,
+        }
+        month_data['total'] = sum(month_data.values()) - month_data['month']  # Subtract the month string
+        monthly_breakdown.append(month_data)
+
+    total_amount = sum([item['total'] for item in contribution_summary])
+    total_contributions = contributions.count()
 
     # Generate PDF
-    template = get_template('church_finances/print/contribution_statement.html')
+    template = get_template('church_finances/contribution_statement.html')
     context = {
         'member': member,
         'church': church,
-        'contributions': contributions,
-        'totals': totals,
+        'contribution_summary': contribution_summary,
+        'monthly_breakdown': monthly_breakdown,
+        'total_amount': total_amount,
+        'total_contributions': total_contributions,
         'year': year,
-        'generated_date': timezone.now(),
+        'statement_date': timezone.now(),
     }
     
     html = template.render(context)
     result = io.BytesIO()
-    pdf = pisa.pisaDocument(io.BytesIO(html.encode("UTF-8")), result)
     
-    if not pdf.err:
-        response = HttpResponse(result.getvalue(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="contribution_statement_{year}_{member.user.username}.pdf"'
-        return response
-    
-    return HttpResponse('Error generating PDF', status=500)
+    try:
+        pdf = pisa.pisaDocument(io.BytesIO(html.encode("UTF-8")), result)
+        
+        if not pdf.err:
+            response = HttpResponse(result.getvalue(), content_type='application/pdf')
+            response['Content-Disposition'] = f'inline; filename="contribution_statement_{year}_{member.user.username}.pdf"'
+            return response
+        else:
+            error(request, "Error generating PDF. Please try again or contact support.")
+            return redirect('member_contributions')
+    except Exception as e:
+        error(request, f"PDF generation failed: {str(e)}")
+        return redirect('member_contributions')
 
 @login_required
 def quick_tithe_entry(request):
