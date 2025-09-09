@@ -11,3 +11,4 @@ paypalrestsdk==1.13.3
 requests==2.31.0
 xhtml2pdf==0.2.17
 reportlab==4.4.3
+beautifulsoup4==4.12.3

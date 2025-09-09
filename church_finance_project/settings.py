@@ -33,12 +33,34 @@ DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = ['*'] # Allow all hosts for Railway deployment
 
-# CSRF and Session Settings
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,https://localhost:8000,http://127.0.0.1:8000,http://127.0.0.1:8083,http://localhost:8083,https://web-production-ffeb6.up.railway.app,https://*.up.railway.app,https://churchbooksmanagement.com/').split(',')
+# CSRF and Session Settings for Production
+CSRF_TRUSTED_ORIGINS = [
+    'https://church-books-production.up.railway.app',
+    'https://*.up.railway.app',  # Wildcard for any Railway subdomain
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+    'http://127.0.0.1:8001',
+    'http://localhost:8001'
+]
+
+# Get additional CSRF origins from environment variable
+additional_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+if additional_origins:
+    CSRF_TRUSTED_ORIGINS.extend([origin.strip() for origin in additional_origins.split(',') if origin.strip()])
+
 CSRF_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
 SESSION_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SAMESITE = 'Lax'
+
+# Additional security settings for production
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 # CSRF debugging (only in development)
 if DEBUG:

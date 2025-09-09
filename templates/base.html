@@ -8,6 +8,13 @@
     <title>{% block title %}Church Books{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- CSRF Debug Info (only in development) -->
+    {% if debug %}
+    <script>
+        console.log('CSRF Token from Meta:', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+        console.log('Available Cookies:', document.cookie);
+    </script>
+    {% endif %}
     <style>
         body {
             font-family: 'Inter', sans-serif;
