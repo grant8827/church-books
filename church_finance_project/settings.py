@@ -36,6 +36,7 @@ ALLOWED_HOSTS = ['*'] # Allow all hosts for Railway deployment
 # CSRF and Session Settings for Production
 CSRF_TRUSTED_ORIGINS = [
     'https://church-books-production.up.railway.app',
+    'https://churchbooksmanagement.com'
     'https://*.up.railway.app',  # Wildcard for any Railway subdomain
     'http://127.0.0.1:8000',
     'http://localhost:8000',
