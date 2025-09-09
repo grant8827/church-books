@@ -38,7 +38,6 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     'localhost'
 ] if not DEBUG else ['*']  # Allow all hosts only in development
-
 # CSRF and Session Settings for Production
 CSRF_TRUSTED_ORIGINS = [
     'https://church-books-production.up.railway.app',
