@@ -66,6 +66,11 @@ CSRF_COOKIE_DOMAIN = None  # Let Django auto-detect
 CSRF_USE_SESSIONS = False  # Use cookies instead of sessions for CSRF tokens
 CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access to CSRF token if needed
 
+# Session security
+SESSION_COOKIE_AGE = 1209600  # 2 weeks
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_SAVE_EVERY_REQUEST = True
+
 # Additional security settings for production
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
@@ -74,6 +79,11 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000  # 1 year
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+    # Enable SSL redirect in production (Railway handles this)
+    SECURE_SSL_REDIRECT = False  # Railway handles SSL termination
+else:
+    # Development settings
+    SECURE_SSL_REDIRECT = False
 
 # CSRF debugging and error handling
 if DEBUG:
@@ -138,29 +148,42 @@ WSGI_APPLICATION = "church_finance_project.wsgi.application"
     #}
 #}
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME', 'railway'),
-        'USER': os.getenv('DB_USER', 'root'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'dmqXKCvymXJrmwlAUTYtODBvRAuUxETT'),
-        'HOST': os.getenv('DB_HOST', 'centerbeam.proxy.rlwy.net'),
-        'PORT': os.getenv('DB_PORT', '21213'),
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-            'charset': 'utf8mb4',
-        }
-    }
-}
-
-# Use MySQL in production (Railway)
+# Database configuration
+# Use Railway's DATABASE_URL in production, fallback to SQLite for local development
 if 'DATABASE_URL' in os.environ:
     # Parse the Railway MySQL connection URL
-    DATABASES['default'] = dj_database_url.parse(os.environ.get('DATABASE_URL'))
+    DATABASES = {
+        'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
+    }
+    # Ensure MySQL engine and options
     DATABASES['default']['ENGINE'] = 'django.db.backends.mysql'
     DATABASES['default']['OPTIONS'] = {
         'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
         'charset': 'utf8mb4',
+    }
+elif all(os.getenv(key) for key in ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST', 'DB_PORT']):
+    # Use individual database environment variables
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('DB_HOST'),
+            'PORT': os.getenv('DB_PORT'),
+            'OPTIONS': {
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+                'charset': 'utf8mb4',
+            }
+        }
+    }
+else:
+    # Fallback to SQLite for local development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -231,3 +254,46 @@ PAYPAL_BASE_URL = os.environ.get('PAYPAL_BASE_URL', 'http://127.0.0.1:8000')
 # PayPal Subscription Plan IDs (These need to be created in PayPal dashboard)
 PAYPAL_STANDARD_PLAN_ID = os.environ.get('PAYPAL_STANDARD_PLAN_ID', 'P-XXXXXXXXXXXXXXXXXXXX')
 PAYPAL_PREMIUM_PLAN_ID = os.environ.get('PAYPAL_PREMIUM_PLAN_ID', 'P-XXXXXXXXXXXXXXXXXXXX')
+
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'django.log',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+        'church_finances': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+    },
+}
