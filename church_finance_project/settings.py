@@ -35,6 +35,10 @@ ALLOWED_HOSTS = [
     'church-books-production.up.railway.app',
     'churchbooksmanagement.com', 
     'www.churchbooksmanagement.com',
+    'https://church-books-production.up.railway.app',
+    'https://churchbooksmanagement.com',  # Fixed: Added missing comma
+    'https://www.churchbooksmanagement.com',  # Added: Support www subdomain
+    'https://*.up.railway.app',  # Wildcard for any Railway sub
     '127.0.0.1',
     'localhost'
 ] if not DEBUG else ['*']  # Allow all hosts only in development
