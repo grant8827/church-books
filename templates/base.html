@@ -8,6 +8,7 @@
     <title>{% block title %}Church Books{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="{% static '/images/logo.png' %}">
     <!-- CSRF Debug Info (only in development) -->
     {% if debug %}
     <script>
@@ -123,7 +124,7 @@
                             </button>
                             <div class="absolute hidden group-hover:block bg-white text-gray-800 rounded-md shadow-lg mt-1 py-2 w-48 z-50">
                                 <a href="{% url 'tithes_offerings_dashboard' %}" class="block px-4 py-2 hover:bg-gray-100">Dashboard</a>
-                                {% if user.churchmember.role == 'member' %}
+                                {% if user.churchmember and user.churchmember.role == 'member' %}
                                     <a href="{% url 'member_contributions' %}" class="block px-4 py-2 hover:bg-gray-100">My Contributions</a>
                                     <a href="{% url 'quick_tithe_entry' %}" class="block px-4 py-2 hover:bg-gray-100">Quick Entry</a>
                                 {% else %}
@@ -162,7 +163,7 @@
                         <div class="border-t border-blue-700 pt-2">
                             <div class="text-blue-200 px-3 py-1 text-sm font-semibold">Tithes & Offerings</div>
                             <a href="{% url 'tithes_offerings_dashboard' %}" class="text-white hover:text-blue-200 rounded-md px-6 py-2 hover:bg-blue-600 transition-colors text-sm">Dashboard</a>
-                            {% if user.churchmember.role == 'member' %}
+                            {% if user.churchmember and user.churchmember.role == 'member' %}
                                 <a href="{% url 'member_contributions' %}" class="text-white hover:text-blue-200 rounded-md px-6 py-2 hover:bg-blue-600 transition-colors text-sm">My Contributions</a>
                                 <a href="{% url 'quick_tithe_entry' %}" class="text-white hover:text-blue-200 rounded-md px-6 py-2 hover:bg-blue-600 transition-colors text-sm">Quick Entry</a>
                             {% else %}
