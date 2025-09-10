@@ -6,6 +6,8 @@ from django.contrib.messages import success, error, info
 from django.db.models import Sum, Q
 from django.http import HttpResponseNotAllowed, HttpResponse
 from django.utils import timezone
+from django.urls import reverse
+from functools import wraps
 from .models import Transaction, Church, ChurchMember, Contribution
 from .forms import (
     CustomUserCreationForm, TransactionForm, ChurchRegistrationForm,
@@ -85,6 +87,17 @@ def choose_plan_view(request):
 def is_superadmin(user):
     return user.is_superuser
 
+def admin_required(function):
+    """Custom decorator that redirects to the correct login page for admin access"""
+    @wraps(function)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('/finances/login/')
+        if not request.user.is_superuser:
+            raise PermissionDenied("You must be a superuser to access this page.")
+        return function(request, *args, **kwargs)
+    return wrapper
+
 def get_user_church(user):
     """Helper function to get the user's church"""
     try:
@@ -154,8 +167,7 @@ def register_view(request):
     }
     return render(request, "church_finances/register.html", context)
 
-@user_passes_test(is_superadmin)
-@user_passes_test(is_superadmin)
+@admin_required
 def church_approval_list(request):
     """
     List all churches pending approval
@@ -165,7 +177,7 @@ def church_approval_list(request):
         'pending_churches': pending_churches
     })
 
-@user_passes_test(is_superadmin)
+@admin_required
 def approve_church(request, church_id):
     """
     Approve a church registration
@@ -199,7 +211,7 @@ def approve_church(request, church_id):
         success(request, success_msg)
     return redirect('church_approval_list')
 
-@user_passes_test(is_superadmin)
+@admin_required
 def reject_church(request, church_id):
     """
     Reject a church registration
