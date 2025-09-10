@@ -60,6 +60,8 @@ def create_paypal_subscription(request):
             first_name = request.POST.get('first_name', '')
             last_name = request.POST.get('last_name', '')
             email = request.POST.get('email', '')
+            phone_number = request.POST.get('phone_number', '')
+            role = request.POST.get('role', '')
             username = request.POST.get('username', '')
             password = request.POST.get('password', '')
             password_confirm = request.POST.get('password_confirm', '')
@@ -78,8 +80,17 @@ def create_paypal_subscription(request):
             print(f"Church Name: {church_name}")
             
             # Validate required fields
-            if not username or not password or not email:
-                messages.error(request, "Username, password, and email are required.")
+            if not username or not password or not email or not first_name or not last_name or not role:
+                messages.error(request, "All required fields must be filled out.")
+                return render(request, 'church_finances/paypal_subscription_form.html', {
+                    'selected_package': request.session.get('selected_package'),
+                    'package_price': request.session.get('package_price'),
+                })
+            
+            # Validate role selection
+            valid_roles = ['admin', 'pastor', 'assistant_pastor', 'treasurer', 'deacon']
+            if role not in valid_roles:
+                messages.error(request, "Please select a valid role.")
                 return render(request, 'church_finances/paypal_subscription_form.html', {
                     'selected_package': request.session.get('selected_package'),
                     'package_price': request.session.get('package_price'),
@@ -119,14 +130,16 @@ def create_paypal_subscription(request):
             
             print(f"DEBUG: Creating user account for {username}")
             
-            # Create user account (inactive until payment is confirmed)
+            # Create user account (inactive for offline payment, active for online payment approval)
+            is_active = False if payment_method == 'offline' else False  # Always inactive until payment/approval
+            
             user = User.objects.create_user(
                 username=username,
                 email=email,
                 password=password,
                 first_name=first_name,
                 last_name=last_name,
-                is_active=False  # Activate after payment confirmation
+                is_active=is_active
             )
             
             print(f"DEBUG: User created successfully with ID: {user.id}")
@@ -145,11 +158,13 @@ def create_paypal_subscription(request):
             
             print(f"DEBUG: Church created successfully with ID: {church.id}")
             
-            # Create ChurchMember relationship
+            # Create ChurchMember relationship with the selected role and phone number
             church_member = ChurchMember.objects.create(
                 user=user,
                 church=church,
-                role='admin'  # First user is the admin
+                role=role,  # Use the role selected by the user
+                phone_number=phone_number,
+                is_active=False  # Will be activated when admin approves or payment is confirmed
             )
             print(f"DEBUG: ChurchMember created successfully with ID: {church_member.id}")
             
@@ -160,7 +175,7 @@ def create_paypal_subscription(request):
             # Check if this is offline payment
             if payment_method == 'offline':
                 # For offline payment, create records and redirect to pending approval
-                messages.success(request, f"Registration submitted successfully! Your church account '{church_name}' and user login '{username}' are pending admin approval and offline payment confirmation.")
+                messages.success(request, f"Registration submitted successfully! Your church account '{church_name}' and user login '{username}' are pending admin approval and offline payment confirmation. You will receive an email with payment instructions once approved.")
                 
                 # Clear session data
                 request.session.pop('selected_package', None)
@@ -279,13 +294,22 @@ def paypal_success(request):
                         church.subscription_end_date = timezone.now() + timedelta(days=365)
                         church.save()
                         
-                        # Activate the user account if it exists
+                        # Activate the user account and church member if it exists
                         pending_user_id = request.session.get('pending_user_id')
                         if pending_user_id:
                             try:
                                 user = User.objects.get(id=pending_user_id)
                                 user.is_active = True
                                 user.save()
+                                
+                                # Also activate the ChurchMember
+                                try:
+                                    church_member = ChurchMember.objects.get(user=user, church=church)
+                                    church_member.is_active = True
+                                    church_member.save()
+                                except ChurchMember.DoesNotExist:
+                                    pass
+                                
                                 messages.success(request, f"Payment successful! Your church account and user login '{user.username}' have been approved and activated.")
                             except User.DoesNotExist:
                                 messages.success(request, "Payment successful! Your church account has been approved and activated.")
