@@ -311,3 +311,8 @@ LOGGING = {
         },
     },
 }
+
+# Authentication URLs
+LOGIN_URL = '/finances/login/'
+LOGIN_REDIRECT_URL = '/finances/dashboard/'
+LOGOUT_REDIRECT_URL = '/'

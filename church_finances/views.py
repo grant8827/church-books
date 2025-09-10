@@ -155,6 +155,7 @@ def register_view(request):
     return render(request, "church_finances/register.html", context)
 
 @user_passes_test(is_superadmin)
+@user_passes_test(is_superadmin)
 def church_approval_list(request):
     """
     List all churches pending approval
