@@ -62,11 +62,6 @@ CSRF_TRUSTED_ORIGINS = [
     'https://church-books-production.up.railway.app',
     'https://churchbooksmanagement.com',  # Fixed: Added missing comma
     'https://www.churchbooksmanagement.com',  # Added: Support www subdomain
-    'https://*.up.railway.app',  # Wildcard for any Railway subdomain
-    'http://127.0.0.1:8000',
-    'http://localhost:8000',
-    'http://127.0.0.1:8001',
-    'http://localhost:8001'
 ]
 
 # Get additional CSRF origins from environment variable
