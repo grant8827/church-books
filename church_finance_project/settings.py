@@ -31,17 +31,32 @@ SECRET_KEY = os.environ.get('SECRET_KEY', "django-insecure-zdk_gm_9vek_n8$o-68f*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
+# ALLOWED_HOSTS configuration
 ALLOWED_HOSTS = [
     'church-books-production.up.railway.app',
     'churchbooksmanagement.com', 
     'www.churchbooksmanagement.com',
-    'https://church-books-production.up.railway.app',
-    'https://churchbooksmanagement.com',  # Fixed: Added missing comma
-    'https://www.churchbooksmanagement.com',  # Added: Support www subdomain
-    'https://*.up.railway.app',  # Wildcard for any Railway sub
+    'healthcheck.railway.app',  # Railway health check domain
+    '*.up.railway.app',  # Railway subdomains
+    '.railway.app',  # All Railway domains
+    '.railway.internal',  # Railway internal domains
     '127.0.0.1',
     'localhost'
 ] if not DEBUG else ['*']  # Allow all hosts only in development
+
+# Add Railway-provided hostnames from environment variables
+railway_public_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+if railway_public_domain:
+    ALLOWED_HOSTS.append(railway_public_domain)
+
+railway_private_domain = os.environ.get('RAILWAY_PRIVATE_DOMAIN')
+if railway_private_domain:
+    ALLOWED_HOSTS.append(railway_private_domain)
+
+# Add additional allowed hosts from environment variable
+additional_hosts = os.environ.get('ALLOWED_HOSTS', '')
+if additional_hosts:
+    ALLOWED_HOSTS.extend([host.strip() for host in additional_hosts.split(',') if host.strip()])
 # CSRF and Session Settings for Production
 CSRF_TRUSTED_ORIGINS = [
     'https://church-books-production.up.railway.app',
