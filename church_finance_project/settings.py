@@ -137,19 +137,54 @@ WSGI_APPLICATION = "church_finance_project.wsgi.application"
 #}
 
 # Database configuration
-# MySQL only - no SQLite fallback
-if os.getenv('DATABASE_URL'):
-    # Production on Railway - MySQL
+# Check for Railway DATABASE_URL first, then construct from individual variables, then fall back to local
+database_url = os.getenv('DATABASE_URL')
+print(f"DATABASE_URL found: {bool(database_url)}")
+
+# If no DATABASE_URL but we have individual Railway DB variables, construct it
+if not database_url:
+    db_host = os.getenv('DB_HOST') or os.getenv('MYSQL_HOST')
+    db_port = os.getenv('DB_PORT') or os.getenv('MYSQL_PORT') 
+    db_name = os.getenv('DB_NAME') or os.getenv('MYSQL_DATABASE')
+    db_user = os.getenv('DB_USER') or os.getenv('MYSQL_USER')
+    db_password = os.getenv('DB_PASSWORD') or os.getenv('MYSQL_PASSWORD')
+    
+    if db_host and db_name and db_user and db_password:
+        # Construct DATABASE_URL from individual variables
+        database_url = f"mysql://{db_user}:{db_password}@{db_host}:{db_port or '3306'}/{db_name}"
+        print(f"Constructed DATABASE_URL from individual variables")
+        print(f"DB Host: {db_host}, DB Name: {db_name}")
+
+if database_url:
+    # Production database via DATABASE_URL
     try:
         DATABASES = {
-            'default': dj_database_url.parse(os.getenv('DATABASE_URL'))
+            'default': dj_database_url.parse(database_url)
         }
-        print(f"Using DATABASE_URL for production database connection")
+        print(f"Using DATABASE_URL for database connection")
+        print(f"Database: {DATABASES['default']['NAME']} @ {DATABASES['default']['HOST']}")
     except Exception as e:
         print(f"Error parsing DATABASE_URL: {e}")
+        print(f"DATABASE_URL value: {database_url}")
         raise
 else:
-    # Local MySQL development - required environment variables
+    # Local development fallback
+    print(f"No DATABASE_URL found. Checking for local MySQL environment variables...")
+    
+    db_name = os.getenv('DB_NAME')
+    db_host = os.getenv('DB_HOST') 
+    print(f"Local DB_NAME: {db_name}, DB_HOST: {db_host}")
+    
+    if not db_name and not db_host:
+        # No database configuration found
+        print("ERROR: No database configuration found!")
+        print("Missing DATABASE_URL and individual DB_* environment variables")
+        print("Available environment variables:")
+        for key in os.environ:
+            if 'DB' in key or 'MYSQL' in key or 'DATABASE' in key:
+                print(f"  {key}: {os.environ[key]}")
+        raise Exception("Database configuration missing. Set DATABASE_URL or DB_* environment variables.")
+    
     try:
         DATABASES = {
             'default': {
@@ -164,7 +199,7 @@ else:
                 }
             }
         }
-        print(f"Using local MySQL database: {os.getenv('DB_NAME', 'church_books')}")
+        print(f"Using local MySQL: {DATABASES['default']['NAME']} @ {DATABASES['default']['HOST']}")
     except Exception as e:
         print(f"Error configuring local database: {e}")
         raise

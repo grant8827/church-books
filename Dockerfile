@@ -30,8 +30,8 @@ RUN mkdir -p /app/staticfiles
 # Collect static files
 RUN python manage.py collectstatic --noinput
 
-# Create startup script
-RUN echo '#!/bin/bash\nset -e\necho "Running database migrations..."\npython manage.py migrate --noinput\necho "Starting server..."\nexec gunicorn church_finance_project.wsgi:application --bind 0.0.0.0:$PORT --log-level debug --timeout 300' > /app/start.sh
+# Create startup script with environment variable debugging
+RUN echo '#!/bin/bash\nset -e\necho "=== Environment Variables Debug ==="\necho "DATABASE_URL: ${DATABASE_URL}"\necho "RAILWAY_ENVIRONMENT: ${RAILWAY_ENVIRONMENT}"\necho "DB_NAME: ${DB_NAME}"\necho "DB_HOST: ${DB_HOST}"\necho "==============================="\necho "Running database migrations..."\npython manage.py migrate --noinput\necho "Starting server..."\nexec gunicorn church_finance_project.wsgi:application --bind 0.0.0.0:$PORT --log-level debug --timeout 300' > /app/start.sh
 RUN chmod +x /app/start.sh
 
 # Start the application
