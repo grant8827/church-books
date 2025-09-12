@@ -178,12 +178,12 @@ def registration_form_view(request):
             # Use database transaction to ensure data consistency
             with transaction.atomic():
                 # Determine if user should be active based on payment method
-                # PayPal users: immediately active after successful payment
-                # Offline users: inactive until admin approval
-                is_user_active = False  # Will be activated in PayPal success or admin approval
+                # PayPal users: immediately active (will complete payment process separately)
+                # Offline users: active but church needs approval for full access
+                is_user_active = True  # Users can login immediately after registration
                 is_church_approved = True if payment_method == 'paypal' else False
                 church_status = 'active' if payment_method == 'paypal' else 'pending'
-                is_member_active = True if payment_method == 'paypal' else False
+                is_member_active = True  # Members are active, but church approval controls access
                 
                 # Create user account
                 user = User.objects.create_user(
@@ -192,7 +192,7 @@ def registration_form_view(request):
                     password=password,
                     first_name=first_name,
                     last_name=last_name,
-                    is_active=is_user_active  # Will be activated later
+                    is_active=is_user_active  # User can login immediately
                 )
                 
                 print(f"DEBUG: User created successfully with ID: {user.id}, active: {user.is_active}")
@@ -227,8 +227,8 @@ def registration_form_view(request):
             
             # Handle payment method
             if payment_method == 'offline':
-                # For offline payment, create records and redirect to pending approval
-                messages.success(request, f"Registration submitted successfully! Your church account '{church_name}' and user login '{username}' are pending admin approval and offline payment confirmation. You will receive an email with payment instructions once approved.")
+                # For offline payment, create records and user can login but payment still needed
+                messages.success(request, f"Registration successful! Your user account '{username}' is now active and you can login. Your church account '{church_name}' is pending offline payment confirmation. You will receive an email with payment instructions.")
                 
                 # Clear session data except user/church IDs (needed for admin approval)
                 request.session.pop('selected_package', None)

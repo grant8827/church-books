@@ -335,7 +335,7 @@ def member_add_view(request):
 
     # Check if user has permission to add members
     member = ChurchMember.objects.get(user=request.user, church=church)
-    if member.role not in ['admin', 'treasurer']:
+    if member.role not in ['admin', 'treasurer', 'pastor']:
         raise PermissionDenied("You don't have permission to add members.")
 
     if request.method == "POST":
@@ -417,7 +417,7 @@ def member_activate_view(request, pk):
 
     # Check if user has permission to activate members
     user_member = ChurchMember.objects.get(user=request.user, church=church)
-    if user_member.role not in ['admin', 'treasurer']:
+    if user_member.role not in ['admin', 'treasurer', 'pastor']:
         raise PermissionDenied("You don't have permission to activate members.")
 
     member = get_object_or_404(ChurchMember, pk=pk, church=church)
@@ -438,7 +438,7 @@ def member_deactivate_view(request, pk):
 
     # Check if user has permission to deactivate members
     user_member = ChurchMember.objects.get(user=request.user, church=church)
-    if user_member.role not in ['admin', 'treasurer']:
+    if user_member.role not in ['admin', 'treasurer', 'pastor']:
         raise PermissionDenied("You don't have permission to deactivate members.")
 
     member = get_object_or_404(ChurchMember, pk=pk, church=church)
@@ -459,7 +459,7 @@ def member_edit_view(request, pk):
 
     # Check if user has permission to edit members
     user_member = ChurchMember.objects.get(user=request.user, church=church)
-    if user_member.role not in ['admin', 'treasurer']:
+    if user_member.role not in ['admin', 'treasurer', 'pastor']:
         raise PermissionDenied("You don't have permission to edit members.")
 
     member = get_object_or_404(ChurchMember, pk=pk, church=church)
@@ -512,7 +512,7 @@ def contribution_add_view(request):
 
     # Check if user has permission to add contributions
     member = ChurchMember.objects.get(user=request.user, church=church)
-    if member.role not in ['admin', 'treasurer']:
+    if member.role not in ['admin', 'treasurer', 'pastor']:
         raise PermissionDenied("You don't have permission to add contributions.")
 
     if request.method == "POST":
@@ -557,7 +557,7 @@ def contribution_edit_view(request, pk):
 
     # Check if user has permission to edit contributions
     member = ChurchMember.objects.get(user=request.user, church=church)
-    if member.role not in ['admin', 'treasurer']:
+    if member.role not in ['admin', 'treasurer', 'pastor']:
         raise PermissionDenied("You don't have permission to edit contributions.")
 
     contribution = get_object_or_404(Contribution, pk=pk, church=church)
@@ -721,7 +721,7 @@ def transaction_create_view(request):
 
     # Check if user has permission to create transactions
     member = ChurchMember.objects.get(user=request.user, church=church)
-    if member.role not in ['admin', 'treasurer']:
+    if member.role not in ['admin', 'treasurer', 'pastor']:
         raise PermissionDenied("You don't have permission to create transactions.")
 
     if request.method == "POST":
@@ -777,7 +777,7 @@ def transaction_update_view(request, pk):
 
     # Check if user has permission to update transactions
     member = ChurchMember.objects.get(user=request.user, church=church)
-    if member.role not in ['admin', 'treasurer']:
+    if member.role not in ['admin', 'treasurer', 'pastor']:
         raise PermissionDenied("You don't have permission to update transactions.")
 
     transaction = get_object_or_404(Transaction, pk=pk, church=church)
@@ -812,7 +812,7 @@ def transaction_delete_view(request, pk):
 
     # Check if user has permission to delete transactions
     member = ChurchMember.objects.get(user=request.user, church=church)
-    if member.role not in ['admin', 'treasurer']:
+    if member.role not in ['admin', 'treasurer', 'pastor']:
         raise PermissionDenied("You don't have permission to delete transactions.")
 
     transaction = get_object_or_404(Transaction, pk=pk, church=church)
@@ -1385,7 +1385,7 @@ def bulk_contribution_entry(request):
         return redirect('dashboard')
 
     # Check permissions
-    if member.role not in ['admin', 'treasurer']:
+    if member.role not in ['admin', 'treasurer', 'pastor']:
         error(request, "You don't have permission to access bulk entry.")
         return redirect('dashboard')
 
