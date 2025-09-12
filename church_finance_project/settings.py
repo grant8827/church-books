@@ -164,7 +164,7 @@ else:
 
         if db_host and db_name and db_user and db_password:
             # Construct DATABASE_URL from individual variables
-            database_url = f"postgres://{db_user}:{db_password}@{db_host}:{db_port or '5432'}/{db_name}"
+            database_url = f"postgres://{db_user}:{db_password}@{db_host}:{db_port or '5432'}/{db_name}?sslmode=disable"
             print("Constructed DATABASE_URL from individual variables")
             print(f"DB Host: {db_host}, DB Name: {db_name}")
 
@@ -215,7 +215,7 @@ else:
                         'HOST': os.getenv('DB_HOST') or os.getenv('POSTGRES_HOST', 'localhost'),
                         'PORT': os.getenv('DB_PORT') or os.getenv('POSTGRES_PORT', '5432'),
                         'OPTIONS': {
-                            'sslmode': 'prefer',
+                            'sslmode': 'disable',
                         }
                     }
                 }
