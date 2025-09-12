@@ -140,24 +140,34 @@ WSGI_APPLICATION = "church_finance_project.wsgi.application"
 # MySQL only - no SQLite fallback
 if os.getenv('DATABASE_URL'):
     # Production on Railway - MySQL
-    DATABASES = {
-        'default': dj_database_url.parse(os.getenv('DATABASE_URL'))
-    }
+    try:
+        DATABASES = {
+            'default': dj_database_url.parse(os.getenv('DATABASE_URL'))
+        }
+        print(f"Using DATABASE_URL for production database connection")
+    except Exception as e:
+        print(f"Error parsing DATABASE_URL: {e}")
+        raise
 else:
     # Local MySQL development - required environment variables
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': os.getenv('DB_NAME', 'church_books'),
-            'USER': os.getenv('DB_USER', 'root'),
-            'PASSWORD': os.getenv('DB_PASSWORD', ''),
-            'HOST': os.getenv('DB_HOST', 'localhost'),
-            'PORT': os.getenv('DB_PORT', '3306'),
-            'OPTIONS': {
-                'sql_mode': 'STRICT_TRANS_TABLES',
+    try:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.mysql',
+                'NAME': os.getenv('DB_NAME', 'church_books'),
+                'USER': os.getenv('DB_USER', 'root'),
+                'PASSWORD': os.getenv('DB_PASSWORD', ''),
+                'HOST': os.getenv('DB_HOST', 'localhost'),
+                'PORT': os.getenv('DB_PORT', '3306'),
+                'OPTIONS': {
+                    'sql_mode': 'STRICT_TRANS_TABLES',
+                }
             }
         }
-    }
+        print(f"Using local MySQL database: {os.getenv('DB_NAME', 'church_books')}")
+    except Exception as e:
+        print(f"Error configuring local database: {e}")
+        raise
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

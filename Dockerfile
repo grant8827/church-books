@@ -14,8 +14,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=8080 \
     DEBUG=False \
-    ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,*.up.railway.app \
-    CSRF_TRUSTED_ORIGINS=https://*.up.railway.app,http://localhost:8080,https://localhost:8080
+    ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,*.up.railway.app,churchbooksmanagement.com,www.churchbooksmanagement.com \
+    CSRF_TRUSTED_ORIGINS=https://*.up.railway.app,https://churchbooksmanagement.com,https://www.churchbooksmanagement.com,http://localhost:8080,https://localhost:8080
 
 # Install Python dependencies
 COPY requirements.txt .
@@ -30,5 +30,9 @@ RUN mkdir -p /app/staticfiles
 # Collect static files
 RUN python manage.py collectstatic --noinput
 
+# Create startup script
+RUN echo '#!/bin/bash\nset -e\necho "Running database migrations..."\npython manage.py migrate --noinput\necho "Starting server..."\nexec gunicorn church_finance_project.wsgi:application --bind 0.0.0.0:$PORT --log-level debug --timeout 300' > /app/start.sh
+RUN chmod +x /app/start.sh
+
 # Start the application
-CMD gunicorn church_finance_project.wsgi:application --bind 0.0.0.0:$PORT --log-level debug --timeout 300
+CMD ["/app/start.sh"]
