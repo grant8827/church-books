@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import sys
 import dj_database_url
 from dotenv import load_dotenv
 
@@ -137,72 +138,91 @@ WSGI_APPLICATION = "church_finance_project.wsgi.application"
 #}
 
 # Database configuration
-# Check for Railway DATABASE_URL first, then construct from individual variables, then fall back to local
-database_url = os.getenv('DATABASE_URL')
-print(f"DATABASE_URL found: {bool(database_url)}")
+RUNNING_COLLECTSTATIC = 'collectstatic' in sys.argv
 
-# If no DATABASE_URL but we have individual Railway DB variables, construct it
-if not database_url:
-    db_host = os.getenv('DB_HOST') or os.getenv('MYSQL_HOST')
-    db_port = os.getenv('DB_PORT') or os.getenv('MYSQL_PORT') 
-    db_name = os.getenv('DB_NAME') or os.getenv('MYSQL_DATABASE')
-    db_user = os.getenv('DB_USER') or os.getenv('MYSQL_USER')
-    db_password = os.getenv('DB_PASSWORD') or os.getenv('MYSQL_PASSWORD')
-    
-    if db_host and db_name and db_user and db_password:
-        # Construct DATABASE_URL from individual variables
-        database_url = f"mysql://{db_user}:{db_password}@{db_host}:{db_port or '3306'}/{db_name}"
-        print(f"Constructed DATABASE_URL from individual variables")
-        print(f"DB Host: {db_host}, DB Name: {db_name}")
-
-if database_url:
-    # Production database via DATABASE_URL
-    try:
-        DATABASES = {
-            'default': dj_database_url.parse(database_url)
+# If we're collecting static during build, don't require DB env: use a safe SQLite fallback
+if RUNNING_COLLECTSTATIC:
+    print("Detected 'collectstatic' command. Using SQLite fallback to allow static collection without DB env.")
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
-        print(f"Using DATABASE_URL for database connection")
-        print(f"Database: {DATABASES['default']['NAME']} @ {DATABASES['default']['HOST']}")
-    except Exception as e:
-        print(f"Error parsing DATABASE_URL: {e}")
-        print(f"DATABASE_URL value: {database_url}")
-        raise
+    }
 else:
-    # Local development fallback
-    print(f"No DATABASE_URL found. Checking for local MySQL environment variables...")
-    
-    db_name = os.getenv('DB_NAME')
-    db_host = os.getenv('DB_HOST') 
-    print(f"Local DB_NAME: {db_name}, DB_HOST: {db_host}")
-    
-    if not db_name and not db_host:
-        # No database configuration found
-        print("ERROR: No database configuration found!")
-        print("Missing DATABASE_URL and individual DB_* environment variables")
-        print("Available environment variables:")
-        for key in os.environ:
-            if 'DB' in key or 'MYSQL' in key or 'DATABASE' in key:
-                print(f"  {key}: {os.environ[key]}")
-        raise Exception("Database configuration missing. Set DATABASE_URL or DB_* environment variables.")
-    
-    try:
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.mysql',
-                'NAME': os.getenv('DB_NAME', 'church_books'),
-                'USER': os.getenv('DB_USER', 'root'),
-                'PASSWORD': os.getenv('DB_PASSWORD', ''),
-                'HOST': os.getenv('DB_HOST', 'localhost'),
-                'PORT': os.getenv('DB_PORT', '3306'),
-                'OPTIONS': {
-                    'sql_mode': 'STRICT_TRANS_TABLES',
+    # Check for Railway DATABASE_URL first, then construct from individual variables, then fall back to local
+    database_url = os.getenv('DATABASE_URL')
+    print(f"DATABASE_URL found: {bool(database_url)}")
+
+    # If no DATABASE_URL but we have individual Railway DB variables, construct it
+    if not database_url:
+        db_host = os.getenv('DB_HOST') or os.getenv('MYSQL_HOST')
+        db_port = os.getenv('DB_PORT') or os.getenv('MYSQL_PORT')
+        db_name = os.getenv('DB_NAME') or os.getenv('MYSQL_DATABASE')
+        db_user = os.getenv('DB_USER') or os.getenv('MYSQL_USER')
+        db_password = os.getenv('DB_PASSWORD') or os.getenv('MYSQL_PASSWORD')
+
+        if db_host and db_name and db_user and db_password:
+            # Construct DATABASE_URL from individual variables
+            database_url = f"mysql://{db_user}:{db_password}@{db_host}:{db_port or '3306'}/{db_name}"
+            print("Constructed DATABASE_URL from individual variables")
+            print(f"DB Host: {db_host}, DB Name: {db_name}")
+
+    if database_url:
+        # Production database via DATABASE_URL
+        try:
+            DATABASES = {
+                'default': dj_database_url.parse(database_url)
+            }
+            print("Using DATABASE_URL for database connection")
+            print(f"Database: {DATABASES['default']['NAME']} @ {DATABASES['default']['HOST']}")
+        except Exception as e:
+            print(f"Error parsing DATABASE_URL: {e}")
+            print(f"DATABASE_URL value: {database_url}")
+            raise
+    else:
+        # Local development fallback
+        print("No DATABASE_URL found. Checking for local MySQL environment variables...")
+
+        db_name = os.getenv('DB_NAME')
+        db_host = os.getenv('DB_HOST')
+        print(f"Local DB_NAME: {db_name}, DB_HOST: {db_host}")
+
+        if not db_name and not db_host:
+            # No database configuration found
+            print("ERROR: No database configuration found!")
+            print("Missing DATABASE_URL and individual DB_* environment variables")
+            print("Available environment variables:")
+            for key in os.environ:
+                if 'DB' in key or 'MYSQL' in key or 'DATABASE' in key:
+                    print(f"  {key}: {os.environ[key]}")
+            # In non-collectstatic paths we still need a DB; default to SQLite rather than crash in some envs
+            print("Falling back to SQLite for safety. Set DATABASE_URL or DB_* env vars in production.")
+            DATABASES = {
+                'default': {
+                    'ENGINE': 'django.db.backends.sqlite3',
+                    'NAME': BASE_DIR / 'db.sqlite3',
                 }
             }
-        }
-        print(f"Using local MySQL: {DATABASES['default']['NAME']} @ {DATABASES['default']['HOST']}")
-    except Exception as e:
-        print(f"Error configuring local database: {e}")
-        raise
+        else:
+            try:
+                DATABASES = {
+                    'default': {
+                        'ENGINE': 'django.db.backends.mysql',
+                        'NAME': os.getenv('DB_NAME', 'church_books'),
+                        'USER': os.getenv('DB_USER', 'root'),
+                        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+                        'HOST': os.getenv('DB_HOST', 'localhost'),
+                        'PORT': os.getenv('DB_PORT', '3306'),
+                        'OPTIONS': {
+                            'sql_mode': 'STRICT_TRANS_TABLES',
+                        }
+                    }
+                }
+                print(f"Using local MySQL: {DATABASES['default']['NAME']} @ {DATABASES['default']['HOST']}")
+            except Exception as e:
+                print(f"Error configuring local database: {e}")
+                raise
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
