@@ -57,28 +57,9 @@ if railway_private_domain:
 additional_hosts = os.environ.get('ALLOWED_HOSTS', '')
 if additional_hosts:
     ALLOWED_HOSTS.extend([host.strip() for host in additional_hosts.split(',') if host.strip()])
-# CSRF and Session Settings for Production
-CSRF_TRUSTED_ORIGINS = [
-    'https://church-books-production.up.railway.app',
-    'https://churchbooksmanagement.com',  # Fixed: Added missing comma
-    'https://www.churchbooksmanagement.com',  # Added: Support www subdomain
-]
-
-# Get additional CSRF origins from environment variable
-additional_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
-if additional_origins:
-    CSRF_TRUSTED_ORIGINS.extend([origin.strip() for origin in additional_origins.split(',') if origin.strip()])
-
-# CSRF Cookie settings
-CSRF_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
+# Session Settings for Production
 SESSION_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
-CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SAMESITE = 'Lax'
-
-# Additional CSRF settings for custom domains
-CSRF_COOKIE_DOMAIN = None  # Let Django auto-detect
-CSRF_USE_SESSIONS = False  # Use cookies instead of sessions for CSRF tokens
-CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access to CSRF token if needed
 
 # Session security
 SESSION_COOKIE_AGE = 1209600  # 2 weeks
@@ -99,13 +80,6 @@ else:
     # Development settings
     SECURE_SSL_REDIRECT = False
 
-# CSRF debugging and error handling
-if DEBUG:
-    CSRF_FAILURE_VIEW = 'church_finances.views.csrf_failure'
-else:
-    # Also enable in production for better error reporting
-    CSRF_FAILURE_VIEW = 'church_finances.views.csrf_failure'
-
 
 # Application definition
 
@@ -124,7 +98,7 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
+    # CSRF Middleware removed for simplified security model
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -163,33 +137,25 @@ WSGI_APPLICATION = "church_finance_project.wsgi.application"
 #}
 
 # Database configuration
-# Intelligent fallback: Railway MySQL -> Local MySQL -> SQLite
+# MySQL only - no SQLite fallback
 if os.getenv('DATABASE_URL'):
-    # Production on Railway
+    # Production on Railway - MySQL
     DATABASES = {
         'default': dj_database_url.parse(os.getenv('DATABASE_URL'))
     }
-elif all([os.getenv('DB_NAME'), os.getenv('DB_USER'), os.getenv('DB_PASSWORD'), os.getenv('DB_HOST')]):
-    # Local MySQL development
+else:
+    # Local MySQL development - required environment variables
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
-            'NAME': os.getenv('DB_NAME'),
-            'USER': os.getenv('DB_USER'),
-            'PASSWORD': os.getenv('DB_PASSWORD'),
-            'HOST': os.getenv('DB_HOST'),
+            'NAME': os.getenv('DB_NAME', 'church_books'),
+            'USER': os.getenv('DB_USER', 'root'),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
             'PORT': os.getenv('DB_PORT', '3306'),
             'OPTIONS': {
                 'sql_mode': 'STRICT_TRANS_TABLES',
             }
-        }
-    }
-else:
-    # Fallback to SQLite for local development
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
 

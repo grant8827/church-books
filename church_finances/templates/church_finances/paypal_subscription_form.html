@@ -20,10 +20,7 @@
                     {% endfor %}
                 {% endif %}
 
-                <form method="post" action="{% url 'paypal_create_subscription' %}">
-                    {% csrf_token %}
-                    
-                    <div class="space-y-6">
+                <form method="post" action="{% url 'paypal_create_subscription' %}"><div class="space-y-6">
                         <div>
                             <h3 class="text-lg font-medium text-gray-900 mb-4">Your Information</h3>
                             <div class="grid grid-cols-2 gap-4">

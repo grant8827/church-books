@@ -12,10 +12,7 @@
     </div>
 
     <div class="max-w-4xl mx-auto">
-        <form method="post" class="space-y-8">
-            {% csrf_token %}
-            
-            <!-- Plan Selection -->
+        <form method="post" class="space-y-8"><!-- Plan Selection -->
             <div class="grid md:grid-cols-3 gap-6">
                 <div class="border-2 border-gray-200 rounded-lg p-6 hover:border-blue-500 transition-colors cursor-pointer plan-option" data-plan="starter">
                     <input type="radio" name="plan" value="starter" id="starter" class="sr-only">

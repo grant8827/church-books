@@ -55,9 +55,7 @@
                     </div>
                 </div>
                 <div class="text-center">
-                    <form method="post" action="{% url 'subscription_select' %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="package" value="standard">
+                    <form method="post" action="{% url 'subscription_select' %}"><input type="hidden" name="package" value="standard">
                         <button type="submit" class="w-full bg-[#6e003d] text-white py-3 px-6 rounded-lg hover:bg-[#8e005d] transition duration-300">
                             Select Standard Plan
                         </button>
@@ -111,9 +109,7 @@
                     </div>
                 </div>
                 <div class="text-center">
-                    <form method="post" action="{% url 'subscription_select' %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="package" value="premium">
+                    <form method="post" action="{% url 'subscription_select' %}"><input type="hidden" name="package" value="premium">
                         <button type="submit" class="w-full bg-[#6e003d] text-white py-3 px-6 rounded-lg hover:bg-[#8e005d] transition duration-300">
                             Select Premium Plan
                         </button>

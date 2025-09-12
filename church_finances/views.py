@@ -226,42 +226,19 @@ def reject_church(request, church_id):
     return redirect('church_approval_list')
 
 
-from django.views.decorators.csrf import ensure_csrf_cookie
+# CSRF-related imports removed as CSRF protection is disabled
 from django.core.exceptions import PermissionDenied
 import logging
 
 logger = logging.getLogger(__name__)
 
-def csrf_failure(request, reason=""):
-    """
-    Custom CSRF failure view for debugging
-    """
-    logger.error(f"CSRF failure: {reason}")
-    logger.error(f"Request META: {request.META}")
-    logger.error(f"Cookies: {request.COOKIES}")
-    
-    context = {
-        'reason': reason,
-        'debug_info': {
-            'csrf_cookie': request.COOKIES.get('csrftoken', 'No CSRF cookie'),
-            'user_agent': request.META.get('HTTP_USER_AGENT', 'Unknown'),
-            'referer': request.META.get('HTTP_REFERER', 'No referer'),
-        }
-    }
-    return render(request, 'church_finances/csrf_failure.html', context, status=403)
-
 logger = logging.getLogger(__name__)
 
-@ensure_csrf_cookie
-@ensure_csrf_cookie
 def user_login_view(request):
     """
-    Handles user login with enhanced CSRF protection and debugging.
+    Handles user login.
     """
     if request.method == "POST":
-        # Log CSRF token information for debugging
-        logger.debug(f"CSRF Token in Cookie: {request.COOKIES.get('csrftoken')}")
-        logger.debug(f"CSRF Token in POST: {request.POST.get('csrfmiddlewaretoken')}")
         
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
@@ -1427,35 +1404,4 @@ def bulk_contribution_entry(request):
     return render(request, "church_finances/bulk_contribution_entry.html", context)
 
 
-def csrf_failure(request, reason=""):
-    """
-    Custom CSRF failure view for debugging CSRF issues in production
-    """
-    from django.conf import settings
-    
-    # Collect debug information
-    debug_info = {
-        'reason': reason,
-        'request_host': request.get_host(),
-        'request_scheme': request.scheme,
-        'full_url': request.build_absolute_uri(),
-        'csrf_trusted_origins': getattr(settings, 'CSRF_TRUSTED_ORIGINS', []),
-        'allowed_hosts': getattr(settings, 'ALLOWED_HOSTS', []),
-        'debug_mode': getattr(settings, 'DEBUG', False),
-        'user_agent': request.META.get('HTTP_USER_AGENT', 'Unknown'),
-        'referer': request.META.get('HTTP_REFERER', 'No referer'),
-        'method': request.method,
-    }
-    
-    # In production, log the error details
-    if not settings.DEBUG:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"CSRF Failure: {debug_info}")
-    
-    context = {
-        'debug_info': debug_info,
-        'is_debug': settings.DEBUG
-    }
-    
-    return render(request, 'church_finances/csrf_failure.html', context, status=403)
+
