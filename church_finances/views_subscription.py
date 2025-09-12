@@ -7,6 +7,16 @@ from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.utils import timezone
+from django.contrib.auth.models import User, Group
+from django.contrib.auth import login
+from django.db import transaction
+from datetime import timedelta
+import json
+from .models import Church, PayPalSubscription, ChurchMember
+from .paypal_service import PayPalService
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.utils import timezone
 from django.contrib.auth.models import User
 from datetime import timedelta
 import json
@@ -28,23 +38,261 @@ def subscription_view(request):
 
 def subscription_select(request):
     """
-    Handle subscription package selection - redirect to PayPal
+    Handle subscription package selection - redirect to payment selection
     """
     if request.method == "POST":
         package = request.POST.get('package')
         if package in ['standard', 'premium']:
             request.session['selected_package'] = package
-            request.session['package_price'] = '10000' if package == 'standard' else '15000'
+            request.session['package_price'] = '100' if package == 'standard' else '150'
             
-            # Store package selection and redirect to PayPal payment
+            # Store package selection and redirect to payment selection
             plan_id = settings.PAYPAL_STANDARD_PLAN_ID if package == 'standard' else settings.PAYPAL_PREMIUM_PLAN_ID
             request.session['paypal_plan_id'] = plan_id
             
-            messages.success(request, f"You have selected the {package.title()} package. You will now be redirected to PayPal for payment.")
-            return redirect('paypal_create_subscription')
+            messages.success(request, f"You have selected the {package.title()} package. Please choose your payment method.")
+            return redirect('payment_selection')
         else:
             messages.error(request, "Invalid package selection.")
     return redirect('subscription')
+
+@ensure_csrf_cookie
+def payment_selection_view(request):
+    """
+    Show payment method selection (PayPal online or offline)
+    """
+    if request.method == "POST":
+        payment_method = request.POST.get('payment_method', '')
+        
+        if payment_method in ['paypal', 'offline']:
+            # Store payment method in session
+            request.session['payment_method'] = payment_method
+            
+            # Redirect to registration form
+            if payment_method == 'paypal':
+                messages.success(request, "PayPal payment selected. Please complete your registration.")
+            else:
+                messages.info(request, "Offline payment selected. Please complete your registration for approval.")
+            
+            return redirect('registration_form')
+        else:
+            messages.error(request, "Please select a valid payment method.")
+    
+    # GET request - show payment selection form
+    selected_package = request.session.get('selected_package')
+    if not selected_package:
+        messages.error(request, "Please select a subscription package first.")
+        return redirect('subscription')
+    
+    context = {
+        'selected_package': selected_package,
+        'package_price': request.session.get('package_price'),
+    }
+    return render(request, 'church_finances/payment_selection.html', context)
+
+@ensure_csrf_cookie
+def registration_form_view(request):
+    """
+    Show registration form after payment method selection
+    """
+    if request.method == "POST":
+        # Get payment method from session
+        payment_method = request.session.get('payment_method', '')
+        
+        if not payment_method:
+            messages.error(request, "Please select a payment method first.")
+            return redirect('payment_selection')
+        
+        try:
+            # Get form data
+            first_name = request.POST.get('first_name', '').strip()
+            last_name = request.POST.get('last_name', '').strip()
+            email = request.POST.get('email', '').strip()
+            phone_number = request.POST.get('phone_number', '').strip()
+            role = request.POST.get('role', '').strip()
+            username = request.POST.get('username', '').strip()
+            password = request.POST.get('password', '')
+            password_confirm = request.POST.get('password_confirm', '')
+            church_name = request.POST.get('church_name', '').strip()
+            church_address = request.POST.get('church_address', '').strip()
+            church_phone = request.POST.get('church_phone', '').strip()
+            church_email = request.POST.get('church_email', '').strip()
+            church_website = request.POST.get('church_website', '').strip()
+            
+            # Validate required fields
+            if not all([username, password, email, first_name, last_name, role, church_name, church_address, church_phone, church_email]):
+                messages.error(request, "All required fields must be filled out.")
+                return render(request, 'church_finances/registration_form.html', {
+                    'selected_package': request.session.get('selected_package'),
+                    'package_price': request.session.get('package_price'),
+                    'payment_method': payment_method,
+                })
+            
+            # Validate role selection
+            valid_roles = ['admin', 'pastor', 'assistant_pastor', 'treasurer', 'deacon']
+            if role not in valid_roles:
+                messages.error(request, "Please select a valid role.")
+                return render(request, 'church_finances/registration_form.html', {
+                    'selected_package': request.session.get('selected_package'),
+                    'package_price': request.session.get('package_price'),
+                    'payment_method': payment_method,
+                })
+            
+            # Validate password confirmation
+            if password != password_confirm:
+                messages.error(request, "Passwords do not match.")
+                return render(request, 'church_finances/registration_form.html', {
+                    'selected_package': request.session.get('selected_package'),
+                    'package_price': request.session.get('package_price'),
+                    'payment_method': payment_method,
+                })
+            
+            # Check if username already exists
+            if User.objects.filter(username=username).exists():
+                messages.error(request, "Username already exists. Please choose a different username.")
+                return render(request, 'church_finances/registration_form.html', {
+                    'selected_package': request.session.get('selected_package'),
+                    'package_price': request.session.get('package_price'),
+                    'payment_method': payment_method,
+                })
+            
+            # Check if email already exists
+            if User.objects.filter(email=email).exists():
+                messages.error(request, "An account with this email already exists.")
+                return render(request, 'church_finances/registration_form.html', {
+                    'selected_package': request.session.get('selected_package'),
+                    'package_price': request.session.get('package_price'),
+                    'payment_method': payment_method,
+                })
+            
+            # Get selected package from session
+            selected_package = request.session.get('selected_package')
+            plan_id = request.session.get('paypal_plan_id')
+            
+            if not selected_package:
+                messages.error(request, "Please select a subscription package first.")
+                return redirect('subscription')
+            
+            print(f"DEBUG: Creating user account for {username} with payment method: {payment_method}")
+            
+            # Use database transaction to ensure data consistency
+            with transaction.atomic():
+                # Determine if user should be active based on payment method
+                # PayPal users: immediately active after successful payment
+                # Offline users: inactive until admin approval
+                is_user_active = False  # Will be activated in PayPal success or admin approval
+                is_church_approved = True if payment_method == 'paypal' else False
+                church_status = 'active' if payment_method == 'paypal' else 'pending'
+                is_member_active = True if payment_method == 'paypal' else False
+                
+                # Create user account
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password,
+                    first_name=first_name,
+                    last_name=last_name,
+                    is_active=is_user_active  # Will be activated later
+                )
+                
+                print(f"DEBUG: User created successfully with ID: {user.id}, active: {user.is_active}")
+                
+                # Create church record
+                church = Church.objects.create(
+                    name=church_name,
+                    address=church_address,
+                    phone=church_phone,
+                    email=church_email,
+                    website=church_website,
+                    subscription_type=selected_package,
+                    subscription_status=church_status,
+                    is_approved=is_church_approved
+                )
+                
+                print(f"DEBUG: Church created successfully with ID: {church.id}, approved: {church.is_approved}")
+                
+                # Create ChurchMember relationship
+                church_member = ChurchMember.objects.create(
+                    user=user,
+                    church=church,
+                    role=role,
+                    phone_number=phone_number,
+                    is_active=is_member_active
+                )
+                print(f"DEBUG: ChurchMember created successfully with ID: {church_member.id}, active: {church_member.is_active}")
+                
+                # Store user ID and church ID in session for later use
+                request.session['pending_user_id'] = user.id
+                request.session['church_id'] = church.id
+            
+            # Handle payment method
+            if payment_method == 'offline':
+                # For offline payment, create records and redirect to pending approval
+                messages.success(request, f"Registration submitted successfully! Your church account '{church_name}' and user login '{username}' are pending admin approval and offline payment confirmation. You will receive an email with payment instructions once approved.")
+                
+                # Clear session data except user/church IDs (needed for admin approval)
+                request.session.pop('selected_package', None)
+                request.session.pop('package_price', None)
+                request.session.pop('paypal_plan_id', None)
+                request.session.pop('payment_method', None)
+                
+                # Redirect to pending approval page
+                return redirect('pending_approval')
+            
+            # Handle PayPal payment
+            elif payment_method == 'paypal':
+                try:
+                    paypal_service = PayPalService()
+                    payer_info = {
+                        'first_name': first_name,
+                        'last_name': last_name,
+                        'email': email
+                    }
+                    
+                    # Use simple plan identifiers
+                    plan_identifier = f"church_books_{selected_package}_plan"
+                    
+                    result = paypal_service.create_subscription(plan_identifier, payer_info, church.id)
+                    
+                    if result['success']:
+                        # Store subscription ID for later reference
+                        request.session['pending_subscription_id'] = result['subscription_id']
+                        
+                        # Redirect to PayPal for approval
+                        return redirect(result['approval_url'])
+                    else:
+                        # Clean up if PayPal subscription creation failed
+                        messages.error(request, f"Failed to create subscription: {result['error']}")
+                        return redirect('subscription')
+                except Exception as e:
+                    # If PayPal fails, provide offline option
+                    print(f"PayPal service error: {str(e)}")
+                    messages.warning(request, "PayPal service temporarily unavailable. Please try again later or contact support for offline payment options.")
+                    return redirect('subscription')
+                
+        except Exception as e:
+            print(f"DEBUG: Exception occurred: {str(e)}")
+            messages.error(request, f"An error occurred: {str(e)}")
+            return redirect('subscription')
+    
+    # GET request - show registration form
+    selected_package = request.session.get('selected_package')
+    payment_method = request.session.get('payment_method')
+    
+    if not selected_package:
+        messages.error(request, "Please select a subscription package first.")
+        return redirect('subscription')
+    
+    if not payment_method:
+        messages.error(request, "Please select a payment method first.")
+        return redirect('payment_selection')
+    
+    context = {
+        'selected_package': selected_package,
+        'package_price': request.session.get('package_price'),
+        'payment_method': payment_method,
+    }
+    return render(request, 'church_finances/registration_form.html', context)
 
 @ensure_csrf_cookie
 def create_paypal_subscription(request):
@@ -286,7 +534,7 @@ def paypal_success(request):
                             }
                         )
                         
-                        # Approve the church immediately after successful payment
+                        # Approve and activate the church immediately after successful payment
                         church.is_approved = True
                         church.subscription_status = 'active'
                         church.paypal_subscription_id = token
@@ -294,7 +542,7 @@ def paypal_success(request):
                         church.subscription_end_date = timezone.now() + timedelta(days=365)
                         church.save()
                         
-                        # Activate the user account and church member if it exists
+                        # Activate the user account and church member
                         pending_user_id = request.session.get('pending_user_id')
                         if pending_user_id:
                             try:
@@ -307,14 +555,18 @@ def paypal_success(request):
                                     church_member = ChurchMember.objects.get(user=user, church=church)
                                     church_member.is_active = True
                                     church_member.save()
+                                    
+                                    # Automatically log in the user after successful payment
+                                    login(request, user)
+                                    
+                                    messages.success(request, f"Payment successful! Welcome {user.first_name}! Your church account '{church.name}' and user login '{user.username}' have been approved and activated. You are now logged in.")
                                 except ChurchMember.DoesNotExist:
-                                    pass
-                                
-                                messages.success(request, f"Payment successful! Your church account and user login '{user.username}' have been approved and activated.")
+                                    messages.success(request, f"Payment successful! Your church account '{church.name}' has been approved and activated.")
+                                    
                             except User.DoesNotExist:
-                                messages.success(request, "Payment successful! Your church account has been approved and activated.")
+                                messages.success(request, f"Payment successful! Your church account '{church.name}' has been approved and activated.")
                         else:
-                            messages.success(request, "Payment successful! Your church account has been approved and activated.")
+                            messages.success(request, f"Payment successful! Your church account '{church.name}' has been approved and activated.")
                         
                         # Clear session data
                         request.session.pop('selected_package', None)
@@ -323,8 +575,9 @@ def paypal_success(request):
                         request.session.pop('pending_subscription_id', None)
                         request.session.pop('church_id', None)
                         request.session.pop('pending_user_id', None)
+                        request.session.pop('payment_method', None)
                         
-                        # Redirect to dashboard after payment
+                        # Redirect to dashboard after payment and login
                         return redirect('dashboard')
                     else:
                         messages.error(request, "Could not find church record.")

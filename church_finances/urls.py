@@ -13,6 +13,8 @@ urlpatterns = [
     # Subscription URLs
     path('subscription/', views_subscription.subscription_view, name='subscription'),
     path('subscription/select/', views_subscription.subscription_select, name='subscription_select'),
+    path('subscription/payment/', views_subscription.payment_selection_view, name='payment_selection'),
+    path('subscription/register/', views_subscription.registration_form_view, name='registration_form'),
     path('pending-approval/', views.pending_approval_view, name='pending_approval'),
     
     # PayPal URLs

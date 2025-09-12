@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block title %}Choose Payment Method - Church Books{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 py-12">
+    <div class="max-w-lg mx-auto">
+        <div class="bg-white rounded-lg shadow-md p-8">
+            <div class="text-center mb-8">
+                <h1 class="text-2xl font-bold text-gray-900">Choose Payment Method</h1>
+                <p class="text-gray-600 mt-2">You've selected the <strong>{{ selected_package|title }}</strong> plan</p>
+                <p class="text-2xl font-bold text-blue-600 mt-2">${{ package_price|floatformat:0 }}/year</p>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="mb-4 p-4 rounded-md {% if message.tags == 'error' %}bg-red-50 text-red-800{% elif message.tags == 'success' %}bg-green-50 text-green-800{% else %}bg-blue-50 text-blue-800{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="space-y-4">
+                <!-- PayPal Online Payment Option -->
+                <div class="border-2 border-blue-200 rounded-lg p-6 hover:border-blue-400 transition-colors">
+                    <div class="flex items-center mb-4">
+                        <svg class="w-8 h-8 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                        </svg>
+                        <h3 class="text-lg font-semibold text-gray-900">Pay Online with PayPal</h3>
+                    </div>
+                    <p class="text-gray-600 mb-4">Secure payment with PayPal. Credit cards accepted. Instant account activation.</p>
+                    <div class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span class="text-sm text-gray-600">Immediate access to your account</span>
+                    </div>
+                    <div class="flex items-center mb-6">
+                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span class="text-sm text-gray-600">Secure payment processing</span>
+                    </div>
+                    <form method="post" action="{% url 'payment_selection' %}">
+                        <button type="submit" name="payment_method" value="paypal"
+                                class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 font-medium">
+                            <span class="flex items-center justify-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                                </svg>
+                                Continue to PayPal Payment
+                            </span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Offline Payment Option -->
+                <div class="border-2 border-gray-200 rounded-lg p-6 hover:border-gray-400 transition-colors">
+                    <div class="flex items-center mb-4">
+                        <svg class="w-8 h-8 text-gray-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <h3 class="text-lg font-semibold text-gray-900">Pay Offline</h3>
+                    </div>
+                    <p class="text-gray-600 mb-4">Pay by check or bank transfer. Account requires admin approval after registration.</p>
+                    <div class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-yellow-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                        <span class="text-sm text-gray-600">Account pending admin approval</span>
+                    </div>
+                    <div class="flex items-center mb-6">
+                        <svg class="w-5 h-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                        <span class="text-sm text-gray-600">Payment instructions via email</span>
+                    </div>
+                    <form method="post" action="{% url 'payment_selection' %}">
+                        <button type="submit" name="payment_method" value="offline" id="offline-payment-btn"
+                                class="w-full bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 font-medium">
+                            <span class="flex items-center justify-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                                </svg>
+                                Continue with Offline Payment
+                            </span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Back to Package Selection -->
+            <div class="mt-8 text-center">
+                <a href="{% url 'subscription' %}" 
+                   class="inline-flex items-center text-gray-600 hover:text-gray-800 transition duration-300">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back to Package Selection
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Offline payment confirmation
+    const offlineBtn = document.getElementById('offline-payment-btn');
+    offlineBtn.addEventListener('click', function(e) {
+        const confirmed = confirm('Are you sure you want to register for offline payment? You will be taken to a registration form, and your account will await admin approval and payment confirmation.');
+        if (!confirmed) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}
