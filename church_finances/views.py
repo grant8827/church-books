@@ -203,6 +203,11 @@ def approve_church(request, church_id):
                 member.user.is_active = True
                 member.user.save()
                 activated_users.append(member.user.username)
+            
+            # Also activate the church member
+            if not member.is_active:
+                member.is_active = True
+                member.save()
         
         success_msg = f"Church '{church.name}' has been approved."
         if activated_users:
