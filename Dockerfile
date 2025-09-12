@@ -27,7 +27,8 @@ COPY . .
 # Make sure the staticfiles directory exists
 RUN mkdir -p /app/staticfiles
 
-# Collect static files
+# Collect static files - set environment to force SQLite usage during build
+ENV DJANGO_COLLECTSTATIC_BUILD=1
 RUN python manage.py collectstatic --noinput
 
 # Create startup script with environment variable debugging

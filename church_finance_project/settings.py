@@ -139,10 +139,13 @@ WSGI_APPLICATION = "church_finance_project.wsgi.application"
 
 # Database configuration
 RUNNING_COLLECTSTATIC = 'collectstatic' in sys.argv
+RUNNING_MIGRATIONS = 'migrate' in sys.argv
+BUILD_TIME_COLLECTSTATIC = os.getenv('DJANGO_COLLECTSTATIC_BUILD') == '1'
 
 # If we're collecting static during build, don't require DB env: use a safe SQLite fallback
-if RUNNING_COLLECTSTATIC:
-    print("Detected 'collectstatic' command. Using SQLite fallback to allow static collection without DB env.")
+if RUNNING_COLLECTSTATIC or RUNNING_MIGRATIONS or BUILD_TIME_COLLECTSTATIC:
+    action = 'collectstatic' if RUNNING_COLLECTSTATIC else 'migrate' if RUNNING_MIGRATIONS else 'build-time-collectstatic'
+    print(f"Detected Django management command ({action}). Using SQLite fallback to allow operation without external DB.")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
