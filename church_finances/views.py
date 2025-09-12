@@ -244,10 +244,40 @@ def user_login_view(request):
     Handles user login.
     """
     if request.method == "POST":
+        username = request.POST.get('username', '')
+        password = request.POST.get('password', '')
+        
+        # Check if user exists but is inactive
+        try:
+            user = User.objects.get(username=username)
+            if not user.is_active:
+                error(request, f"Your account '{username}' is inactive. Please contact an administrator or check if your church account is pending approval.")
+                form = AuthenticationForm()
+                return render(request, "church_finances/login.html", {"form": form})
+        except User.DoesNotExist:
+            pass  # Will be handled by AuthenticationForm
         
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
+            
+            # Additional check for church member status
+            try:
+                member = ChurchMember.objects.get(user=user)
+                if not member.is_active:
+                    error(request, "Your church membership is pending approval. Please contact an administrator.")
+                    return render(request, "church_finances/login.html", {"form": form})
+                    
+                if not member.church.is_approved:
+                    error(request, "Your church account is pending approval. Please contact an administrator.")
+                    return render(request, "church_finances/login.html", {"form": form})
+                    
+            except ChurchMember.DoesNotExist:
+                # Allow admin users without church membership
+                if not user.is_superuser:
+                    error(request, "No church membership found. Please contact an administrator.")
+                    return render(request, "church_finances/login.html", {"form": form})
+            
             login(request, user)
             success(request, f"Welcome back, {user.username}!")
             return redirect("dashboard")
