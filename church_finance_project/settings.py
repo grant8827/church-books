@@ -156,15 +156,15 @@ else:
 
     # If no DATABASE_URL but we have individual Railway DB variables, construct it
     if not database_url:
-        db_host = os.getenv('DB_HOST') or os.getenv('MYSQL_HOST')
-        db_port = os.getenv('DB_PORT') or os.getenv('MYSQL_PORT')
-        db_name = os.getenv('DB_NAME') or os.getenv('MYSQL_DATABASE')
-        db_user = os.getenv('DB_USER') or os.getenv('MYSQL_USER')
-        db_password = os.getenv('DB_PASSWORD') or os.getenv('MYSQL_PASSWORD')
+        db_host = os.getenv('DB_HOST') or os.getenv('POSTGRES_HOST') or os.getenv('PGHOST')
+        db_port = os.getenv('DB_PORT') or os.getenv('POSTGRES_PORT') or os.getenv('PGPORT')
+        db_name = os.getenv('DB_NAME') or os.getenv('POSTGRES_DB') or os.getenv('PGDATABASE')
+        db_user = os.getenv('DB_USER') or os.getenv('POSTGRES_USER') or os.getenv('PGUSER')
+        db_password = os.getenv('DB_PASSWORD') or os.getenv('POSTGRES_PASSWORD') or os.getenv('PGPASSWORD')
 
         if db_host and db_name and db_user and db_password:
             # Construct DATABASE_URL from individual variables
-            database_url = f"mysql://{db_user}:{db_password}@{db_host}:{db_port or '3306'}/{db_name}"
+            database_url = f"postgres://{db_user}:{db_password}@{db_host}:{db_port or '5432'}/{db_name}"
             print("Constructed DATABASE_URL from individual variables")
             print(f"DB Host: {db_host}, DB Name: {db_name}")
 
@@ -182,10 +182,10 @@ else:
             raise
     else:
         # Local development fallback
-        print("No DATABASE_URL found. Checking for local MySQL environment variables...")
+        print("No DATABASE_URL found. Checking for local PostgreSQL environment variables...")
 
-        db_name = os.getenv('DB_NAME')
-        db_host = os.getenv('DB_HOST')
+        db_name = os.getenv('DB_NAME') or os.getenv('POSTGRES_DB')
+        db_host = os.getenv('DB_HOST') or os.getenv('POSTGRES_HOST')
         print(f"Local DB_NAME: {db_name}, DB_HOST: {db_host}")
 
         if not db_name and not db_host:
@@ -194,7 +194,7 @@ else:
             print("Missing DATABASE_URL and individual DB_* environment variables")
             print("Available environment variables:")
             for key in os.environ:
-                if 'DB' in key or 'MYSQL' in key or 'DATABASE' in key:
+                if 'DB' in key or 'POSTGRES' in key or 'PG' in key or 'DATABASE' in key:
                     print(f"  {key}: {os.environ[key]}")
             # In non-collectstatic paths we still need a DB; default to SQLite rather than crash in some envs
             print("Falling back to SQLite for safety. Set DATABASE_URL or DB_* env vars in production.")
@@ -208,18 +208,18 @@ else:
             try:
                 DATABASES = {
                     'default': {
-                        'ENGINE': 'django.db.backends.mysql',
-                        'NAME': os.getenv('DB_NAME', 'church_books'),
-                        'USER': os.getenv('DB_USER', 'root'),
-                        'PASSWORD': os.getenv('DB_PASSWORD', ''),
-                        'HOST': os.getenv('DB_HOST', 'localhost'),
-                        'PORT': os.getenv('DB_PORT', '3306'),
+                        'ENGINE': 'django.db.backends.postgresql',
+                        'NAME': os.getenv('DB_NAME') or os.getenv('POSTGRES_DB', 'church_books'),
+                        'USER': os.getenv('DB_USER') or os.getenv('POSTGRES_USER', 'postgres'),
+                        'PASSWORD': os.getenv('DB_PASSWORD') or os.getenv('POSTGRES_PASSWORD', ''),
+                        'HOST': os.getenv('DB_HOST') or os.getenv('POSTGRES_HOST', 'localhost'),
+                        'PORT': os.getenv('DB_PORT') or os.getenv('POSTGRES_PORT', '5432'),
                         'OPTIONS': {
-                            'sql_mode': 'STRICT_TRANS_TABLES',
+                            'sslmode': 'prefer',
                         }
                     }
                 }
-                print(f"Using local MySQL: {DATABASES['default']['NAME']} @ {DATABASES['default']['HOST']}")
+                print(f"Using local PostgreSQL: {DATABASES['default']['NAME']} @ {DATABASES['default']['HOST']}")
             except Exception as e:
                 print(f"Error configuring local database: {e}")
                 raise
