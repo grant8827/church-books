@@ -58,6 +58,35 @@ if railway_private_domain:
 additional_hosts = os.environ.get('ALLOWED_HOSTS', '')
 if additional_hosts:
     ALLOWED_HOSTS.extend([host.strip() for host in additional_hosts.split(',') if host.strip()])
+
+# CSRF Configuration
+CSRF_TRUSTED_ORIGINS = []
+if not DEBUG:
+    # Production CSRF trusted origins
+    CSRF_TRUSTED_ORIGINS = [
+        'https://church-books-production.up.railway.app',
+        'https://churchbooksmanagement.com',
+        'https://www.churchbooksmanagement.com',
+        'https://*.up.railway.app',
+    ]
+    
+    # Add Railway-provided domains to CSRF trusted origins
+    if railway_public_domain:
+        CSRF_TRUSTED_ORIGINS.append(f'https://{railway_public_domain}')
+    
+    # Add from environment variable if provided
+    csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+    if csrf_origins:
+        CSRF_TRUSTED_ORIGINS.extend([origin.strip() for origin in csrf_origins.split(',') if origin.strip()])
+else:
+    # Development - allow local origins
+    CSRF_TRUSTED_ORIGINS = [
+        'http://localhost:8000',
+        'http://127.0.0.1:8000',
+        'http://localhost:8080',
+        'https://localhost:8080',
+    ]
+
 # Session Settings for Production
 SESSION_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
 SESSION_COOKIE_SAMESITE = 'Lax'
@@ -99,7 +128,7 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    # CSRF Middleware removed for simplified security model
+    "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",

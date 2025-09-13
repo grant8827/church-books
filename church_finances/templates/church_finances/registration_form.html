@@ -25,6 +25,7 @@
             {% endif %}
 
             <form method="post" action="{% url 'registration_form' %}">
+                {% csrf_token %}
                 <input type="hidden" name="payment_method" value="{{ payment_method }}">
                 
                 <div class="space-y-6">
