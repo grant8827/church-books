@@ -196,18 +196,38 @@ else:
     # Check for Railway DATABASE_URL first, then construct from individual variables, then fall back to local
     database_url = os.getenv('DATABASE_URL')
     print(f"DATABASE_URL found: {bool(database_url)}")
+    if database_url:
+        print(f"DATABASE_URL value: {database_url[:50]}...")
 
     # If no DATABASE_URL but we have individual Railway DB variables, construct it
     if not database_url:
-        db_host = os.getenv('DB_HOST') or os.getenv('POSTGRES_HOST') or os.getenv('PGHOST')
-        db_port = os.getenv('DB_PORT') or os.getenv('POSTGRES_PORT') or os.getenv('PGPORT')
-        db_name = os.getenv('DB_NAME') or os.getenv('POSTGRES_DB') or os.getenv('PGDATABASE')
-        db_user = os.getenv('DB_USER') or os.getenv('POSTGRES_USER') or os.getenv('PGUSER')
-        db_password = os.getenv('DB_PASSWORD') or os.getenv('POSTGRES_PASSWORD') or os.getenv('PGPASSWORD')
+        # Try Railway's default PostgreSQL environment variables first
+        db_host = (os.getenv('PGHOST') or 
+                  os.getenv('POSTGRES_HOST') or 
+                  os.getenv('DB_HOST'))
+        db_port = (os.getenv('PGPORT') or 
+                  os.getenv('POSTGRES_PORT') or 
+                  os.getenv('DB_PORT'))
+        db_name = (os.getenv('PGDATABASE') or 
+                  os.getenv('POSTGRES_DB') or 
+                  os.getenv('DB_NAME'))
+        db_user = (os.getenv('PGUSER') or 
+                  os.getenv('POSTGRES_USER') or 
+                  os.getenv('DB_USER'))
+        db_password = (os.getenv('PGPASSWORD') or 
+                      os.getenv('POSTGRES_PASSWORD') or 
+                      os.getenv('DB_PASSWORD'))
+
+        print(f"Environment variables found:")
+        print(f"  Host: {db_host}")
+        print(f"  Port: {db_port}")
+        print(f"  Database: {db_name}")
+        print(f"  User: {db_user}")
+        print(f"  Password: {'***' if db_password else 'None'}")
 
         if db_host and db_name and db_user and db_password:
             # Construct DATABASE_URL from individual variables
-            database_url = f"postgres://{db_user}:{db_password}@{db_host}:{db_port or '5432'}/{db_name}?sslmode=disable"
+            database_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port or '5432'}/{db_name}"
             print("Constructed DATABASE_URL from individual variables")
             print(f"DB Host: {db_host}, DB Name: {db_name}")
 
@@ -219,6 +239,15 @@ else:
             }
             print("Using DATABASE_URL for database connection")
             print(f"Database: {DATABASES['default']['NAME']} @ {DATABASES['default']['HOST']}")
+            
+            # Add connection options for Railway PostgreSQL
+            DATABASES['default'].update({
+                'OPTIONS': {
+                    'sslmode': 'prefer',  # Railway PostgreSQL supports SSL
+                },
+                'CONN_MAX_AGE': 60,  # Connection pooling
+                'CONN_HEALTH_CHECKS': True,  # Django 4.1+ health checks
+            })
         except Exception as e:
             print(f"Error parsing DATABASE_URL: {e}")
             print(f"DATABASE_URL value: {database_url}")
