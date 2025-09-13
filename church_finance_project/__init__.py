@@ -1,3 +1,2 @@
-import pymysql
-
-pymysql.install_as_MySQLdb()
+# PostgreSQL setup - no additional imports needed
+# psycopg2-binary handles PostgreSQL connections directly
