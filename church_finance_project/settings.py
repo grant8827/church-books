@@ -87,11 +87,7 @@ else:
         'https://localhost:8080',
     ]
 
-# Session Settings for Production
-SESSION_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
-SESSION_COOKIE_SAMESITE = 'Lax'
-
-# Session security
+# Session Settings - will be overridden in security section below
 SESSION_COOKIE_AGE = 1209600  # 2 weeks
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_SAVE_EVERY_REQUEST = True
@@ -106,9 +102,24 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
     # Enable SSL redirect in production (Railway handles this)
     SECURE_SSL_REDIRECT = False  # Railway handles SSL termination
+    
+    # CSRF security
+    CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_SAMESITE = 'Strict'
+    
+    # Session security
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Strict'
+    
+    # Additional production security
+    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 else:
     # Development settings
     SECURE_SSL_REDIRECT = False
+    CSRF_COOKIE_SECURE = False
+    SESSION_COOKIE_SECURE = False
 
 
 # Application definition
