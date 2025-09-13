@@ -22,6 +22,16 @@ from datetime import timedelta
 import json
 from .models import Church, PayPalSubscription, ChurchMember
 from .paypal_service import PayPalService
+from .mock_paypal_service import MockPayPalService
+
+def get_paypal_service():
+    """
+    Return either real or mock PayPal service based on configuration
+    """
+    if getattr(settings, 'USE_MOCK_PAYPAL', False):
+        return MockPayPalService()
+    else:
+        return PayPalService()
 
 @ensure_csrf_cookie
 def subscription_view(request):
@@ -242,7 +252,7 @@ def registration_form_view(request):
             # Handle PayPal payment
             elif payment_method == 'paypal':
                 try:
-                    paypal_service = PayPalService()
+                    paypal_service = get_paypal_service()
                     payer_info = {
                         'first_name': first_name,
                         'last_name': last_name,
@@ -435,7 +445,7 @@ def create_paypal_subscription(request):
             
             # Create PayPal subscription for online payment
             try:
-                paypal_service = PayPalService()
+                paypal_service = get_paypal_service()
                 payer_info = {
                     'first_name': first_name,
                     'last_name': last_name,
@@ -497,7 +507,7 @@ def paypal_success(request):
     
     try:
         # Get order details and capture payment
-        paypal_service = PayPalService()
+        paypal_service = get_paypal_service()
         
         # First get order details
         order_result = paypal_service.get_order_details(token)
@@ -642,7 +652,7 @@ def paypal_webhook(request):
     """
     try:
         webhook_data = json.loads(request.body)
-        paypal_service = PayPalService()
+        paypal_service = get_paypal_service()
         result = paypal_service.process_webhook(webhook_data)
         
         if result['success']:

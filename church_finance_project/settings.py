@@ -387,3 +387,14 @@ LOGGING = {
 LOGIN_URL = '/finances/login/'
 LOGIN_REDIRECT_URL = '/finances/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
+
+# PayPal Configuration
+PAYPAL_CLIENT_ID = os.getenv('PAYPAL_CLIENT_ID', '')
+PAYPAL_CLIENT_SECRET = os.getenv('PAYPAL_CLIENT_SECRET', '')
+PAYPAL_MODE = os.getenv('PAYPAL_MODE', 'sandbox')
+PAYPAL_BASE_URL = os.getenv('PAYPAL_BASE_URL', 'https://churchbooksmanagement.com')
+PAYPAL_STANDARD_PLAN_ID = os.getenv('PAYPAL_STANDARD_PLAN_ID', 'P-XXXXXXXXXXXXXXXXXXXX')
+PAYPAL_PREMIUM_PLAN_ID = os.getenv('PAYPAL_PREMIUM_PLAN_ID', 'P-XXXXXXXXXXXXXXXXXXXX')
+
+# Use mock PayPal service when credentials are invalid or missing
+USE_MOCK_PAYPAL = os.getenv('USE_MOCK_PAYPAL', 'False').lower() in ('true', '1', 'yes')
