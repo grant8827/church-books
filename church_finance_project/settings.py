@@ -34,15 +34,7 @@ DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 # ALLOWED_HOSTS configuration
 ALLOWED_HOSTS = [
-    'church-books-production.up.railway.app',
-    'churchbooksmanagement.com', 
-    'www.churchbooksmanagement.com',
-    'healthcheck.railway.app',  # Railway health check domain
-    '*.up.railway.app',  # Railway subdomains
-    '.railway.app',  # All Railway domains
-    '.railway.internal',  # Railway internal domains
-    '127.0.0.1',
-    'localhost'
+    'church-books-production.up.railway.app','http://churchbooksmanagement.com','127.0.0.1','localhost'
 ] if not DEBUG else ['*']  # Allow all hosts only in development
 
 # Add Railway-provided hostnames from environment variables
