@@ -34,7 +34,7 @@ DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 # ALLOWED_HOSTS configuration
 ALLOWED_HOSTS = [
-    'web-production-55cc.up.railway.app',
+    'church-books-production-e217.up.railway.app',
     'http://churchbooksmanagement.com',
     'churchbooksmanagement.com',
     'www.churchbooksmanagement.com',
@@ -63,7 +63,7 @@ CSRF_TRUSTED_ORIGINS = []
 if not DEBUG:
     # Production CSRF trusted origins
     CSRF_TRUSTED_ORIGINS = [
-        'https://web-production-55cc.up.railway.app',
+        'https://church-books-production-e217.up.railway.app',
         'https://churchbooksmanagement.com',
         'https://www.churchbooksmanagement.com',
         'https://*.up.railway.app',
