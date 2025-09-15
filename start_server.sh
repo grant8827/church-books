@@ -18,5 +18,8 @@ echo "==============================="
 echo "Running database migrations..."
 python manage.py migrate --noinput
 
+echo "Ensuring superuser exists..."
+python manage.py ensure_superuser
+
 echo "Starting server..."
 exec gunicorn church_finance_project.wsgi:application --bind 0.0.0.0:$PORT --log-level info --timeout 300

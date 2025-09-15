@@ -356,17 +356,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For developm
 # EMAIL_HOST_USER = 'your-email@gmail.com'
 # EMAIL_HOST_PASSWORD = 'your-app-specific-password'
 
-# PayPal Configuration
-PAYPAL_CLIENT_ID = os.environ.get('PAYPAL_CLIENT_ID', 'your_paypal_client_id')
-PAYPAL_CLIENT_SECRET = os.environ.get('PAYPAL_CLIENT_SECRET', 'your_paypal_client_secret')
-PAYPAL_MODE = os.environ.get('PAYPAL_MODE', 'sandbox')  # 'sandbox' or 'live'
-
-# PayPal URLs - Use your actual domain
-PAYPAL_BASE_URL = os.environ.get('PAYPAL_BASE_URL', 'http://127.0.0.1:8000')
-
-# PayPal Subscription Plan IDs (These need to be created in PayPal dashboard)
-PAYPAL_STANDARD_PLAN_ID = os.environ.get('PAYPAL_STANDARD_PLAN_ID', 'P-XXXXXXXXXXXXXXXXXXXX')
-PAYPAL_PREMIUM_PLAN_ID = os.environ.get('PAYPAL_PREMIUM_PLAN_ID', 'P-XXXXXXXXXXXXXXXXXXXX')
+# PayPal Configuration - REMOVED DUPLICATE (configuration moved to end of file)
 
 # Logging Configuration
 LOGGING = {
@@ -426,3 +416,8 @@ PAYPAL_PREMIUM_PLAN_ID = os.getenv('PAYPAL_PREMIUM_PLAN_ID', 'P-XXXXXXXXXXXXXXXX
 
 # Use mock PayPal service when credentials are invalid or missing
 USE_MOCK_PAYPAL = os.getenv('USE_MOCK_PAYPAL', 'False').lower() in ('true', '1', 'yes')
+
+# Security Settings for Production
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
