@@ -191,27 +191,24 @@ if BUILD_TIME_COLLECTSTATIC and RUNNING_COLLECTSTATIC:
         }
     }
 else:
-    # All other cases: require MySQL
-    db_host = os.getenv('MYSQL_HOST') or os.getenv('DB_HOST')
-    db_port = os.getenv('MYSQL_PORT') or os.getenv('DB_PORT', '3306')
-    db_name = os.getenv('MYSQL_DATABASE') or os.getenv('DB_NAME')
-    db_user = os.getenv('MYSQL_USER') or os.getenv('DB_USER')
-    db_password = os.getenv('MYSQL_PASSWORD') or os.getenv('DB_PASSWORD')
+    # All other cases: require PostgreSQL using POSTGRES_* variables only
+    pg_host = os.getenv('POSTGRES_HOST')
+    pg_port = os.getenv('POSTGRES_PORT', '5432')
+    pg_db = os.getenv('POSTGRES_DB')
+    pg_user = os.getenv('POSTGRES_USER')
+    pg_password = os.getenv('POSTGRES_PASSWORD')
 
-    if not all([db_host, db_port, db_name, db_user, db_password]):
-        raise Exception("No MySQL configuration found! Set MYSQL_* or DB_* environment variables.")
+    if not all([pg_host, pg_port, pg_db, pg_user, pg_password]):
+        raise Exception("No PostgreSQL configuration found! Set POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD in your .env file.")
 
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': db_name,
-            'USER': db_user,
-            'PASSWORD': db_password,
-            'HOST': db_host,
-            'PORT': db_port,
-            'OPTIONS': {
-                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-            },
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': pg_db,
+            'USER': pg_user,
+            'PASSWORD': pg_password,
+            'HOST': pg_host,
+            'PORT': pg_port,
             'CONN_MAX_AGE': 60,
         }
     }
