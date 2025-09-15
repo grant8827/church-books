@@ -177,123 +177,38 @@ WSGI_APPLICATION = "church_finance_project.wsgi.application"
 #}
 
 # Database configuration
-RUNNING_COLLECTSTATIC = 'collectstatic' in sys.argv
-RUNNING_MIGRATIONS = 'migrate' in sys.argv
-BUILD_TIME_COLLECTSTATIC = os.getenv('DJANGO_COLLECTSTATIC_BUILD') == '1'
-
-# If we're collecting static during build, don't require DB env: use a safe SQLite fallback
-if RUNNING_COLLECTSTATIC or RUNNING_MIGRATIONS or BUILD_TIME_COLLECTSTATIC:
-    action = 'collectstatic' if RUNNING_COLLECTSTATIC else 'migrate' if RUNNING_MIGRATIONS else 'build-time-collectstatic'
-    print(f"Detected Django management command ({action}). Using SQLite fallback to allow operation without external DB.")
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-else:
-    # Check for Railway DATABASE_URL first, then construct from individual variables, then fall back to local
-    database_url = os.getenv('DATABASE_URL')
-    print(f"DATABASE_URL found: {bool(database_url)}")
-    if database_url:
-        print(f"DATABASE_URL value: {database_url[:50]}...")
-
-    # If no DATABASE_URL but we have individual Railway DB variables, construct it
-    if not database_url:
-        # Try Railway's default PostgreSQL environment variables first
-        db_host = (os.getenv('PGHOST') or 
-                  os.getenv('POSTGRES_HOST') or 
-                  os.getenv('DB_HOST'))
-        db_port = (os.getenv('PGPORT') or 
-                  os.getenv('POSTGRES_PORT') or 
-                  os.getenv('DB_PORT'))
-        db_name = (os.getenv('PGDATABASE') or 
-                  os.getenv('POSTGRES_DB') or 
-                  os.getenv('DB_NAME'))
-        db_user = (os.getenv('PGUSER') or 
-                  os.getenv('POSTGRES_USER') or 
-                  os.getenv('DB_USER'))
-        db_password = (os.getenv('PGPASSWORD') or 
-                      os.getenv('POSTGRES_PASSWORD') or 
-                      os.getenv('DB_PASSWORD'))
-
-        print(f"Environment variables found:")
-        print(f"  Host: {db_host}")
-        print(f"  Port: {db_port}")
-        print(f"  Database: {db_name}")
-        print(f"  User: {db_user}")
-        print(f"  Password: {'***' if db_password else 'None'}")
-
-        if db_host and db_name and db_user and db_password:
-            # Construct DATABASE_URL from individual variables
-            database_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port or '5432'}/{db_name}"
-            print("Constructed DATABASE_URL from individual variables")
-            print(f"DB Host: {db_host}, DB Name: {db_name}")
-
-    if database_url:
-        # Production database via DATABASE_URL
-        try:
-            DATABASES = {
-                'default': dj_database_url.parse(database_url)
-            }
-            print("Using DATABASE_URL for database connection")
-            print(f"Database: {DATABASES['default']['NAME']} @ {DATABASES['default']['HOST']}")
-            
-            # Add connection options for Railway PostgreSQL
-            DATABASES['default'].update({
-                'OPTIONS': {
-                    'sslmode': 'prefer',  # Railway PostgreSQL supports SSL
-                },
-                'CONN_MAX_AGE': 60,  # Connection pooling
-                'CONN_HEALTH_CHECKS': True,  # Django 4.1+ health checks
-            })
-        except Exception as e:
-            print(f"Error parsing DATABASE_URL: {e}")
-            print(f"DATABASE_URL value: {database_url}")
-            raise
-    else:
-        # Local development fallback
-        print("No DATABASE_URL found. Checking for local PostgreSQL environment variables...")
-
-        db_name = os.getenv('DB_NAME') or os.getenv('POSTGRES_DB')
-        db_host = os.getenv('DB_HOST') or os.getenv('POSTGRES_HOST')
-        print(f"Local DB_NAME: {db_name}, DB_HOST: {db_host}")
-
-        if not db_name and not db_host:
-            # No database configuration found
-            print("ERROR: No database configuration found!")
-            print("Missing DATABASE_URL and individual DB_* environment variables")
-            print("Available environment variables:")
-            for key in os.environ:
-                if 'DB' in key or 'POSTGRES' in key or 'PG' in key or 'DATABASE' in key:
-                    print(f"  {key}: {os.environ[key]}")
-            # In non-collectstatic paths we still need a DB; default to SQLite rather than crash in some envs
-            print("Falling back to SQLite for safety. Set DATABASE_URL or DB_* env vars in production.")
-            DATABASES = {
-                'default': {
-                    'ENGINE': 'django.db.backends.sqlite3',
-                    'NAME': BASE_DIR / 'db.sqlite3',
-                }
-            }
-        else:
-            try:
-                DATABASES = {
-                    'default': {
-                        'ENGINE': 'django.db.backends.postgresql',
-                        'NAME': os.getenv('DB_NAME') or os.getenv('POSTGRES_DB', 'church_books'),
-                        'USER': os.getenv('DB_USER') or os.getenv('POSTGRES_USER', 'postgres'),
-                        'PASSWORD': os.getenv('DB_PASSWORD') or os.getenv('POSTGRES_PASSWORD', ''),
-                        'HOST': os.getenv('DB_HOST') or os.getenv('POSTGRES_HOST', 'localhost'),
-                        'PORT': os.getenv('DB_PORT') or os.getenv('POSTGRES_PORT', '5432'),
-                        'OPTIONS': {
-                            'sslmode': 'disable',
-                        }
-                    }
-                }
-                print(f"Using local PostgreSQL: {DATABASES['default']['NAME']} @ {DATABASES['default']['HOST']}")
-            except Exception as e:
-                print(f"Error configuring local database: {e}")
-                raise
+database_url = os.getenv('DATABASE_URL')
+if not database_url:
+    # Try Railway's default PostgreSQL environment variables first
+    db_host = (os.getenv('PGHOST') or 
+              os.getenv('POSTGRES_HOST') or 
+              os.getenv('DB_HOST'))
+    db_port = (os.getenv('PGPORT') or 
+              os.getenv('POSTGRES_PORT') or 
+              os.getenv('DB_PORT'))
+    db_name = (os.getenv('PGDATABASE') or 
+              os.getenv('POSTGRES_DB') or 
+              os.getenv('DB_NAME'))
+    db_user = (os.getenv('PGUSER') or 
+              os.getenv('POSTGRES_USER') or 
+              os.getenv('DB_USER'))
+    db_password = (os.getenv('PGPASSWORD') or 
+                  os.getenv('POSTGRES_PASSWORD') or 
+                  os.getenv('DB_PASSWORD'))
+    if db_host and db_name and db_user and db_password:
+        database_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port or '5432'}/{db_name}"
+if not database_url:
+    raise Exception("No PostgreSQL configuration found! Set DATABASE_URL or Railway DB environment variables.")
+DATABASES = {
+    'default': dj_database_url.parse(database_url)
+}
+DATABASES['default'].update({
+    'OPTIONS': {
+        'sslmode': 'prefer',  # Railway PostgreSQL supports SSL
+    },
+    'CONN_MAX_AGE': 60,  # Connection pooling
+    'CONN_HEALTH_CHECKS': True,  # Django 4.1+ health checks
+})
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
