@@ -184,12 +184,12 @@ RUNNING_COLLECTSTATIC = 'collectstatic' in sys.argv
 if BUILD_TIME_COLLECTSTATIC and RUNNING_COLLECTSTATIC:
     # During Docker build, use SQLite for collectstatic only
     print("Docker build: Using SQLite for collectstatic command only")
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': ':memory:',  # Use in-memory SQLite for speed
-        }
-    }
+    #DATABASES = {
+     #   'default': {
+        #    'ENGINE': 'django.db.backends.sqlite3',
+         #   'NAME': ':memory:',  # Use in-memory SQLite for speed
+       # }
+   # }
 else:
     # All other cases: require PostgreSQL using POSTGRES_* variables only
     pg_host = os.getenv('POSTGRES_HOST')
@@ -204,11 +204,11 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
+            'HOST': pg_host,
+            'PORT': pg_port,
             'NAME': pg_db,
             'USER': pg_user,
             'PASSWORD': pg_password,
-            'HOST': pg_host,
-            'PORT': pg_port,
             'CONN_MAX_AGE': 60,
         }
     }
