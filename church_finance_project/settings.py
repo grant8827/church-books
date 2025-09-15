@@ -191,41 +191,30 @@ if BUILD_TIME_COLLECTSTATIC and RUNNING_COLLECTSTATIC:
         }
     }
 else:
-    # All other cases: require PostgreSQL
-    database_url = os.getenv('DATABASE_URL')
-    if not database_url:
-        # Try Railway's default PostgreSQL environment variables first
-        db_host = (os.getenv('PGHOST') or 
-                  os.getenv('POSTGRES_HOST') or 
-                  os.getenv('DB_HOST'))
-        db_port = (os.getenv('PGPORT') or 
-                  os.getenv('POSTGRES_PORT') or 
-                  os.getenv('DB_PORT'))
-        db_name = (os.getenv('PGDATABASE') or 
-                  os.getenv('POSTGRES_DB') or 
-                  os.getenv('DB_NAME'))
-        db_user = (os.getenv('PGUSER') or 
-                  os.getenv('POSTGRES_USER') or 
-                  os.getenv('DB_USER'))
-        db_password = (os.getenv('PGPASSWORD') or 
-                      os.getenv('POSTGRES_PASSWORD') or 
-                      os.getenv('DB_PASSWORD'))
-        if db_host and db_name and db_user and db_password:
-            database_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port or '5432'}/{db_name}"
-    
-    if not database_url:
-        raise Exception("No PostgreSQL configuration found! Set DATABASE_URL or Railway DB environment variables.")
-    
+    # All other cases: require MySQL
+    db_host = os.getenv('MYSQL_HOST') or os.getenv('DB_HOST')
+    db_port = os.getenv('MYSQL_PORT') or os.getenv('DB_PORT', '3306')
+    db_name = os.getenv('MYSQL_DATABASE') or os.getenv('DB_NAME')
+    db_user = os.getenv('MYSQL_USER') or os.getenv('DB_USER')
+    db_password = os.getenv('MYSQL_PASSWORD') or os.getenv('DB_PASSWORD')
+
+    if not all([db_host, db_port, db_name, db_user, db_password]):
+        raise Exception("No MySQL configuration found! Set MYSQL_* or DB_* environment variables.")
+
     DATABASES = {
-        'default': dj_database_url.parse(database_url)
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': db_name,
+            'USER': db_user,
+            'PASSWORD': db_password,
+            'HOST': db_host,
+            'PORT': db_port,
+            'OPTIONS': {
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
+            'CONN_MAX_AGE': 60,
+        }
     }
-    DATABASES['default'].update({
-        'OPTIONS': {
-            'sslmode': 'prefer',  # Railway PostgreSQL supports SSL
-        },
-        'CONN_MAX_AGE': 60,  # Connection pooling
-        'CONN_HEALTH_CHECKS': True,  # Django 4.1+ health checks
-    })
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
