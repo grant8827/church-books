@@ -22,6 +22,7 @@ from church_finances.views_health import health_check
 from church_finances.railway_health import railway_health_check
 from church_finances.railway_db_health import railway_db_health_check, railway_env_debug
 from church_finances.debug_views import debug_database, debug_auth
+from church_finances.debug_paypal import debug_paypal_config
 
 urlpatterns = [
     path('admin/', church_admin_site.urls),
@@ -34,4 +35,5 @@ urlpatterns = [
     path('debug/env/', railway_env_debug, name='railway_env_debug'), # Environment debug (dev only)
     path('debug/database/', debug_database, name='debug_database'), # Database debug endpoint
     path('debug/auth/', debug_auth, name='debug_auth'), # Auth system debug endpoint
+    path('debug/paypal/', debug_paypal_config, name='debug_paypal'), # PayPal configuration debug endpoint
 ]
