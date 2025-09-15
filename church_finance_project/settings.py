@@ -177,38 +177,55 @@ WSGI_APPLICATION = "church_finance_project.wsgi.application"
 #}
 
 # Database configuration
-database_url = os.getenv('DATABASE_URL')
-if not database_url:
-    # Try Railway's default PostgreSQL environment variables first
-    db_host = (os.getenv('PGHOST') or 
-              os.getenv('POSTGRES_HOST') or 
-              os.getenv('DB_HOST'))
-    db_port = (os.getenv('PGPORT') or 
-              os.getenv('POSTGRES_PORT') or 
-              os.getenv('DB_PORT'))
-    db_name = (os.getenv('PGDATABASE') or 
-              os.getenv('POSTGRES_DB') or 
-              os.getenv('DB_NAME'))
-    db_user = (os.getenv('PGUSER') or 
-              os.getenv('POSTGRES_USER') or 
-              os.getenv('DB_USER'))
-    db_password = (os.getenv('PGPASSWORD') or 
-                  os.getenv('POSTGRES_PASSWORD') or 
-                  os.getenv('DB_PASSWORD'))
-    if db_host and db_name and db_user and db_password:
-        database_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port or '5432'}/{db_name}"
-if not database_url:
-    raise Exception("No PostgreSQL configuration found! Set DATABASE_URL or Railway DB environment variables.")
-DATABASES = {
-    'default': dj_database_url.parse(database_url)
-}
-DATABASES['default'].update({
-    'OPTIONS': {
-        'sslmode': 'prefer',  # Railway PostgreSQL supports SSL
-    },
-    'CONN_MAX_AGE': 60,  # Connection pooling
-    'CONN_HEALTH_CHECKS': True,  # Django 4.1+ health checks
-})
+# Special case: allow SQLite only during Docker build collectstatic
+BUILD_TIME_COLLECTSTATIC = os.getenv('DJANGO_COLLECTSTATIC_BUILD') == '1'
+RUNNING_COLLECTSTATIC = 'collectstatic' in sys.argv
+
+if BUILD_TIME_COLLECTSTATIC and RUNNING_COLLECTSTATIC:
+    # During Docker build, use SQLite for collectstatic only
+    print("Docker build: Using SQLite for collectstatic command only")
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',  # Use in-memory SQLite for speed
+        }
+    }
+else:
+    # All other cases: require PostgreSQL
+    database_url = os.getenv('DATABASE_URL')
+    if not database_url:
+        # Try Railway's default PostgreSQL environment variables first
+        db_host = (os.getenv('PGHOST') or 
+                  os.getenv('POSTGRES_HOST') or 
+                  os.getenv('DB_HOST'))
+        db_port = (os.getenv('PGPORT') or 
+                  os.getenv('POSTGRES_PORT') or 
+                  os.getenv('DB_PORT'))
+        db_name = (os.getenv('PGDATABASE') or 
+                  os.getenv('POSTGRES_DB') or 
+                  os.getenv('DB_NAME'))
+        db_user = (os.getenv('PGUSER') or 
+                  os.getenv('POSTGRES_USER') or 
+                  os.getenv('DB_USER'))
+        db_password = (os.getenv('PGPASSWORD') or 
+                      os.getenv('POSTGRES_PASSWORD') or 
+                      os.getenv('DB_PASSWORD'))
+        if db_host and db_name and db_user and db_password:
+            database_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port or '5432'}/{db_name}"
+    
+    if not database_url:
+        raise Exception("No PostgreSQL configuration found! Set DATABASE_URL or Railway DB environment variables.")
+    
+    DATABASES = {
+        'default': dj_database_url.parse(database_url)
+    }
+    DATABASES['default'].update({
+        'OPTIONS': {
+            'sslmode': 'prefer',  # Railway PostgreSQL supports SSL
+        },
+        'CONN_MAX_AGE': 60,  # Connection pooling
+        'CONN_HEALTH_CHECKS': True,  # Django 4.1+ health checks
+    })
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
