@@ -36,4 +36,5 @@ urlpatterns = [
     path('debug/database/', debug_database, name='debug_database'), # Database debug endpoint
     path('debug/auth/', debug_auth, name='debug_auth'), # Auth system debug endpoint
     path('debug/paypal/', debug_paypal_config, name='debug_paypal'), # PayPal configuration debug endpoint
+   
 ]
