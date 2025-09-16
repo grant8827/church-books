@@ -209,9 +209,9 @@ else:
             'NAME': pg_db,
             'USER': pg_user,
             'PASSWORD': pg_password,
-            'CONN_MAX_AGE': 60,  # Persistent connections
+            'CONN_MAX_AGE': 60,
             'OPTIONS': {
-                'options': f'-c search_path={pg_db}',
+                'options': '-c search_path=public',
             },
         }
     }
