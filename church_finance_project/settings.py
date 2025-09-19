@@ -130,7 +130,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     'church_finances',
-    'sslserver',
    
 ]
 
