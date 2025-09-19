@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+## from base_settings import *
 from pathlib import Path
 import os
 import sys
@@ -41,7 +41,6 @@ ALLOWED_HOSTS = [
     'healthcheck.railway.app',
     '127.0.0.1',
     'localhost',
-    '*.up.railway.app'
 ] if not DEBUG else ['*']  # Allow all hosts only in development
 
 # Add Railway-provided hostnames from environment variables
@@ -130,7 +129,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    'church_finances'
+    'church_finances',
+    'sslserver',
+    "tailwindcss",
 ]
 
 MIDDLEWARE = [
