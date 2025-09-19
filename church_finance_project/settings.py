@@ -131,7 +131,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     'church_finances',
     'sslserver',
-    "tailwindcss",
+   
 ]
 
 MIDDLEWARE = [
