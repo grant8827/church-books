@@ -168,13 +168,6 @@ WSGI_APPLICATION = "church_finance_project.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Default to SQLite for local development
-#DATABASES = {
- #   'default': {
-  #      'ENGINE': 'django.db.backends.sqlite3',
-   #     'NAME': BASE_DIR / 'db.sqlite3',
-    #}
-#}
 
 # Database configuration
 # Special case: allow SQLite only during Docker build collectstatic
