@@ -330,6 +330,12 @@ PAYPAL_PREMIUM_PLAN_ID = os.getenv('PAYPAL_PREMIUM_PLAN_ID', 'P-XXXXXXXXXXXXXXXX
 USE_MOCK_PAYPAL = os.getenv('USE_MOCK_PAYPAL', 'False').lower() in ('true', '1', 'yes')
 
 # Security Settings for Production
-if not DEBUG:
+# Some hosting platforms set DEBUG=False even in review/staging contexts.
+# To avoid breaking local development when DEBUG=False in .env, require an explicit FORCE_SSL flag.
+FORCE_SSL = os.getenv('FORCE_SSL', '0') in ('1', 'true', 'True', 'yes', 'on')
+if not DEBUG and FORCE_SSL:
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+else:
+    # Ensure local/dev usage does not attempt HTTPS redirection
+    SECURE_SSL_REDIRECT = False
