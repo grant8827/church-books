@@ -1,0 +1,49 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies required for Python packages
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    gcc \
+    g++ \
+    make \
+    pkg-config \
+    libxml2-dev \
+    libxslt1-dev \
+    libjpeg-dev \
+    libpng-dev \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PORT=8080 \
+    DEBUG=False
+
+# Upgrade pip
+RUN pip install --upgrade pip setuptools wheel
+
+# Copy and install requirements
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy project
+COPY . .
+
+# Create staticfiles directory
+RUN mkdir -p staticfiles
+
+# Collect static files with SQLite fallback
+ENV DJANGO_COLLECTSTATIC_BUILD=1
+RUN python manage.py collectstatic --noinput
+
+# Make startup script executable
+RUN chmod +x start_server.sh
+
+# Expose port
+EXPOSE 8080
+
+# Start the application
+CMD ["./start_server.sh"]

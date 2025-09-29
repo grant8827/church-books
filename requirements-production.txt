@@ -1,0 +1,34 @@
+# Core Django and database
+Django==4.2.24
+psycopg2-binary==2.9.9
+dj-database-url==2.1.0
+
+# WSGI Server
+gunicorn==21.2.0
+
+# Static files
+whitenoise==6.6.0
+
+# Environment management
+python-dotenv==1.0.1
+
+# Core dependencies
+asgiref==3.8.1
+sqlparse==0.5.1
+
+# Security
+cryptography==41.0.8
+
+# HTTP requests
+requests==2.31.0
+urllib3==2.0.7
+
+# PayPal integration
+paypalrestsdk==1.13.3
+
+# PDF generation (optional - install separately if needed)
+# reportlab==4.2.2
+# xhtml2pdf==0.2.16
+# beautifulsoup4==4.12.3
+# lxml==5.2.2
+# pillow==10.4.0
