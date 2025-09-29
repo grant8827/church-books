@@ -1,0 +1,14 @@
+# PDF generation dependencies (install separately if needed)
+# These packages have complex dependencies and may cause conflicts
+
+# Compatible PDF generation stack
+reportlab>=3.5.53,<4.0.0
+xhtml2pdf>=0.2.8,<0.3.0
+beautifulsoup4>=4.11.0,<5.0.0
+lxml>=4.9.0,<5.0.0
+Pillow>=9.5.0,<11.0.0
+
+# Additional PDF dependencies
+arabic-reshaper>=3.0.0
+python-bidi>=0.4.2
+html5lib>=1.0.1

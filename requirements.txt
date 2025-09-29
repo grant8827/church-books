@@ -16,21 +16,8 @@ whitenoise==6.5.0
 # Environment
 python-dotenv==1.0.0
 
-# Security and crypto (using latest compatible version)
-cryptography>=3.4.8,<42.0.0
-
 # HTTP requests
 requests==2.31.0
-urllib3>=1.26.0,<3.0.0
 
-# PayPal payments
+# PayPal payments (optional)
 paypalrestsdk==1.13.1
-
-# PDF generation dependencies
-reportlab==4.0.4
-beautifulsoup4==4.12.2
-lxml>=4.9.0,<5.0.0
-Pillow>=9.5.0,<11.0.0
-
-# HTML to PDF converter
-xhtml2pdf==0.2.11

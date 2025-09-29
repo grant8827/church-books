@@ -23,7 +23,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY requirements.txt .
 RUN pip install --upgrade pip setuptools wheel
 
-# Install Python dependencies
+# Install core dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy project

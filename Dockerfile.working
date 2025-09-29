@@ -1,0 +1,38 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PORT=8080
+
+# Upgrade pip
+RUN pip install --upgrade pip
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application
+COPY . .
+
+# Create staticfiles directory
+RUN mkdir -p staticfiles
+
+# Collect static files
+ENV DJANGO_COLLECTSTATIC_BUILD=1
+RUN python manage.py collectstatic --noinput
+
+# Make startup script executable
+RUN chmod +x start_server.sh
+
+EXPOSE 8080
+
+CMD ["./start_server.sh"]
