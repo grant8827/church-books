@@ -216,7 +216,8 @@ def registration_form_view(request):
                     website=church_website,
                     subscription_type=selected_package,
                     subscription_status=church_status,
-                    is_approved=is_church_approved
+                    is_approved=is_church_approved,
+                    payment_method=payment_method
                 )
                 
                 print(f"DEBUG: Church created successfully with ID: {church.id}, approved: {church.is_approved}")
@@ -411,7 +412,8 @@ def create_paypal_subscription(request):
                 website=church_website,
                 subscription_type=selected_package,
                 subscription_status='pending',
-                is_approved=False
+                is_approved=False,
+                payment_method=('offline' if payment_method == 'offline' else 'paypal')
             )
             
             print(f"DEBUG: Church created successfully with ID: {church.id}")
@@ -528,6 +530,9 @@ def paypal_success(request):
                     if custom_id:
                         church = get_object_or_404(Church, id=custom_id)
                         
+                        # Ensure church payment_method is set to paypal
+                        if church.payment_method != 'paypal':
+                            church.payment_method = 'paypal'
                         # Create PayPalSubscription record
                         paypal_sub, created = PayPalSubscription.objects.get_or_create(
                             subscription_id=token,
@@ -635,11 +640,6 @@ def paypal_cancel(request):
     request.session.pop('pending_subscription_id', None)
     request.session.pop('church_id', None)
     request.session.pop('pending_user_id', None)
-    
-    messages.warning(request, "Subscription cancelled. You can try again anytime.")
-    return redirect('subscription')
-    request.session.pop('pending_subscription_id', None)
-    request.session.pop('church_id', None)
     
     messages.warning(request, "Subscription cancelled. You can try again anytime.")
     return redirect('subscription')

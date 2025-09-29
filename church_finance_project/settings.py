@@ -30,12 +30,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', "django-insecure-zdk_gm_9vek_n8$o-68f*yyyn#22%1l$8g*1j_)$gf50de3)u%")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+DEBUG = True  # Temporary override for local testing
+# DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 # ALLOWED_HOSTS configuration
 ALLOWED_HOSTS = [
     'church-books-production-e217.up.railway.app',
-    'http://churchbooksmanagement.com',
     'churchbooksmanagement.com',
     'www.churchbooksmanagement.com',
     'healthcheck.railway.app',
@@ -56,6 +56,7 @@ if railway_private_domain:
 additional_hosts = os.environ.get('ALLOWED_HOSTS', '')
 if additional_hosts:
     ALLOWED_HOSTS.extend([host.strip() for host in additional_hosts.split(',') if host.strip()])
+
 
 # CSRF Configuration
 CSRF_TRUSTED_ORIGINS = []
@@ -82,8 +83,10 @@ else:
         'http://localhost:8000',
         'http://127.0.0.1:8000',
         'http://localhost:8080',
-        'https://localhost:8080',
+        'http://127.0.0.1:8001',
+        'http://localhost:8001',
     ]
+
 
 # Session Settings - will be overridden in security section below
 SESSION_COOKIE_AGE = 1209600  # 2 weeks
@@ -191,23 +194,31 @@ else:
     pg_user = os.getenv('POSTGRES_USER')
     pg_password = os.getenv('POSTGRES_PASSWORD')
 
+    # Use PostgreSQL if credentials are available, otherwise fall back to SQLite
     if not all([pg_host, pg_port, pg_db, pg_user, pg_password]):
-        raise Exception("No PostgreSQL configuration found! Set POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD in your .env file.")
-
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'HOST': pg_host,
-            'PORT': pg_port,
-            'NAME': pg_db,
-            'USER': pg_user,
-            'PASSWORD': pg_password,
-            'CONN_MAX_AGE': 60,
-            'OPTIONS': {
-                'options': '-c search_path=public',
-            },
+        print("Using SQLite for local development/testing - PostgreSQL credentials not found")
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
         }
-    }
+    else:
+        print("Using PostgreSQL database")
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'HOST': pg_host,
+                'PORT': pg_port,
+                'NAME': pg_db,
+                'USER': pg_user,
+                'PASSWORD': pg_password,
+                'CONN_MAX_AGE': 60,
+                'OPTIONS': {
+                    'options': '-c search_path=public',
+                },
+            }
+        }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

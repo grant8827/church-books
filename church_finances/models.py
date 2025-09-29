@@ -28,11 +28,29 @@ class Church(models.Model):
     paypal_subscription_id = models.CharField(max_length=100, blank=True, null=True)
     subscription_start_date = models.DateTimeField(blank=True, null=True)
     subscription_end_date = models.DateTimeField(blank=True, null=True)
+    # Payment / billing metadata
+    PAYMENT_METHODS = (
+        ('paypal', 'PayPal'),
+        ('offline', 'Offline'),
+    )
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default='offline')
+    offline_payment_reference = models.CharField(max_length=255, blank=True, null=True, help_text="Reference # / receipt / memo for offline payment")
+    offline_verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='offline_verifications', help_text='Admin user who verified offline payment')
+    offline_verified_at = models.DateTimeField(blank=True, null=True)
+    offline_notes = models.TextField(blank=True, help_text="Internal notes regarding offline payment verification")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
+
+    @property
+    def is_payment_verified(self):
+        if self.payment_method == 'paypal':
+            return self.subscription_status == 'active' and self.is_approved
+        if self.payment_method == 'offline':
+            return self.offline_verified_at is not None
+        return False
 
 class PayPalSubscription(models.Model):
     """

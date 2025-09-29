@@ -18,6 +18,7 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact Information</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
@@ -61,15 +62,51 @@
                             </div>
                         </td>
                         <td class="px-6 py-4">
-                            <div class="flex space-x-2">
-                                <form action="{% url 'approve_church' church.id %}" method="post" class="inline"><button type="submit" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            <div class="text-xs">
+                                <div>
+                                    {% if church.payment_method == 'paypal' %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">PayPal</span>
+                                    {% else %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Offline</span>
+                                    {% endif %}
+                                </div>
+                                {% if church.payment_method == 'offline' %}
+                                    <div class="mt-2 text-gray-600">
+                                        {% if church.offline_verified_at %}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Verified {{ church.offline_verified_at|date:"M d, Y" }}</span>
+                                            {% if church.offline_payment_reference %}
+                                                <div class="mt-1">Ref: {{ church.offline_payment_reference }}</div>
+                                            {% endif %}
+                                        {% else %}
+                                            <form action="{% url 'verify_offline_payment' church.id %}" method="post" class="space-y-2">
+                                                {% csrf_token %}
+                                                <div>
+                                                    <input type="text" name="offline_payment_reference" placeholder="Payment reference" class="w-full px-2 py-1 text-xs border rounded" required>
+                                                </div>
+                                                <div>
+                                                    <textarea name="offline_notes" placeholder="Notes (optional)" rows="2" class="w-full px-2 py-1 text-xs border rounded"></textarea>
+                                                </div>
+                                                <button type="submit" class="w-full inline-flex justify-center items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Verify & Approve</button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col space-y-2">
+                                <form action="{% url 'approve_church' church.id %}" method="post" class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="w-full inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" {% if church.payment_method == 'offline' and not church.offline_verified_at %}disabled title="Verify offline payment first" class="opacity-50 cursor-not-allowed"{% endif %}>
                                         <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                                         </svg>
                                         Approve
                                     </button>
                                 </form>
-                                <form action="{% url 'reject_church' church.id %}" method="post" class="inline"><button type="submit" onclick="return confirm('Are you sure you want to reject this church registration?')" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                                <form action="{% url 'reject_church' church.id %}" method="post" class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit" onclick="return confirm('Are you sure you want to reject this church registration?')" class="w-full inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
                                         <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                             <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
                                         </svg>

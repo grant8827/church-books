@@ -89,4 +89,5 @@ urlpatterns = [
     path("churches/pending/", views.church_approval_list, name="church_approval_list"),
     path("churches/<int:church_id>/approve/", views.approve_church, name="approve_church"),
     path("churches/<int:church_id>/reject/", views.reject_church, name="reject_church"),
+    path("churches/<int:church_id>/verify-offline/", views.verify_offline_payment, name="verify_offline_payment"),
 ]

@@ -1,27 +1,151 @@
 {% extends 'base.html' %}
 
+{% block extra_css %}
+<style>
+    /* Custom styles for member select dropdown */
+    .member-select {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .member-select option {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding: 8px 12px;
+    }
+    
+    /* Responsive form container */
+    .form-container {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+    
+    /* Notes textarea styling */
+    .notes-textarea {
+        resize: vertical;
+        min-height: 100px;
+        max-height: 300px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+        .form-container {
+            padding: 1rem;
+        }
+        
+        .member-select {
+            font-size: 14px;
+        }
+        
+        .grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mx-auto px-4 py-8">
-    <div class="max-w-3xl mx-auto">
+    <div class="max-w-4xl mx-auto">
         <div class="bg-white shadow-md rounded-lg p-6">
             <h2 class="text-2xl font-bold text-gray-800 mb-6">{% if form.instance.pk %}Edit{% else %}Add{% endif %} Contribution</h2>
             
             <form method="post" class="space-y-6">
                 {% csrf_token %}
-                {% for field in form %}
-                <div class="space-y-1">
-                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                        {{ field.label }}
-                    </label>
-                    {{ field }}
-                    {% if field.help_text %}
-                    <p class="text-sm text-gray-500">{{ field.help_text }}</p>
-                    {% endif %}
-                    {% for error in field.errors %}
-                    <p class="text-red-500 text-sm">{{ error }}</p>
-                    {% endfor %}
+                
+                <!-- Grid layout for better organization -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Member field with proper overflow handling -->
+                    <div class="space-y-1 md:col-span-2">
+                        <label for="{{ form.member.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            {{ form.member.label }}
+                        </label>
+                        <div class="relative form-container">
+                            {{ form.member }}
+                        </div>
+                        {% for error in form.member.errors %}
+                        <p class="text-red-500 text-sm">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Date field -->
+                    <div class="space-y-1">
+                        <label for="{{ form.date.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            {{ form.date.label }}
+                        </label>
+                        {{ form.date }}
+                        {% for error in form.date.errors %}
+                        <p class="text-red-500 text-sm">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Contribution Type field -->
+                    <div class="space-y-1">
+                        <label for="{{ form.contribution_type.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            {{ form.contribution_type.label }}
+                        </label>
+                        {{ form.contribution_type }}
+                        {% for error in form.contribution_type.errors %}
+                        <p class="text-red-500 text-sm">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Amount field -->
+                    <div class="space-y-1">
+                        <label for="{{ form.amount.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            {{ form.amount.label }}
+                        </label>
+                        {{ form.amount }}
+                        {% for error in form.amount.errors %}
+                        <p class="text-red-500 text-sm">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Payment Method field -->
+                    <div class="space-y-1">
+                        <label for="{{ form.payment_method.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            {{ form.payment_method.label }}
+                        </label>
+                        {{ form.payment_method }}
+                        {% for error in form.payment_method.errors %}
+                        <p class="text-red-500 text-sm">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Reference Number field -->
+                    <div class="space-y-1 md:col-span-2">
+                        <label for="{{ form.reference_number.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            {{ form.reference_number.label }}
+                        </label>
+                        {{ form.reference_number }}
+                        {% if form.reference_number.help_text %}
+                        <p class="text-sm text-gray-500">{{ form.reference_number.help_text }}</p>
+                        {% endif %}
+                        {% for error in form.reference_number.errors %}
+                        <p class="text-red-500 text-sm">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Notes field with proper responsive sizing -->
+                    <div class="space-y-1 md:col-span-2">
+                        <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            {{ form.notes.label }}
+                        </label>
+                        <div class="form-container">
+                            {{ form.notes }}
+                        </div>
+                        {% for error in form.notes.errors %}
+                        <p class="text-red-500 text-sm">{{ error }}</p>
+                        {% endfor %}
+                    </div>
                 </div>
-                {% endfor %}
 
                 <div class="flex justify-end space-x-4 pt-4">
                     <a href="{% url 'contribution_list' %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">

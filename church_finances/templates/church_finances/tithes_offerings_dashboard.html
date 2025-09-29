@@ -3,11 +3,11 @@
 {% block title %}Tithes & Offerings Dashboard - Church Books{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-100 py-8">
+<div class="min-h-screen bg-gray-100 py-8 overflow-y-clip">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
         <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div class="flex justify-between items-center">
+            <div class="flex flex-wrap justify-between items-center">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900">Tithes & Offerings Dashboard</h1>
                     <p class="text-gray-600 mt-2">
@@ -18,7 +18,7 @@
                         {% endif %}
                     </p>
                 </div>
-                <div class="flex space-x-3">
+                <div class="flex space-x-3 flex-wrap gap-2">
                     {% if context_type == 'member' %}
                         <a href="{% url 'quick_tithe_entry' %}" 
                            class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center">
@@ -62,33 +62,33 @@
         </div>
 
         <!-- Summary Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
-            <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                <div class="text-3xl font-bold text-blue-600">${{ totals.tithe|floatformat:2 }}</div>
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-6">
+            <div class="bg-white p-2 rounded-lg shadow-md text-left">
+                <div class="text-1xl font-bold text-blue-600">${{ totals.tithe|floatformat:2 }}</div>
                 <div class="text-sm text-gray-600 mt-1">Tithes</div>
             </div>
-            <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                <div class="text-3xl font-bold text-green-600">${{ totals.offering|floatformat:2 }}</div>
+            <div class="bg-white p-2 rounded-lg shadow-md text-left">
+                <div class="text-1xl font-bold text-green-600">${{ totals.offering|floatformat:2 }}</div>
                 <div class="text-sm text-gray-600 mt-1">Offerings</div>
             </div>
-            <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                <div class="text-3xl font-bold text-purple-600">${{ totals.special_offering|floatformat:2 }}</div>
+            <div class="bg-white p-2 rounded-lg shadow-md text-left">
+                <div class="text-1xl font-bold text-purple-600">${{ totals.special_offering|floatformat:2 }}</div>
                 <div class="text-sm text-gray-600 mt-1">Special</div>
             </div>
-            <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                <div class="text-3xl font-bold text-orange-600">${{ totals.building_fund|floatformat:2 }}</div>
+            <div class="bg-white p-2 rounded-lg shadow-md text-left">
+                <div class="text-1xl font-bold text-orange-600">${{ totals.building_fund|floatformat:2 }}</div>
                 <div class="text-sm text-gray-600 mt-1">Building Fund</div>
             </div>
-            <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                <div class="text-3xl font-bold text-red-600">${{ totals.missions|floatformat:2 }}</div>
+            <div class="bg-white p-2 rounded-lg shadow-md text-left">
+                <div class="text-1xl font-bold text-red-600">${{ totals.missions|floatformat:2 }}</div>
                 <div class="text-sm text-gray-600 mt-1">Missions</div>
             </div>
-            <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                <div class="text-3xl font-bold text-gray-600">${{ totals.other|floatformat:2 }}</div>
+            <div class="bg-white p-2 rounded-lg shadow-md text-left">
+                <div class="text-1xl font-bold text-gray-600">${{ totals.other|floatformat:2 }}</div>
                 <div class="text-sm text-gray-600 mt-1">Other</div>
             </div>
-            <div class="bg-white p-6 rounded-lg shadow-md text-center border-2 border-indigo-200">
-                <div class="text-3xl font-bold text-indigo-600">${{ totals.total|floatformat:2 }}</div>
+            <div class="bg-white p-2 rounded-lg shadow-md text-left border-2 border-indigo-200">
+                <div class="text-1xl font-bold text-indigo-600">${{ totals.total|floatformat:2 }}</div>
                 <div class="text-sm text-gray-600 mt-1">Total {{ current_year }}</div>
             </div>
         </div>

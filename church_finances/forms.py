@@ -105,25 +105,43 @@ class ContributionForm(forms.ModelForm):
         ]
         widgets = {
             'member': forms.Select(
-                attrs={'class': 'form-select rounded-md shadow-sm'}
+                attrs={
+                    'class': 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm truncate',
+                    'style': 'max-width: 100%; overflow: hidden; text-overflow: ellipsis;'
+                }
             ),
             'date': forms.DateInput(
-                attrs={'type': 'date', 'class': 'form-input rounded-md shadow-sm'}
+                attrs={
+                    'type': 'date', 
+                    'class': 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
+                }
             ),
             'contribution_type': forms.Select(
-                attrs={'class': 'form-select rounded-md shadow-sm'}
+                attrs={'class': 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'}
             ),
             'amount': forms.NumberInput(
-                attrs={'class': 'form-input rounded-md shadow-sm', 'step': '0.01'}
+                attrs={
+                    'class': 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500', 
+                    'step': '0.01',
+                    'min': '0'
+                }
             ),
             'payment_method': forms.Select(
-                attrs={'class': 'form-select rounded-md shadow-sm'}
+                attrs={'class': 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'}
             ),
             'reference_number': forms.TextInput(
-                attrs={'class': 'form-input rounded-md shadow-sm'}
+                attrs={
+                    'class': 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+                    'placeholder': 'Check number, transaction ID, etc.'
+                }
             ),
             'notes': forms.Textarea(
-                attrs={'rows': 3, 'class': 'form-textarea rounded-md shadow-sm'}
+                attrs={
+                    'rows': 4, 
+                    'class': 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 resize-y',
+                    'style': 'min-height: 100px; max-height: 300px;',
+                    'placeholder': 'Enter any additional notes about this contribution...'
+                }
             ),
         }
 

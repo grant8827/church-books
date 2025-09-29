@@ -22,6 +22,8 @@ from calendar import monthrange
 from collections import defaultdict
 import io
 from django.template.loader import get_template
+from django.views.decorators.http import require_POST
+
 
 # Conditional import for PDF generation
 try:
@@ -188,32 +190,38 @@ def approve_church(request, church_id):
     church = get_object_or_404(Church, id=church_id)
     if church.is_approved:
         error(request, f"Church '{church.name}' is already approved.")
-    else:
-        church.is_approved = True
-        church.subscription_status = 'active'
-        church.save()
-        
-        # Find and activate any inactive users associated with this church
-        from .models import ChurchMember
-        church_members = ChurchMember.objects.filter(church=church)
-        
-        activated_users = []
-        for member in church_members:
-            if not member.user.is_active:
-                member.user.is_active = True
-                member.user.save()
-                activated_users.append(member.user.username)
-            
-            # Also activate the church member
-            if not member.is_active:
-                member.is_active = True
-                member.save()
-        
-        success_msg = f"Church '{church.name}' has been approved."
-        if activated_users:
-            success_msg += f" Activated user accounts: {', '.join(activated_users)}"
-        
-        success(request, success_msg)
+        return redirect('church_approval_list')
+
+    # If offline payment and not verified yet, block approval
+    if church.payment_method == 'offline' and not church.offline_verified_at:
+        error(request, f"Offline payment not verified for '{church.name}'. Provide reference and verify before approval.")
+        return redirect('church_approval_list')
+
+    church.is_approved = True
+    church.subscription_status = 'active'
+    if not church.subscription_start_date:
+        church.subscription_start_date = timezone.now()
+    if not church.subscription_end_date:
+        church.subscription_end_date = timezone.now() + timezone.timedelta(days=365)
+    church.save()
+
+    from .models import ChurchMember
+    church_members = ChurchMember.objects.filter(church=church)
+
+    activated_users = []
+    for member in church_members:
+        if not member.user.is_active:
+            member.user.is_active = True
+            member.user.save()
+            activated_users.append(member.user.username)
+        if not member.is_active:
+            member.is_active = True
+            member.save()
+
+    success_msg = f"Church '{church.name}' has been approved."
+    if activated_users:
+        success_msg += f" Activated user accounts: {', '.join(activated_users)}"
+    success(request, success_msg)
     return redirect('church_approval_list')
 
 @admin_required
@@ -228,6 +236,56 @@ def reject_church(request, church_id):
     name = church.name
     church.delete()
     success(request, f"Church '{name}' registration has been rejected.")
+    return redirect('church_approval_list')
+
+@admin_required
+@require_POST
+def verify_offline_payment(request, church_id):
+    """Verify offline payment for a pending church and approve it.
+
+    Expects POST fields:
+      offline_payment_reference (required)
+      offline_notes (optional)
+    """
+    church = get_object_or_404(Church, id=church_id)
+    if church.payment_method != 'offline':
+        error(request, f"Church '{church.name}' is not using offline payment.")
+        return redirect('church_approval_list')
+    reference = request.POST.get('offline_payment_reference', '').strip()
+    notes = request.POST.get('offline_notes', '').strip()
+    if not reference:
+        error(request, "Offline payment reference is required to verify payment.")
+        return redirect('church_approval_list')
+    # Update church payment verification fields
+    church.offline_payment_reference = reference
+    church.offline_notes = notes
+    church.offline_verified_by = request.user
+    church.offline_verified_at = timezone.now()
+    # Approve and activate subscription
+    church.is_approved = True
+    church.subscription_status = 'active'
+    if not church.subscription_start_date:
+        church.subscription_start_date = timezone.now()
+    if not church.subscription_end_date:
+        church.subscription_end_date = timezone.now() + timezone.timedelta(days=365)
+    church.save()
+
+    # Activate users/members associated if not active
+    members = ChurchMember.objects.filter(church=church)
+    activated_users = []
+    for member in members:
+        if not member.user.is_active:
+            member.user.is_active = True
+            member.user.save()
+            activated_users.append(member.user.username)
+        if not member.is_active:
+            member.is_active = True
+            member.save()
+
+    msg = f"Offline payment verified and church '{church.name}' approved."
+    if activated_users:
+        msg += f" Activated users: {', '.join(activated_users)}"
+    success(request, msg)
     return redirect('church_approval_list')
 
 
