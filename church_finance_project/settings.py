@@ -116,7 +116,13 @@ if not DEBUG:
     # Enable SSL redirect in production (Railway handles this)
     SECURE_SSL_REDIRECT = False  # Railway handles SSL termination
     
-        # CSRF security\n    CSRF_COOKIE_SECURE = True\n    CSRF_COOKIE_HTTPONLY = True\n    CSRF_COOKIE_SAMESITE = 'Lax'  # Changed from 'Strict' to 'Lax' for better compatibility\n    CSRF_COOKIE_AGE = 31449600  # 1 year\n    CSRF_USE_SESSIONS = False  # Use cookies instead of sessions for CSRF tokens
+    # CSRF security
+    CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access for debugging
+    CSRF_COOKIE_SAMESITE = 'Lax'  # Changed from 'Strict' to 'Lax' for better compatibility
+    CSRF_COOKIE_AGE = 31449600  # 1 year
+    CSRF_USE_SESSIONS = False  # Use cookies instead of sessions for CSRF tokens
+    CSRF_COOKIE_NAME = 'csrftoken'  # Explicit cookie name
     
     # Session security
     SESSION_COOKIE_SECURE = True
