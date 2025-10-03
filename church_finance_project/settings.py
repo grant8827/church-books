@@ -216,9 +216,18 @@ else:
         pg_user = os.getenv('POSTGRES_USER')
         pg_password = os.getenv('POSTGRES_PASSWORD')
 
+        # Debug: Show what PostgreSQL variables we found
+        print(f"PostgreSQL Variables Debug:")
+        print(f"  POSTGRES_HOST: {'***' if pg_host else 'Not set'}")
+        print(f"  POSTGRES_PORT: {pg_port}")
+        print(f"  POSTGRES_DB: {'***' if pg_db else 'Not set'}")
+        print(f"  POSTGRES_USER: {'***' if pg_user else 'Not set'}")
+        print(f"  POSTGRES_PASSWORD: {'***' if pg_password else 'Not set'}")
+
         # Use PostgreSQL if credentials are available, otherwise fall back to SQLite
         if not all([pg_host, pg_port, pg_db, pg_user, pg_password]):
-            print("Using SQLite for local development/testing - PostgreSQL credentials not found")
+            missing_vars = [var for var, val in [('POSTGRES_HOST', pg_host), ('POSTGRES_PORT', pg_port), ('POSTGRES_DB', pg_db), ('POSTGRES_USER', pg_user), ('POSTGRES_PASSWORD', pg_password)] if not val]
+            print(f"Using SQLite for local development/testing - Missing PostgreSQL variables: {missing_vars}")
             DATABASES = {
                 'default': {
                     'ENGINE': 'django.db.backends.sqlite3',
@@ -226,7 +235,7 @@ else:
                 }
             }
         else:
-            print("Using PostgreSQL database with individual variables")
+            print(f"Using PostgreSQL database: {pg_user}@{pg_host}:{pg_port}/{pg_db}")
             DATABASES = {
                 'default': {
                     'ENGINE': 'django.db.backends.postgresql',
