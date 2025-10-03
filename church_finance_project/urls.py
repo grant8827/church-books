@@ -18,7 +18,6 @@ from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import TemplateView # For a simple home page
 from church_finances.admin_site import church_admin_site
-from church_finances.debug_home import debug_home_view, simple_home_view
 from church_finances.views_health import health_check
 from church_finances.railway_health import railway_health_check
 from church_finances.railway_db_health import railway_db_health_check, railway_env_debug
@@ -27,8 +26,7 @@ from church_finances.debug_views import debug_database, debug_auth
 urlpatterns = [
     path('admin/', church_admin_site.urls),
     path('accounts/', include('django.contrib.auth.urls')), # Django's built-in auth URLs
-    path('', debug_home_view, name='home'), # Debug home page
-    path('simple/', simple_home_view, name='simple_home'), # Simple fallback
+    path('', TemplateView.as_view(template_name='home.html'), name='home'), # Simple home page
     path('finances/', include('church_finances.urls')), # Include your app's URLs
     path('health/', health_check, name='health_check'), # Health check endpoint
     path('healthz', railway_health_check, name='railway_health'), # Railway-specific health check
