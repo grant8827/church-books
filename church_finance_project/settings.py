@@ -60,12 +60,11 @@ if additional_hosts:
 # CSRF Configuration
 CSRF_TRUSTED_ORIGINS = []
 if not DEBUG:
-    # Production CSRF trusted origins
+    # Production CSRF trusted origins - Base list
     CSRF_TRUSTED_ORIGINS = [
         'https://church-books-production-e217.up.railway.app',
         'https://churchbooksmanagement.com',
         'https://www.churchbooksmanagement.com',
-        'https://*.up.railway.app',
     ]
     
     # Add Railway-provided domains to CSRF trusted origins
@@ -75,7 +74,12 @@ if not DEBUG:
     # Add from environment variable if provided
     csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
     if csrf_origins:
-        CSRF_TRUSTED_ORIGINS.extend([origin.strip() for origin in csrf_origins.split(',') if origin.strip()])
+        additional_origins = [origin.strip() for origin in csrf_origins.split(',') if origin.strip()]
+        CSRF_TRUSTED_ORIGINS.extend(additional_origins)
+        print(f"Added CSRF origins from env: {additional_origins}")
+    
+    # Debug: Print final CSRF_TRUSTED_ORIGINS
+    print(f"Final CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}")
 else:
     # Development - allow local origins
     CSRF_TRUSTED_ORIGINS = [
@@ -85,6 +89,7 @@ else:
         'http://127.0.0.1:8001',
         'http://localhost:8001',
     ]
+    print(f"Development CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}")
 
 
 # Session Settings - will be overridden in security section below
@@ -103,10 +108,7 @@ if not DEBUG:
     # Enable SSL redirect in production (Railway handles this)
     SECURE_SSL_REDIRECT = False  # Railway handles SSL termination
     
-    # CSRF security
-    CSRF_COOKIE_SECURE = True
-    CSRF_COOKIE_HTTPONLY = True
-    CSRF_COOKIE_SAMESITE = 'Strict'
+        # CSRF security\n    CSRF_COOKIE_SECURE = True\n    CSRF_COOKIE_HTTPONLY = True\n    CSRF_COOKIE_SAMESITE = 'Lax'  # Changed from 'Strict' to 'Lax' for better compatibility\n    CSRF_COOKIE_AGE = 31449600  # 1 year\n    CSRF_USE_SESSIONS = False  # Use cookies instead of sessions for CSRF tokens
     
     # Session security
     SESSION_COOKIE_SECURE = True
