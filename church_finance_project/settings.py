@@ -60,25 +60,33 @@ if additional_hosts:
 # CSRF Configuration
 CSRF_TRUSTED_ORIGINS = []
 if not DEBUG:
-    # Production CSRF trusted origins - Base list
-    CSRF_TRUSTED_ORIGINS = [
+    # Production CSRF trusted origins - Base list (Railway and custom domain)
+    base_origins = [
         'https://church-books-production-e217.up.railway.app',
         'https://churchbooksmanagement.com',
         'https://www.churchbooksmanagement.com',
     ]
     
-    # Add Railway-provided domains to CSRF trusted origins
-    if railway_public_domain:
-        CSRF_TRUSTED_ORIGINS.append(f'https://{railway_public_domain}')
+    # Add Railway-provided domain if different
+    if railway_public_domain and f'https://{railway_public_domain}' not in base_origins:
+        base_origins.append(f'https://{railway_public_domain}')
     
-    # Add from environment variable if provided
+    # Add from environment variable (but filter out invalid ones)
     csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
     if csrf_origins:
-        additional_origins = [origin.strip() for origin in csrf_origins.split(',') if origin.strip()]
-        CSRF_TRUSTED_ORIGINS.extend(additional_origins)
-        print(f"Added CSRF origins from env: {additional_origins}")
+        env_origins = [origin.strip() for origin in csrf_origins.split(',') if origin.strip()]
+        # Filter out wildcards and localhost in production
+        valid_env_origins = [
+            origin for origin in env_origins 
+            if not ('*' in origin or 'localhost' in origin or origin.startswith('http://'))
+        ]
+        base_origins.extend(valid_env_origins)
+        print(f"Added valid CSRF origins from env: {valid_env_origins}")
+        if len(env_origins) != len(valid_env_origins):
+            print(f"Filtered out invalid origins: {[o for o in env_origins if o not in valid_env_origins]}")
     
-    # Debug: Print final CSRF_TRUSTED_ORIGINS
+    # Remove duplicates while preserving order
+    CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(base_origins))
     print(f"Final CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}")
 else:
     # Development - allow local origins
@@ -188,38 +196,51 @@ if BUILD_TIME_COLLECTSTATIC and RUNNING_COLLECTSTATIC:
        # }
    # }
 else:
-    # All other cases: require PostgreSQL using POSTGRES_* variables only
-    pg_host = os.getenv('POSTGRES_HOST')
-    pg_port = os.getenv('POSTGRES_PORT', '5432')
-    pg_db = os.getenv('POSTGRES_DB')
-    pg_user = os.getenv('POSTGRES_USER')
-    pg_password = os.getenv('POSTGRES_PASSWORD')
-
-    # Use PostgreSQL if credentials are available, otherwise fall back to SQLite
-    if not all([pg_host, pg_port, pg_db, pg_user, pg_password]):
-        print("Using SQLite for local development/testing - PostgreSQL credentials not found")
+    # All other cases: try Railway DATABASE_URL first, then POSTGRES_* variables
+    database_url = os.getenv('DATABASE_URL')
+    
+    if database_url:
+        print(f"Using Railway DATABASE_URL for PostgreSQL connection")
         DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': BASE_DIR / 'db.sqlite3',
-            }
+            'default': dj_database_url.config(
+                default=database_url,
+                conn_max_age=60,
+                conn_health_checks=True,
+            )
         }
     else:
-        print("Using PostgreSQL database")
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.postgresql',
-                'HOST': pg_host,
-                'PORT': pg_port,
-                'NAME': pg_db,
-                'USER': pg_user,
-                'PASSWORD': pg_password,
-                'CONN_MAX_AGE': 60,
-                'OPTIONS': {
-                    'options': '-c search_path=public',
-                },
+        # Fallback to individual POSTGRES_* variables
+        pg_host = os.getenv('POSTGRES_HOST')
+        pg_port = os.getenv('POSTGRES_PORT', '5432')
+        pg_db = os.getenv('POSTGRES_DB')
+        pg_user = os.getenv('POSTGRES_USER')
+        pg_password = os.getenv('POSTGRES_PASSWORD')
+
+        # Use PostgreSQL if credentials are available, otherwise fall back to SQLite
+        if not all([pg_host, pg_port, pg_db, pg_user, pg_password]):
+            print("Using SQLite for local development/testing - PostgreSQL credentials not found")
+            DATABASES = {
+                'default': {
+                    'ENGINE': 'django.db.backends.sqlite3',
+                    'NAME': BASE_DIR / 'db.sqlite3',
+                }
             }
-        }
+        else:
+            print("Using PostgreSQL database with individual variables")
+            DATABASES = {
+                'default': {
+                    'ENGINE': 'django.db.backends.postgresql',
+                    'HOST': pg_host,
+                    'PORT': pg_port,
+                    'NAME': pg_db,
+                    'USER': pg_user,
+                    'PASSWORD': pg_password,
+                    'CONN_MAX_AGE': 60,
+                    'OPTIONS': {
+                        'options': '-c search_path=public',
+                    },
+                }
+            }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
