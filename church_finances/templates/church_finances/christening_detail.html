@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ christening.baby_full_name }} - Christening Details{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Modern Button Styling */
+.modern-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.modern-btn:hover {
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.modern-btn-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+}
+
+.modern-btn-warning:hover {
+    color: white;
+    box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
+}
+
+.modern-btn-secondary {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    color: white;
+}
+
+.modern-btn-secondary:hover {
+    color: white;
+    box-shadow: 0 8px 25px rgba(107, 114, 128, 0.3);
+}
+
+.btn-group-modern {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Enhanced Cards */
+.enhanced-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
+    backdrop-filter: blur(15px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    position: relative;
+}
+
+.enhanced-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(135deg, #c084fc 0%, #f472b6 100%);
+}
+
+.enhanced-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.card-header {
+    background: linear-gradient(135deg, rgba(192, 132, 252, 0.1) 0%, rgba(244, 114, 182, 0.1) 100%);
+    border-bottom: 1px solid rgba(192, 132, 252, 0.1);
+    padding: 1.5rem;
+}
+
+/* Modern breadcrumb */
+.breadcrumb {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 10px;
+    padding: 12px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.breadcrumb-item a {
+    color: #2563eb;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.breadcrumb-item a:hover {
+    color: #1d4ed8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .btn-group-modern {
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+    }
+    
+    .modern-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'christenings_list' %}">Christenings</a></li>
+                    <li class="breadcrumb-item active">{{ christening.baby_full_name }}</li>
+                </ol>
+            </nav>
+            <h1><i class="fas fa-baby text-primary"></i> {{ christening.baby_full_name }}</h1>
+            <p class="text-muted">Christening Record Details</p>
+        </div>
+        <div class="btn-group-modern">
+            <a href="{% url 'christening_edit' christening.id %}" class="modern-btn modern-btn-warning">
+                <i class="fas fa-edit"></i> Edit Record
+            </a>
+            <a href="{% url 'christenings_list' %}" class="modern-btn modern-btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Baby Information -->
+        <div class="col-md-6">
+            <div class="enhanced-card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-baby"></i> Baby Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Full Name:</strong></div>
+                        <div class="col-sm-8">{{ christening.baby_full_name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Date of Birth:</strong></div>
+                        <div class="col-sm-8">
+                            {% if christening.baby_date_of_birth %}
+                                {{ christening.baby_date_of_birth|date:"F j, Y" }}
+                            {% else %}
+                                <span class="text-muted">Not provided</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Age at Christening:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-info">{{ christening.baby_age_at_christening }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Christening Details -->
+        <div class="col-md-6">
+            <div class="enhanced-card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-cross"></i> Christening Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Christening Date:</strong></div>
+                        <div class="col-sm-8">{{ christening.christening_date|date:"F j, Y" }}</div>
+                    </div>
+                    {% if christening.christening_time %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Time:</strong></div>
+                            <div class="col-sm-8">{{ christening.christening_time|time:"g:i A" }}</div>
+                        </div>
+                    {% endif %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Pastor:</strong></div>
+                        <div class="col-sm-8">{{ christening.pastor }}</div>
+                    </div>
+                    {% if christening.certificate_number %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Certificate #:</strong></div>
+                            <div class="col-sm-8">
+                                <span class="badge bg-success">{{ christening.certificate_number }}</span>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Parents Information -->
+        <div class="col-md-6">
+            <div class="enhanced-card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-users"></i> Parents Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if christening.father_name %}
+                        <div class="row mb-2">
+                            <div class="col-sm-4"><strong>Father:</strong></div>
+                            <div class="col-sm-8">{{ christening.father_name }}</div>
+                        </div>
+                    {% endif %}
+                    {% if christening.mother_name %}
+                        <div class="row mb-2">
+                            <div class="col-sm-4"><strong>Mother:</strong></div>
+                            <div class="col-sm-8">{{ christening.mother_name }}</div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if christening.parent_members.exists %}
+                        <div class="row mb-2">
+                            <div class="col-sm-4"><strong>Church Members:</strong></div>
+                            <div class="col-sm-8">
+                                {% for member in christening.parent_members.all %}
+                                    <span class="badge bg-primary me-1">{{ member.user.get_full_name }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if not christening.father_name and not christening.mother_name and not christening.parent_members.exists %}
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-users fa-2x mb-2"></i>
+                            <p>No parent information provided</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Godparents Information -->
+        <div class="col-md-6">
+            <div class="enhanced-card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-hands"></i> Godparents Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if christening.godfather_name %}
+                        <div class="row mb-2">
+                            <div class="col-sm-4"><strong>Godfather:</strong></div>
+                            <div class="col-sm-8">{{ christening.godfather_name }}</div>
+                        </div>
+                    {% endif %}
+                    {% if christening.godmother_name %}
+                        <div class="row mb-2">
+                            <div class="col-sm-4"><strong>Godmother:</strong></div>
+                            <div class="col-sm-8">{{ christening.godmother_name }}</div>
+                        </div>
+                    {% endif %}
+                    {% if christening.other_godparents %}
+                        <div class="row mb-2">
+                            <div class="col-sm-4"><strong>Other Godparents:</strong></div>
+                            <div class="col-sm-8">{{ christening.other_godparents }}</div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if not christening.godfather_name and not christening.godmother_name and not christening.other_godparents %}
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-hands fa-2x mb-2"></i>
+                            <p>No godparent information provided</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Information -->
+    {% if christening.contact_address or christening.contact_phone or christening.contact_email %}
+        <div class="row">
+            <div class="col-12">
+                <div class="enhanced-card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-address-book"></i> Contact Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% if christening.contact_address %}
+                                <div class="col-md-4">
+                                    <strong><i class="fas fa-map-marker-alt"></i> Address:</strong>
+                                    <p>{{ christening.contact_address }}</p>
+                                </div>
+                            {% endif %}
+                            {% if christening.contact_phone %}
+                                <div class="col-md-4">
+                                    <strong><i class="fas fa-phone"></i> Phone:</strong>
+                                    <p>{{ christening.contact_phone }}</p>
+                                </div>
+                            {% endif %}
+                            {% if christening.contact_email %}
+                                <div class="col-md-4">
+                                    <strong><i class="fas fa-envelope"></i> Email:</strong>
+                                    <p>{{ christening.contact_email }}</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Ceremony Notes -->
+    {% if christening.ceremony_notes %}
+        <div class="row">
+            <div class="col-12">
+                <div class="enhanced-card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-sticky-note"></i> Ceremony Notes
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p>{{ christening.ceremony_notes|linebreaks }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Record Information -->
+    <div class="row">
+        <div class="col-12">
+            <div class="enhanced-card">
+                <div class="card-body">
+                    <div class="row text-muted small">
+                        <div class="col-md-4">
+                            <i class="fas fa-user-plus"></i> Recorded by: {{ christening.recorded_by.get_full_name }}
+                        </div>
+                        <div class="col-md-4">
+                            <i class="fas fa-calendar"></i> Date recorded: {{ christening.date_recorded|date:"M j, Y g:i A" }}
+                        </div>
+                        <div class="col-md-4">
+                            <i class="fas fa-edit"></i> Last modified: {{ christening.last_modified|date:"M j, Y g:i A" }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

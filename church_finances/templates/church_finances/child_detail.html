@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ child.full_name }} - Children Directory{% endblock %}
+
+
+
+{% block content %}
+<div class="child-detail-container">
+<div class="container">
+    <!-- Breadcrumb -->
+    <div class="modern-breadcrumb">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'children_list' %}">Children</a></li>
+                    <li class="breadcrumb-item active">{{ child.full_name }}</li>
+            </ol>
+        </nav>
+    </div>
+    
+    <div class="child-profile-card">
+        <div class="profile-header">
+            <div class="profile-avatar">
+                <i class="fas fa-child"></i>
+            </div>
+            <h1 class="profile-name">{{ child.full_name }}</h1>
+            {% if child.date_of_birth %}
+                <div class="profile-age">{{ child.age }} years old</div>
+            {% endif %}
+            
+            <div class="action-buttons">
+                <a href="{% url 'child_edit' child.id %}" class="btn-professional btn-warning-pro">
+                    <i class="fas fa-edit"></i>
+                    <span>Edit Child</span>
+                </a>
+                <a href="{% url 'children_list' %}" class="btn-professional btn-secondary-pro">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to List</span>
+                </a>
+            </div>
+        </div>
+        
+        <div class="p-4">
+
+            <div class="row">
+                <!-- Basic Information -->
+                <div class="col-md-6">
+                    <div class="enhanced-card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-user"></i> Basic Information
+                    </h5>
+                </div>
+                        <div class="card-body">
+                            <div class="info-row">
+                                <span class="info-label">Full Name:</span>
+                                <span class="info-value">{{ child.full_name }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Date of Birth:</span>
+                                <span class="info-value">
+                                {% if child.date_of_birth %}
+                                    {{ child.date_of_birth|date:"F j, Y" }}
+                                {% else %}
+                                    <span class="text-muted">Not provided</span>
+                                {% endif %}
+                                </span>
+                            </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Grade Level:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-secondary">{{ child.get_grade_level_display }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Sunday School:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-info">{{ child.get_sunday_school_class_display }}</span>
+                        </div>
+                    </div>
+                    {% if child.address %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Address:</strong></div>
+                            <div class="col-sm-8">{{ child.address }}</div>
+                        </div>
+                    {% endif %}
+                    {% if child.phone_number %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Phone:</strong></div>
+                            <div class="col-sm-8">
+                                <i class="fas fa-phone"></i> {{ child.phone_number }}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+                <!-- Parents Information -->
+                <div class="col-md-6">
+                    <div class="enhanced-card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-users"></i> Parents & Guardians
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if child.parents.exists %}
+                        {% for parent in child.parents.all %}
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="flex-grow-1">
+                                    <strong>{{ parent.user.get_full_name }}</strong><br>
+                                    <small class="text-muted">
+                                        {% if parent.role %}
+                                            {{ parent.get_role_display }}
+                                        {% endif %}
+                                        {% if parent.user.email %}
+                                            | <i class="fas fa-envelope"></i> {{ parent.user.email }}
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                            {% if not forloop.last %}<hr>{% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-users fa-2x mb-2"></i>
+                            <p>No parents or guardians listed</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+                <!-- Emergency Contact Information -->
+                <div class="col-md-6">
+                    <div class="enhanced-card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-phone-alt text-danger"></i> Emergency Contact
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if child.emergency_contact_name %}
+                        <div class="row mb-2">
+                            <div class="col-sm-4"><strong>Name:</strong></div>
+                            <div class="col-sm-8">{{ child.emergency_contact_name }}</div>
+                        </div>
+                        {% if child.emergency_contact_phone %}
+                            <div class="row mb-2">
+                                <div class="col-sm-4"><strong>Phone:</strong></div>
+                                <div class="col-sm-8">
+                                    <i class="fas fa-phone"></i> {{ child.emergency_contact_phone }}
+                                </div>
+                            </div>
+                        {% endif %}
+                        {% if child.emergency_contact_relationship %}
+                            <div class="row mb-2">
+                                <div class="col-sm-4"><strong>Relationship:</strong></div>
+                                <div class="col-sm-8">{{ child.emergency_contact_relationship }}</div>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-phone-alt fa-2x mb-2"></i>
+                            <p>No emergency contact information</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+                <!-- Medical Information -->
+                <div class="col-md-6">
+                    <div class="enhanced-card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-heartbeat text-danger"></i> Medical Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if child.allergies or child.medications or child.medical_notes %}
+                        {% if child.allergies %}
+                            <div class="mb-3">
+                                <strong class="text-danger">
+                                    <i class="fas fa-exclamation-triangle"></i> Allergies:
+                                </strong>
+                                <div class="mt-1">{{ child.allergies }}</div>
+                            </div>
+                        {% endif %}
+                        {% if child.medications %}
+                            <div class="mb-3">
+                                <strong class="text-warning">
+                                    <i class="fas fa-pills"></i> Medications:
+                                </strong>
+                                <div class="mt-1">{{ child.medications }}</div>
+                            </div>
+                        {% endif %}
+                        {% if child.medical_notes %}
+                            <div class="mb-3">
+                                <strong class="text-info">
+                                    <i class="fas fa-sticky-note"></i> Medical Notes:
+                                </strong>
+                                <div class="mt-1">{{ child.medical_notes }}</div>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-heartbeat fa-2x mb-2"></i>
+                            <p>No medical information provided</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Attendance -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-calendar-check"></i> Recent Attendance
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_attendance %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Activity</th>
+                                        <th>Status</th>
+                                        <th>Recorded By</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for attendance in recent_attendance %}
+                                        <tr>
+                                            <td>{{ attendance.date|date:"M j, Y" }}</td>
+                                            <td>
+                                                <strong>{{ attendance.get_activity_type_display }}</strong>
+                                                {% if attendance.activity_name %}
+                                                    <br><small class="text-muted">{{ attendance.activity_name }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if attendance.present %}
+                                                    <span class="badge bg-success">Present</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Absent</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <small>{{ attendance.recorded_by.get_full_name }}</small>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-calendar-check fa-3x mb-3"></i>
+                            <h5>No Attendance Records</h5>
+                            <p>No attendance has been recorded for this child yet.</p>
+                            <a href="{% url 'attendance_record' %}" class="btn-professional btn-primary-pro">
+                                <i class="fas fa-plus"></i>
+                                <span>Record Attendance</span>
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+            <!-- Additional Notes -->
+            {% if child.notes %}
+                <div class="row">
+                    <div class="col-12">
+                        <div class="enhanced-card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-sticky-note"></i> Additional Notes
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p>{{ child.notes|linebreaks }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Record Information -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row text-muted small">
+                        <div class="col-md-6">
+                            <i class="fas fa-user-plus"></i> Added by: {{ child.added_by.get_full_name }}
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <i class="fas fa-calendar"></i> Date added: {{ child.date_added|date:"M j, Y g:i A" }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

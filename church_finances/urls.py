@@ -90,4 +90,17 @@ urlpatterns = [
     path("churches/<int:church_id>/approve/", views.approve_church, name="approve_church"),
     path("churches/<int:church_id>/reject/", views.reject_church, name="reject_church"),
     path("churches/<int:church_id>/verify-offline/", views.verify_offline_payment, name="verify_offline_payment"),
+    
+    # Children Management URLs
+    path("children/", views.children_list_view, name="children_list"),
+    path("children/add/", views.child_add_view, name="child_add"),
+    path("children/<int:child_id>/", views.child_detail_view, name="child_detail"),
+    path("children/<int:child_id>/edit/", views.child_edit_view, name="child_edit"),
+    path("attendance/record/", views.attendance_record_view, name="attendance_record"),
+    
+    # Baby Christening URLs
+    path("christenings/", views.christenings_list_view, name="christenings_list"),
+    path("christenings/add/", views.christening_add_view, name="christening_add"),
+    path("christenings/<int:christening_id>/", views.christening_detail_view, name="christening_detail"),
+    path("christenings/<int:christening_id>/edit/", views.christening_edit_view, name="christening_edit"),
 ]

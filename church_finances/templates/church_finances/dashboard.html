@@ -23,7 +23,7 @@
     </div>
 
     <!-- Church Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
         <div class="bg-purple-100 p-6 rounded-lg shadow-md border border-purple-200 text-center">
             <h3 class="text-xl font-semibold text-purple-800 mb-2">Active Members</h3>
             <p class="text-4xl font-bold text-purple-700">{{ total_members }}</p>
@@ -40,6 +40,11 @@
             <p class="text-4xl font-bold text-yellow-700">{{ total_transactions }}</p>
             <a href="{% url 'transaction_list' %}" class="text-sm text-yellow-600 hover:text-yellow-800 mt-2 inline-block">View Transactions →</a>
         </div>
+        <div class="bg-pink-100 p-6 rounded-lg shadow-md border border-pink-200 text-center">
+            <h3 class="text-xl font-semibold text-pink-800 mb-2">Children</h3>
+            <p class="text-4xl font-bold text-pink-700">{{ total_children }}</p>
+            <a href="{% url 'children_list' %}" class="text-sm text-pink-600 hover:text-pink-800 mt-2 inline-block">View Children →</a>
+        </div>
         <div class="bg-teal-100 p-6 rounded-lg shadow-md border border-teal-200 text-center">
             <h3 class="text-xl font-semibold text-teal-800 mb-2">Quick Actions</h3>
             <div class="space-y-2 mt-2">
@@ -51,6 +56,51 @@
                     <a href="{% url 'bulk_contribution_entry' %}" class="text-sm text-teal-600 hover:text-teal-800 block">Bulk Entry →</a>
                 {% endif %}
                 <a href="{% url 'transaction_create' %}" class="text-sm text-teal-600 hover:text-teal-800 block">Add Transaction →</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Children Ministry Section -->
+    <div class="bg-gradient-to-r from-pink-50 to-purple-50 p-6 rounded-lg shadow-md border border-pink-200 mb-8">
+        <h3 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-child text-pink-600 mr-3"></i>
+            Children Ministry
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-pink-100">
+                <h4 class="font-semibold text-pink-800 mb-2">Children Directory</h4>
+                <p class="text-sm text-gray-600 mb-3">Manage children information and records</p>
+                <div class="space-y-2">
+                    <a href="{% url 'children_list' %}" class="block text-sm text-pink-600 hover:text-pink-800">View All Children →</a>
+                    <a href="{% url 'child_add' %}" class="block text-sm text-pink-600 hover:text-pink-800">Add New Child →</a>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-blue-100">
+                <h4 class="font-semibold text-blue-800 mb-2 flex items-center">
+                    <i class="fas fa-baby text-blue-600 mr-2"></i>
+                    Baby Christenings
+                </h4>
+                <p class="text-sm text-gray-600 mb-3">Manage christening records and ceremonies</p>
+                <div class="space-y-2">
+                    <a href="{% url 'christenings_list' %}" class="block text-sm text-blue-600 hover:text-blue-800">View Christenings →</a>
+                    <a href="{% url 'christening_add' %}" class="block text-sm text-blue-600 hover:text-blue-800">Add New Christening →</a>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-purple-100">
+                <h4 class="font-semibold text-purple-800 mb-2">Attendance Tracking</h4>
+                <p class="text-sm text-gray-600 mb-3">Record and track children's attendance</p>
+                <div class="space-y-2">
+                    <a href="{% url 'attendance_record' %}" class="block text-sm text-purple-600 hover:text-purple-800">Record Attendance →</a>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-indigo-100">
+                <h4 class="font-semibold text-indigo-800 mb-2">Quick Stats</h4>
+                <div class="text-sm text-gray-600">
+                    <p class="mb-1">Total Active Children: <strong>{{ total_children }}</strong></p>
+                    <p class="mb-1">Total Christenings: <strong>{{ total_christenings }}</strong></p>
+                    <p class="mb-1">Sunday School Classes: <strong>6</strong></p>
+                    <p>Age Range: <strong>Nursery - Youth</strong></p>
+                </div>
             </div>
         </div>
     </div>

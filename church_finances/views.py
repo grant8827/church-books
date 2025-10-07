@@ -8,7 +8,7 @@ from django.http import HttpResponseNotAllowed, HttpResponse
 from django.utils import timezone
 from django.urls import reverse
 from functools import wraps
-from .models import Transaction, Church, ChurchMember, Contribution
+from .models import Transaction, Church, ChurchMember, Contribution, Child, ChildAttendance, BabyChristening
 from .forms import (
     CustomUserCreationForm, TransactionForm, ChurchRegistrationForm,
     ChurchMemberForm, ContributionForm, DashboardUserRegistrationForm
@@ -722,6 +722,8 @@ def dashboard_view(request):
     total_members = ChurchMember.objects.filter(church=church, is_active=True).count()
     total_transactions = Transaction.objects.filter(church=church).count()
     total_contributions = Contribution.objects.filter(church=church).count()
+    total_children = Child.objects.filter(church=church, is_active=True).count()
+    total_christenings = BabyChristening.objects.filter(church=church, is_active=True).count()
     
     # Calculate this month's contributions
     now = timezone.now()
@@ -745,6 +747,8 @@ def dashboard_view(request):
         "total_transactions": total_transactions,
         "total_contributions": total_contributions,
         "this_month_contributions": this_month_contributions,
+        "total_children": total_children,
+        "total_christenings": total_christenings,
     }
     return render(request, "church_finances/dashboard.html", context)
 
@@ -1495,6 +1499,441 @@ def bulk_contribution_entry(request):
     }
     
     return render(request, "church_finances/bulk_contribution_entry.html", context)
+
+
+# ============== CHILDREN MANAGEMENT VIEWS ==============
+
+@login_required
+def children_list_view(request):
+    """
+    Display a list of all children in the church
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    children = Child.objects.filter(church=church, is_active=True).order_by('last_name', 'first_name')
+    
+    context = {
+        'children': children,
+        'church': church,
+        'total_children': children.count(),
+    }
+    return render(request, "church_finances/children_list.html", context)
+
+
+@login_required
+def child_detail_view(request, child_id):
+    """
+    Display detailed information about a specific child
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+    
+    child = get_object_or_404(Child, id=child_id, church=church)
+    
+    # Get recent attendance records
+    recent_attendance = ChildAttendance.objects.filter(child=child).order_by('-date')[:10]
+    
+    context = {
+        'child': child,
+        'church': church,
+        'recent_attendance': recent_attendance,
+    }
+    return render(request, "church_finances/child_detail.html", context)
+
+
+@login_required
+def child_add_view(request):
+    """
+    Add a new child to the church
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    if request.method == 'POST':
+        # Get form data
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        date_of_birth = request.POST.get('date_of_birth')
+        grade_level = request.POST.get('grade_level')
+        sunday_school_class = request.POST.get('sunday_school_class')
+        parent_ids = request.POST.getlist('parents')
+        
+        # Emergency contact info
+        emergency_contact_name = request.POST.get('emergency_contact_name')
+        emergency_contact_phone = request.POST.get('emergency_contact_phone')
+        emergency_contact_relationship = request.POST.get('emergency_contact_relationship')
+        
+        # Medical info
+        allergies = request.POST.get('allergies')
+        medications = request.POST.get('medications')
+        medical_notes = request.POST.get('medical_notes')
+        
+        # Additional info
+        address = request.POST.get('address')
+        phone_number = request.POST.get('phone_number')
+        notes = request.POST.get('notes')
+        
+        try:
+            # Create the child
+            child = Child.objects.create(
+                first_name=first_name,
+                last_name=last_name,
+                date_of_birth=date_of_birth,
+                grade_level=grade_level,
+                sunday_school_class=sunday_school_class,
+                church=church,
+                emergency_contact_name=emergency_contact_name,
+                emergency_contact_phone=emergency_contact_phone,
+                emergency_contact_relationship=emergency_contact_relationship,
+                allergies=allergies,
+                medications=medications,
+                medical_notes=medical_notes,
+                address=address,
+                phone_number=phone_number,
+                notes=notes,
+                added_by=request.user
+            )
+            
+            # Add parents if selected
+            if parent_ids:
+                parents = ChurchMember.objects.filter(id__in=parent_ids, church=church)
+                child.parents.set(parents)
+            
+            success(request, f"Successfully added {child.full_name} to the children's directory.")
+            return redirect('child_detail', child_id=child.id)
+            
+        except Exception as e:
+            error(request, f"Error adding child: {str(e)}")
+    
+    # Get church members as potential parents
+    church_members = ChurchMember.objects.filter(church=church, is_active=True).order_by('user__first_name', 'user__last_name')
+    
+    context = {
+        'church': church,
+        'church_members': church_members,
+        'grade_levels': Child.GRADE_LEVELS,
+        'sunday_school_classes': Child.SUNDAY_SCHOOL_CLASSES,
+    }
+    return render(request, "church_finances/child_add.html", context)
+
+
+@login_required  
+def child_edit_view(request, child_id):
+    """
+    Edit an existing child's information
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+    
+    child = get_object_or_404(Child, id=child_id, church=church)
+    
+    if request.method == 'POST':
+        # Update child information
+        child.first_name = request.POST.get('first_name')
+        child.last_name = request.POST.get('last_name')
+        child.date_of_birth = request.POST.get('date_of_birth')
+        child.grade_level = request.POST.get('grade_level')
+        child.sunday_school_class = request.POST.get('sunday_school_class')
+        
+        # Emergency contact info
+        child.emergency_contact_name = request.POST.get('emergency_contact_name')
+        child.emergency_contact_phone = request.POST.get('emergency_contact_phone')
+        child.emergency_contact_relationship = request.POST.get('emergency_contact_relationship')
+        
+        # Medical info
+        child.allergies = request.POST.get('allergies')
+        child.medications = request.POST.get('medications')
+        child.medical_notes = request.POST.get('medical_notes')
+        
+        # Additional info
+        child.address = request.POST.get('address')
+        child.phone_number = request.POST.get('phone_number')
+        child.notes = request.POST.get('notes')
+        child.is_active = request.POST.get('is_active') == 'on'
+        
+        try:
+            child.save()
+            
+            # Update parents
+            parent_ids = request.POST.getlist('parents')
+            if parent_ids:
+                parents = ChurchMember.objects.filter(id__in=parent_ids, church=church)
+                child.parents.set(parents)
+            else:
+                child.parents.clear()
+                
+            success(request, f"Successfully updated {child.full_name}'s information.")
+            return redirect('child_detail', child_id=child.id)
+            
+        except Exception as e:
+            error(request, f"Error updating child: {str(e)}")
+    
+    # Get church members as potential parents
+    church_members = ChurchMember.objects.filter(church=church, is_active=True).order_by('user__first_name', 'user__last_name')
+    
+    context = {
+        'child': child,
+        'church': church,
+        'church_members': church_members,
+        'grade_levels': Child.GRADE_LEVELS,
+        'sunday_school_classes': Child.SUNDAY_SCHOOL_CLASSES,
+    }
+    return render(request, "church_finances/child_edit.html", context)
+
+
+@login_required
+def attendance_record_view(request):
+    """
+    Record attendance for children
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    if request.method == 'POST':
+        date = request.POST.get('date')
+        activity_type = request.POST.get('activity_type')
+        activity_name = request.POST.get('activity_name', '')
+        
+        attendance_data = request.POST.getlist('attendance')  # List of child IDs who were present
+        
+        try:
+            children = Child.objects.filter(church=church, is_active=True)
+            
+            for child in children:
+                # Check if child was marked as present
+                present = str(child.id) in attendance_data
+                
+                # Create or update attendance record
+                attendance, created = ChildAttendance.objects.update_or_create(
+                    child=child,
+                    church=church,
+                    date=date,
+                    activity_type=activity_type,
+                    defaults={
+                        'activity_name': activity_name,
+                        'present': present,
+                        'recorded_by': request.user
+                    }
+                )
+            
+            success(request, f"Attendance recorded for {activity_type} on {date}.")
+            return redirect('attendance_record')
+            
+        except Exception as e:
+            error(request, f"Error recording attendance: {str(e)}")
+    
+    children = Child.objects.filter(church=church, is_active=True).order_by('last_name', 'first_name')
+    
+    context = {
+        'church': church,
+        'children': children,
+        'activity_types': ChildAttendance.ACTIVITY_TYPES,
+    }
+    return render(request, "church_finances/attendance_record.html", context)
+
+
+# ============== BABY CHRISTENING VIEWS ==============
+
+@login_required
+def christenings_list_view(request):
+    """
+    Display a list of all baby christenings in the church
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    christenings = BabyChristening.objects.filter(church=church, is_active=True).order_by('-christening_date')
+    
+    context = {
+        'christenings': christenings,
+        'church': church,
+        'total_christenings': christenings.count(),
+    }
+    return render(request, "church_finances/christenings_list.html", context)
+
+
+@login_required
+def christening_detail_view(request, christening_id):
+    """
+    Display detailed information about a specific christening
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+    
+    christening = get_object_or_404(BabyChristening, id=christening_id, church=church)
+    
+    context = {
+        'christening': christening,
+        'church': church,
+    }
+    return render(request, "church_finances/christening_detail.html", context)
+
+
+@login_required
+def christening_add_view(request):
+    """
+    Add a new baby christening record
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    if request.method == 'POST':
+        try:
+            # Get baby information
+            baby_first_name = request.POST.get('baby_first_name')
+            baby_last_name = request.POST.get('baby_last_name')
+            baby_date_of_birth = request.POST.get('baby_date_of_birth') or None
+            
+            # Get christening details
+            christening_date = request.POST.get('christening_date')
+            christening_time = request.POST.get('christening_time') or None
+            pastor = request.POST.get('pastor')
+            ceremony_notes = request.POST.get('ceremony_notes')
+            certificate_number = request.POST.get('certificate_number')
+            
+            # Get parents information
+            father_name = request.POST.get('father_name')
+            mother_name = request.POST.get('mother_name')
+            parent_member_ids = request.POST.getlist('parent_members')
+            
+            # Get godparents information
+            godfather_name = request.POST.get('godfather_name')
+            godmother_name = request.POST.get('godmother_name')
+            other_godparents = request.POST.get('other_godparents')
+            
+            # Get contact information
+            contact_address = request.POST.get('contact_address')
+            contact_phone = request.POST.get('contact_phone')
+            contact_email = request.POST.get('contact_email')
+            
+            # Create the christening record
+            christening = BabyChristening.objects.create(
+                baby_first_name=baby_first_name,
+                baby_last_name=baby_last_name,
+                baby_date_of_birth=baby_date_of_birth,
+                christening_date=christening_date,
+                christening_time=christening_time,
+                pastor=pastor,
+                ceremony_notes=ceremony_notes,
+                certificate_number=certificate_number,
+                father_name=father_name,
+                mother_name=mother_name,
+                godfather_name=godfather_name,
+                godmother_name=godmother_name,
+                other_godparents=other_godparents,
+                contact_address=contact_address,
+                contact_phone=contact_phone,
+                contact_email=contact_email,
+                church=church,
+                recorded_by=request.user
+            )
+            
+            # Add parent members if selected
+            if parent_member_ids:
+                parent_members = ChurchMember.objects.filter(id__in=parent_member_ids, church=church)
+                christening.parent_members.set(parent_members)
+            
+            success(request, f"Successfully added christening record for {christening.baby_full_name}.")
+            return redirect('christening_detail', christening_id=christening.id)
+            
+        except Exception as e:
+            error(request, f"Error adding christening: {str(e)}")
+    
+    # Get church members as potential parents
+    church_members = ChurchMember.objects.filter(church=church, is_active=True).order_by('user__first_name', 'user__last_name')
+    
+    context = {
+        'church': church,
+        'church_members': church_members,
+    }
+    return render(request, "church_finances/christening_add.html", context)
+
+
+@login_required  
+def christening_edit_view(request, christening_id):
+    """
+    Edit an existing christening record
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+    
+    christening = get_object_or_404(BabyChristening, id=christening_id, church=church)
+    
+    if request.method == 'POST':
+        try:
+            # Update baby information
+            christening.baby_first_name = request.POST.get('baby_first_name')
+            christening.baby_last_name = request.POST.get('baby_last_name')
+            christening.baby_date_of_birth = request.POST.get('baby_date_of_birth') or None
+            
+            # Update christening details
+            christening.christening_date = request.POST.get('christening_date')
+            christening.christening_time = request.POST.get('christening_time') or None
+            christening.pastor = request.POST.get('pastor')
+            christening.ceremony_notes = request.POST.get('ceremony_notes')
+            christening.certificate_number = request.POST.get('certificate_number')
+            
+            # Update parents information
+            christening.father_name = request.POST.get('father_name')
+            christening.mother_name = request.POST.get('mother_name')
+            
+            # Update godparents information
+            christening.godfather_name = request.POST.get('godfather_name')
+            christening.godmother_name = request.POST.get('godmother_name')
+            christening.other_godparents = request.POST.get('other_godparents')
+            
+            # Update contact information
+            christening.contact_address = request.POST.get('contact_address')
+            christening.contact_phone = request.POST.get('contact_phone')
+            christening.contact_email = request.POST.get('contact_email')
+            
+            # Update status
+            christening.is_active = request.POST.get('is_active') == 'on'
+            
+            christening.save()
+            
+            # Update parent members
+            parent_member_ids = request.POST.getlist('parent_members')
+            if parent_member_ids:
+                parent_members = ChurchMember.objects.filter(id__in=parent_member_ids, church=church)
+                christening.parent_members.set(parent_members)
+            else:
+                christening.parent_members.clear()
+                
+            success(request, f"Successfully updated christening record for {christening.baby_full_name}.")
+            return redirect('christening_detail', christening_id=christening.id)
+            
+        except Exception as e:
+            error(request, f"Error updating christening: {str(e)}")
+    
+    # Get church members as potential parents
+    church_members = ChurchMember.objects.filter(church=church, is_active=True).order_by('user__first_name', 'user__last_name')
+    
+    context = {
+        'christening': christening,
+        'church': church,
+        'church_members': church_members,
+    }
+    return render(request, "church_finances/christening_edit.html", context)
 
 
 

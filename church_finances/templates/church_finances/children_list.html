@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Children Ministry - {{ church.church_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-8">
+    <!-- Header Section -->
+    <div class="flex flex-wrap items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+                <i class="fas fa-users text-blue-600 mr-3"></i>Children Ministry
+            </h1>
+            <p class="text-gray-600 mt-2">Nurturing the next generation with love and care</p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+            <a href="{% url 'child_add' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                <i class="fas fa-plus-circle mr-2"></i>Add Child
+            </a>
+            <a href="{% url 'attendance_record' %}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                <i class="fas fa-calendar-check mr-2"></i>Take Attendance
+            </a>
+            <a href="{% url 'christenings_list' %}" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                <i class="fas fa-baby mr-2"></i>Christenings
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900">{{ total_children }}</h3>
+                    <p class="text-gray-600">Total Children</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <i class="fas fa-child text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900">{% if children %}{{ children|length }}{% else %}0{% endif %}</h3>
+                    <p class="text-gray-600">Active Today</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <i class="fas fa-heart text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-indigo-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900">12</h3>
+                    <p class="text-gray-600">Sunday School Classes</p>
+                </div>
+                <div class="bg-indigo-100 rounded-full p-3">
+                    <i class="fas fa-school text-indigo-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900">8</h3>
+                    <p class="text-gray-600">Special Needs</p>
+                </div>
+                <div class="bg-orange-100 rounded-full p-3">
+                    <i class="fas fa-hands-helping text-orange-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if children %}
+        <!-- Children Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {% for child in children %}
+                <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-400">
+                    <div class="mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">{{ child.full_name }}</h3>
+                        <p class="text-gray-600 text-sm">
+                            {% if child.date_of_birth %}
+                                {{ child.age }} years old
+                            {% else %}
+                                Age not specified
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        {% if child.grade_level %}
+                            <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full">{{ child.get_grade_level_display }}</span>
+                        {% endif %}
+                        {% if child.sunday_school_class %}
+                            <span class="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">{{ child.get_sunday_school_class_display }}</span>
+                        {% endif %}
+                        {% if child.allergies %}
+                            <span class="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded-full">Allergies</span>
+                        {% endif %}
+                        {% if child.medications %}
+                            <span class="bg-orange-100 text-orange-800 text-xs font-semibold px-2 py-1 rounded-full">Medication</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="space-y-2 mb-4">
+                        {% if child.parents.exists %}
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-users mr-2 text-gray-400"></i>
+                                <span>
+                                    {% for parent in child.parents.all %}
+                                        {{ parent.user.get_full_name }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </span>
+                            </div>
+                        {% endif %}
+                        
+                        {% if child.emergency_contact_name %}
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-phone mr-2 text-gray-400"></i>
+                                <span>{{ child.emergency_contact_name }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex space-x-2">
+                        <a href="{% url 'child_detail' child.id %}" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded text-center">
+                            <i class="fas fa-eye mr-1"></i>View
+                        </a>
+                        <a href="{% url 'child_edit' child.id %}" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium py-2 px-3 rounded text-center">
+                            <i class="fas fa-edit mr-1"></i>Edit
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-12">
+            <div class="mb-6">
+                <i class="fas fa-child text-gray-300 text-6xl"></i>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-700 mb-2">No Children Registered</h3>
+            <p class="text-gray-500 mb-6">Start building your children's directory by adding your first child to the ministry.</p>
+            <a href="{% url 'child_add' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded inline-flex items-center">
+                <i class="fas fa-plus-circle mr-2"></i>Add First Child
+            </a>
+        </div>
+    {% endif %}
+
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center mb-4">
+                <div class="bg-green-100 rounded-full p-3 mr-4">
+                    <i class="fas fa-calendar-check text-green-600 text-xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-800">Quick Attendance</h3>
+            </div>
+            <p class="text-gray-600 mb-4">Record attendance for today's activities.</p>
+            <a href="{% url 'attendance_record' %}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                <i class="fas fa-calendar-check mr-2"></i>Record Attendance
+            </a>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center mb-4">
+                <div class="bg-blue-100 rounded-full p-3 mr-4">
+                    <i class="fas fa-user-plus text-blue-600 text-xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-800">Add New Child</h3>
+            </div>
+            <p class="text-gray-600 mb-4">Register a new child in the church directory.</p>
+            <a href="{% url 'child_add' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                <i class="fas fa-user-plus mr-2"></i>Add Child
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

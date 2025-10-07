@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit {{ child.full_name }} - Children Directory{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Breadcrumb -->
+        <nav class="mb-6">
+            <ol class="flex items-center space-x-2 text-sm text-gray-600">
+                <li><a href="{% url 'dashboard' %}" class="hover:text-blue-600">Dashboard</a></li>
+                <li><span class="mx-2">→</span></li>
+                <li><a href="{% url 'children_list' %}" class="hover:text-blue-600">Children</a></li>
+                <li><span class="mx-2">→</span></li>
+                <li><a href="{% url 'child_detail' child.id %}" class="hover:text-blue-600">{{ child.full_name }}</a></li>
+                <li><span class="mx-2">→</span></li>
+                <li class="text-gray-800 font-medium">Edit</li>
+            </ol>
+        </nav>
+
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                        <i class="fas fa-edit text-blue-600 mr-3"></i>Edit {{ child.full_name }}
+                    </h1>
+                    <p class="text-gray-600">Update child information</p>
+                </div>
+                <a href="{% url 'child_detail' child.id %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Child Details
+                </a>
+            </div>
+
+            <form method="post" class="space-y-8">
+                {% csrf_token %}
+                
+                <!-- Basic Information -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-user text-blue-600 mr-3"></i>Basic Information
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-1">
+                            <label for="first_name" class="block text-sm font-medium text-gray-700">First Name *</label>
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="first_name" name="first_name" value="{{ child.first_name }}" required>
+                        </div>
+                        <div class="space-y-1">
+                            <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name *</label>
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="last_name" name="last_name" value="{{ child.last_name }}" required>
+                        </div>
+                        <div class="space-y-1">
+                            <label for="date_of_birth" class="block text-sm font-medium text-gray-700">Date of Birth</label>
+                            <input type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="date_of_birth" name="date_of_birth" value="{% if child.date_of_birth %}{{ child.date_of_birth|date:'Y-m-d' }}{% endif %}">
+                        </div>
+                        <div class="space-y-1">
+                            <label for="phone_number" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                            <input type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="phone_number" name="phone_number" value="{{ child.phone_number }}" placeholder="(123) 456-7890">
+                        </div>
+                        <div class="space-y-1">
+                            <label for="grade_level" class="block text-sm font-medium text-gray-700">Grade Level</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="grade_level" name="grade_level">
+                                <option value="">Select Grade Level</option>
+                                {% for grade_value, grade_display in grade_levels %}
+                                    <option value="{{ grade_value }}" {% if child.grade_level == grade_value %}selected{% endif %}>{{ grade_display }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label for="sunday_school_class" class="block text-sm font-medium text-gray-700">Sunday School Class</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="sunday_school_class" name="sunday_school_class">
+                                <option value="">Select Class</option>
+                                {% for class_value, class_display in sunday_school_classes %}
+                                    <option value="{{ class_value }}" {% if child.sunday_school_class == class_value %}selected{% endif %}>{{ class_display }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="md:col-span-2 space-y-1">
+                            <label for="address" class="block text-sm font-medium text-gray-700">Address</label>
+                            <textarea class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="address" name="address" rows="3" placeholder="Street address, city, state, zip">{{ child.address }}</textarea>
+                        </div>
+                        <div class="md:col-span-2">
+                            <div class="flex items-center">
+                                <input class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" type="checkbox" id="is_active" name="is_active" {% if child.is_active %}checked{% endif %}>
+                                <label class="ml-2 block text-sm text-gray-900" for="is_active">
+                                    Active Child
+                                </label>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Uncheck if child is no longer attending</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parents & Guardians -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-users text-green-600 mr-3"></i>Parents & Guardians
+                    </h2>
+                    
+                    <div class="space-y-1">
+                        <label for="parents" class="block text-sm font-medium text-gray-700">Select Parents/Guardians</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="parents" name="parents" multiple size="6">
+                            {% for member in church_members %}
+                                <option value="{{ member.id }}" {% if member in child.parents.all %}selected{% endif %}>
+                                    {{ member.user.get_full_name }} 
+                                    {% if member.role %}({{ member.get_role_display }}){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Hold Ctrl (or Cmd) to select multiple parents</p>
+                    </div>
+                </div>
+
+                <!-- Emergency Contact -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-phone-alt text-red-600 mr-3"></i>Emergency Contact
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="space-y-1">
+                            <label for="emergency_contact_name" class="block text-sm font-medium text-gray-700">Emergency Contact Name</label>
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="emergency_contact_name" name="emergency_contact_name" value="{{ child.emergency_contact_name }}">
+                        </div>
+                        <div class="space-y-1">
+                            <label for="emergency_contact_phone" class="block text-sm font-medium text-gray-700">Emergency Phone Number</label>
+                            <input type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="emergency_contact_phone" name="emergency_contact_phone" value="{{ child.emergency_contact_phone }}" placeholder="(123) 456-7890">
+                        </div>
+                        <div class="space-y-1">
+                            <label for="emergency_contact_relationship" class="block text-sm font-medium text-gray-700">Relationship</label>
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="emergency_contact_relationship" name="emergency_contact_relationship" value="{{ child.emergency_contact_relationship }}" placeholder="e.g., Parent, Grandparent, Guardian">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Medical Information -->
+                <div class="bg-red-50 rounded-lg p-6 border-l-4 border-red-400">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-heartbeat text-red-600 mr-3"></i>Medical Information
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="space-y-1">
+                            <label for="allergies" class="block text-sm font-medium text-gray-700 flex items-center">
+                                <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>Allergies
+                            </label>
+                            <textarea class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical" id="allergies" name="allergies" rows="4" placeholder="List any known allergies">{{ child.allergies }}</textarea>
+                        </div>
+                        <div class="space-y-1">
+                            <label for="medications" class="block text-sm font-medium text-gray-700 flex items-center">
+                                <i class="fas fa-pills text-yellow-500 mr-2"></i>Current Medications
+                            </label>
+                            <textarea class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical" id="medications" name="medications" rows="4" placeholder="List current medications and dosages">{{ child.medications }}</textarea>
+                        </div>
+                        <div class="space-y-1">
+                            <label for="medical_notes" class="block text-sm font-medium text-gray-700 flex items-center">
+                                <i class="fas fa-sticky-note text-blue-500 mr-2"></i>Additional Medical Notes
+                            </label>
+                            <textarea class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical" id="medical_notes" name="medical_notes" rows="4" placeholder="Any other important medical information">{{ child.medical_notes }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Notes -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-sticky-note text-purple-600 mr-3"></i>Additional Notes
+                    </h2>
+                    
+                    <div class="space-y-1">
+                        <label for="notes" class="block text-sm font-medium text-gray-700">Notes</label>
+                        <textarea class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical" id="notes" name="notes" rows="4" placeholder="Any additional information about the child">{{ child.notes }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex justify-between items-center pt-6 border-t border-gray-200">
+                    <div>
+                        <small class="text-gray-500 block">* Required fields</small>
+                        <small class="text-gray-500 block mt-1">
+                            <i class="fas fa-user-plus mr-1"></i>Added by {{ child.added_by.get_full_name }} on {{ child.date_added|date:"M j, Y" }}
+                        </small>
+                    </div>
+                    <div class="flex space-x-4">
+                        <a href="{% url 'child_detail' child.id %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                            <i class="fas fa-times mr-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                            <i class="fas fa-save mr-2"></i>Save Changes
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

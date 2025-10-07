@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ christening.baby_full_name }} - Christening Record{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <!-- Breadcrumb -->
+            <nav class="flex mb-4" aria-label="Breadcrumb">
+                <ol class="flex items-center space-x-2">
+                    <li><a href="{% url 'dashboard' %}" class="text-blue-600 hover:text-blue-800">Dashboard</a></li>
+                    <li class="text-gray-500">/</li>
+                    <li><a href="{% url 'christenings_list' %}" class="text-blue-600 hover:text-blue-800">Christenings</a></li>
+                    <li class="text-gray-500">/</li>
+                    <li><a href="{% url 'christening_detail' christening.id %}" class="text-blue-600 hover:text-blue-800">{{ christening.baby_full_name }}</a></li>
+                    <li class="text-gray-500">/</li>
+                    <li class="text-gray-600">Edit</li>
+                </ol>
+            </nav>
+            
+            <!-- Title and Actions -->
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+                        <i class="fas fa-edit text-blue-600 mr-3"></i>Edit {{ christening.baby_full_name }}
+                    </h1>
+                    <p class="text-gray-600 mt-2">Update christening record</p>
+                </div>
+                <a href="{% url 'christening_detail' christening.id %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Details
+                </a>
+            </div>
+        </div>
+
+        <!-- Main Form -->
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <!-- Baby Information -->
+                    <div class="bg-pink-50 rounded-lg p-6 border-l-4 border-pink-400">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <i class="fas fa-baby text-pink-600 mr-3"></i>Baby Information
+                        </h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div class="space-y-1">
+                                <label for="baby_first_name" class="block text-sm font-medium text-gray-700">Baby's First Name *</label>
+                                <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="baby_first_name" name="baby_first_name" value="{{ christening.baby_first_name }}" required>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="baby_last_name" class="block text-sm font-medium text-gray-700">Baby's Last Name *</label>
+                                <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="baby_last_name" name="baby_last_name" value="{{ christening.baby_last_name }}" required>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1 mb-4">
+                            <label for="baby_date_of_birth" class="block text-sm font-medium text-gray-700">Baby's Date of Birth</label>
+                            <input type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="baby_date_of_birth" name="baby_date_of_birth" value="{% if christening.baby_date_of_birth %}{{ christening.baby_date_of_birth|date:'Y-m-d' }}{% endif %}">
+                            <p class="text-sm text-gray-500 mt-1">Optional - helps calculate age at christening</p>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input type="checkbox" id="is_active" name="is_active" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if christening.is_active %}checked{% endif %}>
+                            <label for="is_active" class="ml-2 block text-sm text-gray-700">
+                                Active Record
+                            </label>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-1">Uncheck to archive this record</p>
+                    </div>
+
+                    <!-- Christening Details -->
+                    <div class="bg-blue-50 rounded-lg p-6 border-l-4 border-blue-400">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <i class="fas fa-cross text-blue-600 mr-3"></i>Christening Details
+                        </h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div class="space-y-1">
+                                <label for="christening_date" class="block text-sm font-medium text-gray-700">Christening Date *</label>
+                                <input type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="christening_date" name="christening_date" value="{{ christening.christening_date|date:'Y-m-d' }}" required>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="christening_time" class="block text-sm font-medium text-gray-700">Time (Optional)</label>
+                                <input type="time" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="christening_time" name="christening_time" value="{% if christening.christening_time %}{{ christening.christening_time|time:'H:i' }}{% endif %}">
+                            </div>
+                        </div>
+
+                        <div class="space-y-1 mb-4">
+                            <label for="pastor" class="block text-sm font-medium text-gray-700">Pastor *</label>
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="pastor" name="pastor" value="{{ christening.pastor }}" required placeholder="Pastor who performed the christening">
+                        </div>
+
+                        <div class="space-y-1">
+                            <label for="certificate_number" class="block text-sm font-medium text-gray-700">Certificate Number</label>
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="certificate_number" name="certificate_number" value="{{ christening.certificate_number }}" placeholder="Optional certificate number">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <!-- Parents Information -->
+                    <div class="bg-green-50 rounded-lg p-6 border-l-4 border-green-400">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <i class="fas fa-users text-green-600 mr-3"></i>Parents Information
+                        </h2>
+                        
+                        <div class="space-y-4">
+                            <div class="space-y-1">
+                                <label for="father_name" class="block text-sm font-medium text-gray-700">Father's Full Name</label>
+                                <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="father_name" name="father_name" value="{{ christening.father_name }}">
+                            </div>
+
+                            <div class="space-y-1">
+                                <label for="mother_name" class="block text-sm font-medium text-gray-700">Mother's Full Name</label>
+                                <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="mother_name" name="mother_name" value="{{ christening.mother_name }}">
+                            </div>
+
+                            <div class="space-y-1">
+                                <label for="parent_members" class="block text-sm font-medium text-gray-700">Church Member Parents</label>
+                                <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="parent_members" name="parent_members" multiple size="4">
+                                    {% for member in church_members %}
+                                        <option value="{{ member.id }}" {% if member in christening.parent_members.all %}selected{% endif %}>
+                                            {{ member.user.get_full_name }}
+                                            {% if member.role %}({{ member.get_role_display }}){% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <p class="text-sm text-gray-500 mt-1">Hold Ctrl (or Cmd) to select multiple church member parents</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Godparents Information -->
+                    <div class="bg-purple-50 rounded-lg p-6 border-l-4 border-purple-400">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <i class="fas fa-hands text-purple-600 mr-3"></i>Godparents Information
+                        </h2>
+                        
+                        <div class="space-y-4">
+                            <div class="space-y-1">
+                                <label for="godfather_name" class="block text-sm font-medium text-gray-700">Godfather's Full Name</label>
+                                <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="godfather_name" name="godfather_name" value="{{ christening.godfather_name }}">
+                            </div>
+
+                            <div class="space-y-1">
+                                <label for="godmother_name" class="block text-sm font-medium text-gray-700">Godmother's Full Name</label>
+                                <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="godmother_name" name="godmother_name" value="{{ christening.godmother_name }}">
+                            </div>
+
+                            <div class="space-y-1">
+                                <label for="other_godparents" class="block text-sm font-medium text-gray-700">Other Godparents</label>
+                                <textarea class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical" id="other_godparents" name="other_godparents" rows="3" placeholder="Additional godparents or sponsors">{{ christening.other_godparents }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="bg-orange-50 rounded-lg p-6 border-l-4 border-orange-400 mb-8">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-address-book text-orange-600 mr-3"></i>Contact Information
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="space-y-1">
+                            <label for="contact_address" class="block text-sm font-medium text-gray-700">Family Address</label>
+                            <textarea class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical" id="contact_address" name="contact_address" rows="3" placeholder="Street address, city, state, zip">{{ christening.contact_address }}</textarea>
+                        </div>
+                        <div class="space-y-1">
+                            <label for="contact_phone" class="block text-sm font-medium text-gray-700">Primary Phone Number</label>
+                            <input type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="contact_phone" name="contact_phone" value="{{ christening.contact_phone }}" placeholder="(123) 456-7890">
+                        </div>
+                        <div class="space-y-1">
+                            <label for="contact_email" class="block text-sm font-medium text-gray-700">Email Address</label>
+                            <input type="email" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="contact_email" name="contact_email" value="{{ christening.contact_email }}" placeholder="family@example.com">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ceremony Notes -->
+                <div class="bg-gray-50 rounded-lg p-6 mb-8">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-sticky-note text-gray-600 mr-3"></i>Ceremony Notes
+                    </h2>
+                    
+                    <div class="space-y-1">
+                        <label for="ceremony_notes" class="block text-sm font-medium text-gray-700">Special Notes</label>
+                        <textarea class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical" id="ceremony_notes" name="ceremony_notes" rows="4" placeholder="Any special details about the ceremony, attendees, or other notes">{{ christening.ceremony_notes }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex justify-between items-center pt-6 border-t border-gray-200">
+                    <div>
+                        <small class="text-gray-500">* Required fields</small>
+                        <br>
+                        <small class="text-gray-500 mt-1 flex items-center">
+                            <i class="fas fa-user-plus mr-1"></i>Recorded by {{ christening.recorded_by.get_full_name }} on {{ christening.date_recorded|date:"M j, Y" }}
+                        </small>
+                    </div>
+                    <div class="flex space-x-4">
+                        <a href="{% url 'christening_detail' christening.id %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                            <i class="fas fa-times mr-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                            <i class="fas fa-save mr-2"></i>Save Changes
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
