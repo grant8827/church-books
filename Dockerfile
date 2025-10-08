@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     g++ \
     make \
     pkg-config \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables
@@ -38,6 +39,17 @@ RUN python manage.py collectstatic --noinput
 
 # Make startup script executable
 RUN chmod +x /app/start_server.sh
+
+# Create a simple health check script for container startup
+RUN echo '#!/bin/bash\ncurl -f http://localhost:$PORT/startup/ || exit 1' > /app/health_check.sh && \
+    chmod +x /app/health_check.sh
+
+# Add health check to the container itself
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD /app/health_check.sh
+
+# Expose the port
+EXPOSE $PORT
 
 # Start the application
 CMD ["/app/start_server.sh"]

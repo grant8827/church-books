@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Page Not Found - Church Books{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 py-16 px-4">
+    <div class="max-w-2xl mx-auto text-center">
+        <div class="bg-white rounded-2xl shadow-xl p-12">
+            <!-- 404 Icon -->
+            <div class="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-8">
+                <svg class="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+            </div>
+
+            <h1 class="text-6xl font-bold text-gray-900 mb-4">404</h1>
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Page Not Found</h2>
+            <p class="text-gray-600 mb-8">
+                Sorry, the page you are looking for doesn't exist or has been moved.
+            </p>
+
+            <!-- Action Buttons -->
+            <div class="space-y-4">
+                <a href="{% url 'home' %}" class="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition duration-300 mr-4">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                    </svg>
+                    Go Home
+                </a>
+
+                {% if user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        Dashboard
+                    </a>
+                {% else %}
+                    <a href="{% url 'login' %}" class="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-300">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                        </svg>
+                        Login
+                    </a>
+                {% endif %}
+            </div>
+
+            <!-- Help Section -->
+            <div class="mt-12 pt-8 border-t border-gray-200">
+                <p class="text-gray-500 text-sm mb-4">Need help? Here are some common pages:</p>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <a href="{% url 'subscription' %}" class="text-blue-600 hover:underline">Subscription Plans</a>
+                    <a href="{% url 'contact' %}" class="text-blue-600 hover:underline">Contact Support</a>
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'member_list' %}" class="text-blue-600 hover:underline">Member Management</a>
+                        <a href="{% url 'transaction_list' %}" class="text-blue-600 hover:underline">Transactions</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

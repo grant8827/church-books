@@ -102,6 +102,10 @@ def admin_required(function):
 
 def get_user_church(user):
     """Helper function to get the user's church"""
+    # Check if user is authenticated and not anonymous
+    if not user or not user.is_authenticated or user.is_anonymous:
+        return None
+        
     try:
         member = ChurchMember.objects.get(user=user, is_active=True)
         return member.church if member.church.is_approved else None
@@ -664,6 +668,7 @@ def dashboard_user_register_view(request):
         "church": church
     })
 
+@login_required
 def dashboard_view(request):
     """
     Displays a financial summary dashboard for the user's church.
@@ -1085,13 +1090,24 @@ def account_status_view(request):
     church = None
     church_member = None
     
+    # Ensure user is authenticated
+    if not request.user.is_authenticated:
+        return redirect('login')
+    
     try:
         # Get church member record (even if church is not approved)
         church_member = ChurchMember.objects.get(user=request.user)
         church = church_member.church
     except ChurchMember.DoesNotExist:
         # Try to find any church associated with this user
-        pass
+        try:
+            # Look for any church membership, even inactive ones
+            church_members = ChurchMember.objects.filter(user=request.user)
+            if church_members.exists():
+                church_member = church_members.first()
+                church = church_member.church
+        except:
+            pass
     
     context = {
         'church': church,
