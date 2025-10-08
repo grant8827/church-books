@@ -5,8 +5,7 @@ from django.utils import timezone
 
 class Church(models.Model):
     SUBSCRIPTION_TYPES = (
-        ('standard', 'Standard'),
-        ('premium', 'Premium'),
+        ('standard', 'Church Books'),
     )
     
     SUBSCRIPTION_STATUS = (
@@ -43,6 +42,16 @@ class Church(models.Model):
 
     def __str__(self):
         return self.name
+    
+    def offline_verified_status(self):
+        """Return status of offline payment verification"""
+        if self.payment_method != 'offline':
+            return 'N/A (PayPal)'
+        elif self.offline_verified_at:
+            return f'Verified ({self.offline_verified_at.strftime("%m/%d/%Y")})'
+        else:
+            return 'Pending Verification'
+    offline_verified_status.short_description = 'Offline Payment Status'
 
     @property
     def is_payment_verified(self):

@@ -16,6 +16,7 @@ urlpatterns = [
     path('subscription/payment/', views_subscription.payment_selection_view, name='payment_selection'),
     path('subscription/register/', views_subscription.registration_form_view, name='registration_form'),
     path('pending-approval/', views.pending_approval_view, name='pending_approval'),
+    path('account-status/', views.account_status_view, name='account_status'),
     
     # PayPal URLs
     path('paypal/create-subscription/', views_subscription.create_paypal_subscription, name='paypal_create_subscription'),
@@ -90,6 +91,7 @@ urlpatterns = [
     path("churches/<int:church_id>/approve/", views.approve_church, name="approve_church"),
     path("churches/<int:church_id>/reject/", views.reject_church, name="reject_church"),
     path("churches/<int:church_id>/verify-offline/", views.verify_offline_payment, name="verify_offline_payment"),
+    path("admin/quick-approve-user/<int:user_id>/", views.quick_approve_user_church, name="quick_approve_user_church"),
     
     # Children Management URLs
     path("children/", views.children_list_view, name="children_list"),

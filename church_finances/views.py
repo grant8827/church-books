@@ -192,10 +192,12 @@ def approve_church(request, church_id):
         error(request, f"Church '{church.name}' is already approved.")
         return redirect('church_approval_list')
 
-    # If offline payment and not verified yet, block approval
+    # For offline payments, auto-verify if not already done
     if church.payment_method == 'offline' and not church.offline_verified_at:
-        error(request, f"Offline payment not verified for '{church.name}'. Provide reference and verify before approval.")
-        return redirect('church_approval_list')
+        church.offline_verified_at = timezone.now()
+        church.offline_verified_by = request.user
+        if not church.offline_payment_reference:
+            church.offline_payment_reference = f"ADMIN_APPROVED_{church.id}"
 
     church.is_approved = True
     church.subscription_status = 'active'
@@ -218,7 +220,7 @@ def approve_church(request, church_id):
             member.is_active = True
             member.save()
 
-    success_msg = f"Church '{church.name}' has been approved."
+    success_msg = f"Church '{church.name}' has been approved and activated."
     if activated_users:
         success_msg += f" Activated user accounts: {', '.join(activated_users)}"
     success(request, success_msg)
@@ -1074,6 +1076,76 @@ def pending_approval_view(request):
     Display the pending approval page
     """
     return render(request, "church_finances/pending_approval.html")
+
+@login_required
+def account_status_view(request):
+    """
+    Display detailed account status for troubleshooting
+    """
+    church = None
+    church_member = None
+    
+    try:
+        # Get church member record (even if church is not approved)
+        church_member = ChurchMember.objects.get(user=request.user)
+        church = church_member.church
+    except ChurchMember.DoesNotExist:
+        # Try to find any church associated with this user
+        pass
+    
+    context = {
+        'church': church,
+        'church_member': church_member,
+    }
+    return render(request, 'church_finances/account_status.html', context)
+
+@admin_required
+def quick_approve_user_church(request, user_id):
+    """
+    Quick approve function for admins to fix user accounts
+    """
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    
+    user = get_object_or_404(User, id=user_id)
+    
+    try:
+        church_member = ChurchMember.objects.get(user=user)
+        church = church_member.church
+        
+        # Approve and activate everything
+        if not church.is_approved:
+            church.is_approved = True
+            church.subscription_status = 'active'
+            if not church.subscription_start_date:
+                church.subscription_start_date = timezone.now()
+            if not church.subscription_end_date:
+                church.subscription_end_date = timezone.now() + timezone.timedelta(days=365)
+            
+            # Auto-verify offline payments
+            if church.payment_method == 'offline' and not church.offline_verified_at:
+                church.offline_verified_at = timezone.now()
+                church.offline_verified_by = request.user
+                if not church.offline_payment_reference:
+                    church.offline_payment_reference = f"QUICK_APPROVED_{church.id}"
+            
+            church.save()
+        
+        # Activate user and member
+        if not user.is_active:
+            user.is_active = True
+            user.save()
+        
+        if not church_member.is_active:
+            church_member.is_active = True
+            church_member.save()
+        
+        success(request, f"Successfully approved and activated church '{church.name}' and user '{user.username}'")
+        
+    except ChurchMember.DoesNotExist:
+        error(request, f"No church membership found for user '{user.username}'")
+    
+    return redirect('account_status')
 
 
 # ==================== ENHANCED TITHES & OFFERINGS MANAGEMENT ====================

@@ -1,21 +1,41 @@
 from django.contrib import admin
+from django.utils import timezone
 from .models import Church, ChurchMember, Transaction, Child, ChildAttendance, BabyChristening
 from .admin_site import church_admin_site
 
 @admin.register(Church, site=church_admin_site)
 class ChurchAdmin(admin.ModelAdmin):
-    list_display = ('name', 'email', 'phone', 'is_approved', 'created_at')
-    list_filter = ('is_approved',)
-    search_fields = ('name', 'email')
-    actions = ['approve_churches', 'reject_churches']
+    list_display = [
+        'name', 'email', 'subscription_type', 'subscription_status', 'is_approved', 
+        'payment_method', 'offline_verified_status', 'created_at', 'subscription_start_date', 'subscription_end_date'
+    ]
+    list_filter = ['is_approved', 'subscription_type', 'subscription_status', 'payment_method', 'created_at', 'offline_verified_at']
+    search_fields = ['name', 'email', 'phone', 'offline_payment_reference']
+    actions = ['approve_churches', 'reject_churches', 'mark_offline_payment_verified']
 
     def approve_churches(self, request, queryset):
         queryset.update(is_approved=True)
     approve_churches.short_description = "Approve selected churches"
 
     def reject_churches(self, request, queryset):
+        """Action to reject multiple churches"""
+        count = queryset.count()
         queryset.delete()
+        self.message_user(request, f"Successfully rejected {count} church(es).")
     reject_churches.short_description = "Reject selected churches"
+    
+    def mark_offline_payment_verified(self, request, queryset):
+        """Action to mark offline payments as verified"""
+        offline_churches = queryset.filter(payment_method='offline', offline_verified_at__isnull=True)
+        count = 0
+        for church in offline_churches:
+            church.offline_verified_at = timezone.now()
+            church.offline_verified_by = request.user
+            church.offline_payment_reference = f"ADMIN_VERIFIED_{church.id}"
+            church.save()
+            count += 1
+        self.message_user(request, f"Marked {count} offline payment(s) as verified.")
+    mark_offline_payment_verified.short_description = "Mark offline payments as verified"
 
 @admin.register(ChurchMember, site=church_admin_site)
 class ChurchMemberAdmin(admin.ModelAdmin):

@@ -39,10 +39,10 @@ def subscription_view(request):
     Display subscription packages
     """
     context = {
-        'paypal_client_id': settings.PAYPAL_CLIENT_ID,
-        'standard_plan_id': settings.PAYPAL_STANDARD_PLAN_ID,
-        'premium_plan_id': settings.PAYPAL_PREMIUM_PLAN_ID,
-        'paypal_mode': settings.PAYPAL_MODE
+        'paypal_client_id': getattr(settings, 'PAYPAL_CLIENT_ID', ''),
+        'standard_plan_id': getattr(settings, 'PAYPAL_STANDARD_PLAN_ID', ''),
+        'paypal_mode': getattr(settings, 'PAYPAL_MODE', 'sandbox'),
+        'package_price': 100
     }
     return render(request, "church_finances/subscription.html", context)
 
@@ -51,16 +51,16 @@ def subscription_select(request):
     Handle subscription package selection - redirect to payment selection
     """
     if request.method == "POST":
-        package = request.POST.get('package')
-        if package in ['standard', 'premium']:
+        package = request.POST.get('package', 'standard')  # Default to standard
+        if package == 'standard':
             request.session['selected_package'] = package
-            request.session['package_price'] = '100' if package == 'standard' else '150'
+            request.session['package_price'] = '100'
             
             # Store package selection and redirect to payment selection
-            plan_id = settings.PAYPAL_STANDARD_PLAN_ID if package == 'standard' else settings.PAYPAL_PREMIUM_PLAN_ID
+            plan_id = getattr(settings, 'PAYPAL_STANDARD_PLAN_ID', '')
             request.session['paypal_plan_id'] = plan_id
             
-            messages.success(request, f"You have selected the {package.title()} package. Please choose your payment method.")
+            messages.success(request, "You have selected Church Books. Please choose your payment method.")
             return redirect('payment_selection')
         else:
             messages.error(request, "Invalid package selection.")
