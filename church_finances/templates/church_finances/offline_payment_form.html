@@ -2,6 +2,56 @@
 
 {% block title %}Church Registration - Offline Payment - Church Books{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Form field styling with borders */
+.form-field {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #d1d5db;
+    border-radius: 0.5rem;
+    background-color: white;
+    color: #1f2937;
+    transition: all 0.2s ease-in-out;
+}
+
+.form-field:focus {
+    outline: none;
+    border-color: #6e003d;
+    box-shadow: 0 0 0 3px rgba(110, 0, 61, 0.1);
+    ring: 2px;
+    ring-color: #6e003d;
+}
+
+.form-field:hover {
+    border-color: #9ca3af;
+}
+
+/* Specific styling for different input types */
+.form-field[type="text"],
+.form-field[type="email"],
+.form-field[type="tel"],
+.form-field[type="url"] {
+    height: 2.75rem;
+}
+
+.form-field textarea {
+    min-height: 5rem;
+    resize: vertical;
+}
+
+/* Error state */
+.form-field.error {
+    border-color: #ef4444;
+}
+
+.form-field.error:focus {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="min-h-screen bg-gray-100 py-12">
     <div class="container mx-auto px-4">
@@ -18,7 +68,8 @@
             </div>
 
             <!-- Church Registration Form -->
-            <form method="post" class="space-y-6"><!-- Church Information -->
+            <form method="post" class="space-y-6">
+                {% csrf_token %}<!-- Church Information -->
                 <div class="border-b border-gray-200 pb-6">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Church Information</h3>
                     
@@ -118,4 +169,20 @@
         </div>
     </div>
 </div>
+
+<script>
+// Apply form-field styling to all form elements
+document.addEventListener('DOMContentLoaded', function() {
+    // Get all input and textarea elements within the form
+    const formElements = document.querySelectorAll('form input, form textarea');
+    
+    formElements.forEach(function(element) {
+        // Skip hidden fields and submit buttons
+        if (element.type !== 'hidden' && element.type !== 'submit' && element.type !== 'button') {
+            // Replace existing classes with our form-field class
+            element.className = 'form-field';
+        }
+    });
+});
+</script>
 {% endblock %}

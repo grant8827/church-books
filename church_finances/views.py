@@ -1540,33 +1540,60 @@ def bulk_contribution_entry(request):
         return redirect('dashboard')
 
     if request.method == 'POST':
-        contributions_data = request.POST.getlist('contributions')
+        service_date = request.POST.get('service_date')
+        default_payment_method = request.POST.get('default_payment_method', 'cash')
+        
         success_count = 0
         error_count = 0
         
-        for contribution_json in contributions_data:
+        # Process each row of contributions
+        row_index = 0
+        while True:
+            member_id = request.POST.get(f'contributions[{row_index}][member]')
+            if not member_id:
+                break
+                
             try:
-                import json
-                data = json.loads(contribution_json)
+                contrib_member = ChurchMember.objects.get(id=member_id, church=church)
+                row_payment_method = request.POST.get(f'contributions[{row_index}][payment_method]') or default_payment_method
                 
-                # Validate and create contribution
-                contrib_member = ChurchMember.objects.get(id=data['member_id'], church=church)
+                # Define contribution types mapping
+                contribution_types = {
+                    'tithe': 'tithe',
+                    'offering': 'offering', 
+                    'special_offering': 'special_offering',
+                    'building_fund': 'building_fund',
+                    'missions': 'missions',
+                    'other': 'other'
+                }
                 
-                Contribution.objects.create(
-                    member=contrib_member,
-                    church=church,
-                    date=datetime.strptime(data['date'], '%Y-%m-%d').date(),
-                    contribution_type=data['contribution_type'],
-                    amount=float(data['amount']),
-                    payment_method=data['payment_method'],
-                    reference_number=data.get('reference_number', ''),
-                    notes=data.get('notes', ''),
-                    recorded_by=request.user
-                )
-                success_count += 1
-                
+                # Process each contribution type for this member
+                for field_name, contrib_type in contribution_types.items():
+                    amount_str = request.POST.get(f'contributions[{row_index}][{field_name}]', '0')
+                    if amount_str:
+                        try:
+                            amount = float(amount_str)
+                            if amount > 0:
+                                Contribution.objects.create(
+                                    member=contrib_member,
+                                    church=church,
+                                    date=datetime.strptime(service_date, '%Y-%m-%d').date(),
+                                    contribution_type=contrib_type,
+                                    amount=amount,
+                                    payment_method=row_payment_method,
+                                    notes=f"Bulk entry - {request.POST.get('service_type', 'Regular Service')}",
+                                    recorded_by=request.user
+                                )
+                                success_count += 1
+                        except (ValueError, TypeError):
+                            error_count += 1
+                            
+            except ChurchMember.DoesNotExist:
+                error_count += 1
             except Exception as e:
                 error_count += 1
+                
+            row_index += 1
                 
         if success_count > 0:
             success(request, f"Successfully recorded {success_count} contributions.")
@@ -1577,13 +1604,28 @@ def bulk_contribution_entry(request):
 
     # Get all church members for the dropdown
     church_members = ChurchMember.objects.filter(church=church, is_active=True).order_by('user__first_name', 'user__last_name')
-
+    
+    # Prepare members data for JavaScript
+    import json
+    from django.utils.safestring import mark_safe
+    
+    members_data = []
+    for cm in church_members:
+        members_data.append({
+            'id': cm.id,
+            'name': f"{cm.user.first_name} {cm.user.last_name}".strip() or cm.user.username
+        })
+    
+    from datetime import date
+    
     context = {
         'member': member,
         'church': church,
         'church_members': church_members,
         'contribution_types': Contribution.CONTRIBUTION_TYPES,
         'payment_methods': Contribution.PAYMENT_METHODS,
+        'members_json': mark_safe(json.dumps(members_data)),
+        'today': date.today().strftime('%Y-%m-%d'),
     }
     
     return render(request, "church_finances/bulk_contribution_entry.html", context)

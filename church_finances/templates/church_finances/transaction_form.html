@@ -2,6 +2,72 @@
 
 {% block title %}{{ title }} - Church Finance App{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Form field styling with borders */
+.form-field {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #d1d5db;
+    border-radius: 0.5rem;
+    background-color: white;
+    color: #1f2937;
+    transition: all 0.2s ease-in-out;
+}
+
+.form-field:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    ring: 2px;
+    ring-color: #3b82f6;
+}
+
+.form-field:hover {
+    border-color: #9ca3af;
+}
+
+/* Specific styling for different input types */
+.form-field[type="text"],
+.form-field[type="email"],
+.form-field[type="number"],
+.form-field[type="date"],
+.form-field[type="password"] {
+    height: 2.75rem;
+}
+
+.form-field select {
+    height: 2.75rem;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+}
+
+.form-field textarea {
+    min-height: 5rem;
+    resize: vertical;
+}
+
+.form-field[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.5rem;
+}
+
+/* Error state */
+.form-field.error {
+    border-color: #ef4444;
+}
+
+.form-field.error:focus {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="flex items-center justify-center min-h-screen-minus-nav-footer">
     <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-lg">
@@ -13,7 +79,38 @@
                     <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
                         {{ field.label }}
                     </label>
-                    {{ field }}
+                    {% if field.field.widget.input_type == 'checkbox' %}
+                        <div class="flex items-center">
+                            <input type="checkbox" 
+                                   name="{{ field.name }}" 
+                                   id="{{ field.id_for_label }}"
+                                   class="form-field"
+                                   {% if field.value %}checked{% endif %}>
+                            <span class="ml-2 text-sm text-gray-700">{{ field.label }}</span>
+                        </div>
+                    {% else %}
+                        {% if field.errors %}
+                            {{ field.as_widget }}
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    var field = document.getElementById('{{ field.id_for_label }}');
+                                    if (field) {
+                                        field.className = 'form-field error';
+                                    }
+                                });
+                            </script>
+                        {% else %}
+                            {{ field.as_widget }}
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    var field = document.getElementById('{{ field.id_for_label }}');
+                                    if (field) {
+                                        field.className = 'form-field';
+                                    }
+                                });
+                            </script>
+                        {% endif %}
+                    {% endif %}
                     {% if field.help_text %}
                         <p class="text-xs text-gray-500 mt-1">{{ field.help_text }}</p>
                     {% endif %}

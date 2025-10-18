@@ -2,6 +2,66 @@
 
 {% block title %}Complete Your Subscription - Church Books{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Form field styling with borders */
+.form-field {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #d1d5db;
+    border-radius: 0.5rem;
+    background-color: white;
+    color: #1f2937;
+    transition: all 0.2s ease-in-out;
+}
+
+.form-field:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    ring: 2px;
+    ring-color: #3b82f6;
+}
+
+.form-field:hover {
+    border-color: #9ca3af;
+}
+
+/* Specific styling for different input types */
+.form-field[type="text"],
+.form-field[type="email"],
+.form-field[type="tel"],
+.form-field[type="url"],
+.form-field[type="password"] {
+    height: 2.75rem;
+}
+
+.form-field select {
+    height: 2.75rem;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+}
+
+.form-field textarea {
+    min-height: 5rem;
+    resize: vertical;
+}
+
+/* Error state */
+.form-field.error {
+    border-color: #ef4444;
+}
+
+.form-field.error:focus {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="min-h-screen bg-gray-100 py-12">
         <div class="max-w-md mx-auto">
@@ -168,8 +228,20 @@
 </div>
 
 <script>
-// Password confirmation validation
+// Apply form-field styling to all form elements and add validation
 document.addEventListener('DOMContentLoaded', function() {
+    // Get all input, select, and textarea elements within the form
+    const formElements = document.querySelectorAll('form input, form select, form textarea');
+    
+    formElements.forEach(function(element) {
+        // Skip hidden fields and submit buttons
+        if (element.type !== 'hidden' && element.type !== 'submit' && element.type !== 'button') {
+            // Replace existing classes with our form-field class
+            element.className = 'form-field';
+        }
+    });
+
+    // Password confirmation validation
     const password = document.getElementById('password');
     const passwordConfirm = document.getElementById('password_confirm');
     const submitButton = document.querySelector('button[type="submit"]');
@@ -178,40 +250,46 @@ document.addEventListener('DOMContentLoaded', function() {
         if (password.value && passwordConfirm.value) {
             if (password.value !== passwordConfirm.value) {
                 passwordConfirm.setCustomValidity('Passwords do not match');
-                passwordConfirm.style.borderColor = '#dc2626';
+                passwordConfirm.classList.add('error');
                 submitButton.disabled = true;
             } else {
                 passwordConfirm.setCustomValidity('');
-                passwordConfirm.style.borderColor = '#d1d5db';
+                passwordConfirm.classList.remove('error');
                 submitButton.disabled = false;
             }
         }
     }
     
-    password.addEventListener('input', validatePasswords);
-    passwordConfirm.addEventListener('input', validatePasswords);
+    if (password && passwordConfirm) {
+        password.addEventListener('input', validatePasswords);
+        passwordConfirm.addEventListener('input', validatePasswords);
+    }
     
     // Username validation - check for valid characters
     const username = document.getElementById('username');
-    username.addEventListener('input', function() {
-        const validUsername = /^[a-zA-Z0-9_-]+$/.test(this.value);
-        if (this.value && !validUsername) {
-            this.setCustomValidity('Username can only contain letters, numbers, underscores, and hyphens');
-            this.style.borderColor = '#dc2626';
-        } else {
-            this.setCustomValidity('');
-            this.style.borderColor = '#d1d5db';
-        }
-    });
+    if (username) {
+        username.addEventListener('input', function() {
+            const validUsername = /^[a-zA-Z0-9_-]+$/.test(this.value);
+            if (this.value && !validUsername) {
+                this.setCustomValidity('Username can only contain letters, numbers, underscores, and hyphens');
+                this.classList.add('error');
+            } else {
+                this.setCustomValidity('');
+                this.classList.remove('error');
+            }
+        });
+    }
     
     // Offline payment confirmation
     const offlineBtn = document.getElementById('offline-payment-btn');
-    offlineBtn.addEventListener('click', function(e) {
-        const confirmed = confirm('Are you sure you want to register for offline payment? Your account will be created and await admin approval. You will receive payment instructions after approval.');
-        if (!confirmed) {
-            e.preventDefault();
-        }
-    });
+    if (offlineBtn) {
+        offlineBtn.addEventListener('click', function(e) {
+            const confirmed = confirm('Are you sure you want to register for offline payment? Your account will be created and await admin approval. You will receive payment instructions after approval.');
+            if (!confirmed) {
+                e.preventDefault();
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

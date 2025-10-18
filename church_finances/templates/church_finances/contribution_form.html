@@ -2,6 +2,62 @@
 
 {% block extra_css %}
 <style>
+    /* Form field styling with borders */
+    .form-field {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #d1d5db;
+        border-radius: 0.5rem;
+        background-color: white;
+        color: #1f2937;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .form-field:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        ring: 2px;
+        ring-color: #3b82f6;
+    }
+
+    .form-field:hover {
+        border-color: #9ca3af;
+    }
+
+    /* Specific styling for different input types */
+    .form-field[type="text"],
+    .form-field[type="email"],
+    .form-field[type="number"],
+    .form-field[type="date"],
+    .form-field[type="password"] {
+        height: 2.75rem;
+    }
+
+    .form-field select {
+        height: 2.75rem;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 0.5rem center;
+        background-repeat: no-repeat;
+        background-size: 1.5em 1.5em;
+        padding-right: 2.5rem;
+    }
+
+    .form-field textarea {
+        min-height: 5rem;
+        resize: vertical;
+    }
+
+    /* Error state */
+    .form-field.error {
+        border-color: #ef4444;
+    }
+
+    .form-field.error:focus {
+        border-color: #ef4444;
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    }
+
     /* Custom styles for member select dropdown */
     .member-select {
         max-width: 100%;
@@ -159,4 +215,25 @@
         </div>
     </div>
 </div>
+
+<script>
+// Apply form-field class to all form elements
+document.addEventListener('DOMContentLoaded', function() {
+    // Get all input, select, and textarea elements within the form
+    const formElements = document.querySelectorAll('form input, form select, form textarea');
+    
+    formElements.forEach(function(element) {
+        // Skip hidden fields and submit buttons
+        if (element.type !== 'hidden' && element.type !== 'submit' && element.type !== 'button') {
+            element.classList.add('form-field');
+            
+            // Add error class if the field has errors
+            const fieldContainer = element.closest('.space-y-1');
+            if (fieldContainer && fieldContainer.querySelector('.text-red-500')) {
+                element.classList.add('error');
+            }
+        }
+    });
+});
+</script>
 {% endblock %}
