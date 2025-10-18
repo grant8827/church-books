@@ -22,6 +22,24 @@ class ChurchRegistrationForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-input rounded-md shadow-sm'}),
             'website': forms.URLInput(attrs={'class': 'form-input rounded-md shadow-sm'}),
         }
+        
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # Check if the user has already registered a church
+        if self.user and self.user.is_authenticated:
+            existing_church = Church.objects.filter(registered_by=self.user).first()
+            if existing_church:
+                raise forms.ValidationError(
+                    f"You have already registered a church: {existing_church.name}. "
+                    "Each account can only register one church."
+                )
+        
+        return cleaned_data
 
 class CustomUserCreationForm(UserCreationForm):
     """

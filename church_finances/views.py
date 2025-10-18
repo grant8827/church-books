@@ -123,12 +123,33 @@ def register_view(request):
     if not selected_package:
         info(request, "Please select a subscription package first.")
         return redirect('subscription')
+    
+    # Check if user is authenticated and already has registered a church
+    if request.user.is_authenticated:
+        existing_church = Church.objects.filter(registered_by=request.user).first()
+        if existing_church:
+            error(request, f"You have already registered a church: {existing_church.name}. Each account can only register one church.")
+            return redirect('dashboard')
         
     if request.method == "POST":
         user_form = CustomUserCreationForm(request.POST)
-        church_form = ChurchRegistrationForm(request.POST)
+        church_form = ChurchRegistrationForm(request.POST, user=request.user if request.user.is_authenticated else None)
         
         if user_form.is_valid() and church_form.is_valid():
+            # Check if the username is already associated with a registered church
+            username = user_form.cleaned_data['username']
+            try:
+                existing_user = User.objects.get(username=username)
+                existing_church = Church.objects.filter(registered_by=existing_user).first()
+                if existing_church:
+                    error(request, f"This username is already associated with a registered church: {existing_church.name}. Each account can only register one church.")
+                    return render(request, "church_finances/register.html", {
+                        "user_form": user_form,
+                        "church_form": church_form
+                    })
+            except User.DoesNotExist:
+                pass  # Username is available, proceed with registration
+                
             try:
                 with transaction.atomic():
                     user = user_form.save()
@@ -136,6 +157,7 @@ def register_view(request):
                     church.is_approved = False  # New churches require approval
                     church.subscription_type = selected_package
                     church.subscription_status = 'pending'
+                    church.registered_by = user  # Set the registering user
                     church.save()
                     # Create an inactive church member until approved
                     ChurchMember.objects.create(
@@ -165,7 +187,7 @@ def register_view(request):
                     error(request, f"{field}: {err}")
     else:
         user_form = CustomUserCreationForm()
-        church_form = ChurchRegistrationForm()
+        church_form = ChurchRegistrationForm(user=request.user if request.user.is_authenticated else None)
     
     context = {
         "user_form": user_form,

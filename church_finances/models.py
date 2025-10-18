@@ -37,6 +37,7 @@ class Church(models.Model):
     offline_verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='offline_verifications', help_text='Admin user who verified offline payment')
     offline_verified_at = models.DateTimeField(blank=True, null=True)
     offline_notes = models.TextField(blank=True, help_text="Internal notes regarding offline payment verification")
+    registered_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='registered_churches', help_text='User who originally registered this church')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -60,6 +61,13 @@ class Church(models.Model):
         if self.payment_method == 'offline':
             return self.offline_verified_at is not None
         return False
+
+    @property
+    def registration_info(self):
+        """Return information about who registered this church"""
+        if self.registered_by:
+            return f'Registered by: {self.registered_by.get_full_name() or self.registered_by.username}'
+        return 'Registration user unknown (pre-existing church)'
 
 class PayPalSubscription(models.Model):
     """
