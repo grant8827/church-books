@@ -41,7 +41,26 @@ class ChurchAdmin(admin.ModelAdmin):
 class ChurchMemberAdmin(admin.ModelAdmin):
     list_display = ('user', 'church', 'role', 'is_active', 'created_at')
     list_filter = ('role', 'is_active', 'church')
-    search_fields = ('user__username', 'church__name')
+    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'church__name', 'city', 'state')
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('user', 'church', 'role', 'is_active')
+        }),
+        ('Personal Details', {
+            'fields': ('date_of_birth', 'phone_number', 'marital_status', 'baptism_date')
+        }),
+        ('Address Information', {
+            'fields': ('street_address', 'city', 'state', 'zip_code', 'country', 'address'),
+            'description': 'Use the separate address fields. The old "address" field is kept for backward compatibility.'
+        }),
+        ('Emergency Contact', {
+            'fields': ('emergency_contact_name', 'emergency_contact_phone')
+        }),
+        ('Additional Notes', {
+            'fields': ('notes',),
+            'classes': ('collapse',)
+        })
+    )
 
 @admin.register(Transaction, site=church_admin_site)
 class TransactionAdmin(admin.ModelAdmin):

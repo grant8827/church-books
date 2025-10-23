@@ -119,6 +119,7 @@ class ChurchMember(models.Model):
         ('admin', 'Church Admin'),
         ('treasurer', 'Treasurer'),
         ('pastor', 'Pastor'),
+        ('bishop', 'Bishop'),
         ('assistant_pastor', 'Assistant Pastor'),
         ('deacon', 'Deacon')
     )
@@ -138,7 +139,13 @@ class ChurchMember(models.Model):
     # Additional member details
     date_of_birth = models.DateField(null=True, blank=True)
     phone_number = models.CharField(max_length=20, blank=True)
-    address = models.TextField(blank=True)
+    address = models.TextField(blank=True)  # Keep for backwards compatibility, will be deprecated
+    # New separate address fields
+    street_address = models.CharField(max_length=255, blank=True, verbose_name="Street Address")
+    city = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=100, blank=True)
+    zip_code = models.CharField(max_length=20, blank=True, verbose_name="ZIP/Postal Code")
+    country = models.CharField(max_length=100, blank=True, default="United States")
     marital_status = models.CharField(max_length=20, choices=MARITAL_STATUS, blank=True)
     baptism_date = models.DateField(null=True, blank=True)
     membership_date = models.DateField(default=timezone.now)
@@ -154,6 +161,34 @@ class ChurchMember(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.church.name} ({self.role})"
+    
+    @property
+    def full_address(self):
+        """Combine separate address fields into a single string for display"""
+        address_parts = []
+        if self.street_address:
+            address_parts.append(self.street_address)
+        
+        city_state_zip = []
+        if self.city:
+            city_state_zip.append(self.city)
+        if self.state:
+            city_state_zip.append(self.state)
+        if self.zip_code:
+            city_state_zip.append(self.zip_code)
+        
+        if city_state_zip:
+            address_parts.append(', '.join(city_state_zip))
+        
+        if self.country and self.country.lower() != 'united states':
+            address_parts.append(self.country)
+        
+        return '\n'.join(address_parts) if address_parts else self.address
+    
+    @property
+    def full_name(self):
+        """Return the member's full name"""
+        return f"{self.user.first_name} {self.user.last_name}".strip()
 
 
 class Contribution(models.Model):
@@ -308,13 +343,18 @@ class Child(models.Model):
     emergency_contact_relationship = models.CharField(max_length=50, blank=True, 
                                                     help_text="e.g., Grandmother, Uncle, Family Friend")
     
-    # Medical Information
-    allergies = models.TextField(blank=True, help_text="List any known allergies or medical conditions")
-    medications = models.TextField(blank=True, help_text="List any regular medications")
-    medical_notes = models.TextField(blank=True, help_text="Any other important medical information")
+    # Medical Information (Commented out as requested)
+    # allergies = models.TextField(blank=True, help_text="List any known allergies or medical conditions")
+    # medications = models.TextField(blank=True, help_text="List any regular medications")
+    # medical_notes = models.TextField(blank=True, help_text="Any other important medical information")
     
-    # Contact Information
-    address = models.TextField(blank=True, help_text="If different from parents' address")
+    # Contact Information - Separate Address Fields
+    address = models.TextField(blank=True, help_text="If different from parents' address (legacy field)")
+    street_address = models.CharField(max_length=255, blank=True, help_text="Street address")
+    city = models.CharField(max_length=100, blank=True, help_text="City")
+    state = models.CharField(max_length=100, blank=True, help_text="State/Province")
+    zip_code = models.CharField(max_length=20, blank=True, help_text="ZIP/Postal code")
+    country = models.CharField(max_length=100, blank=True, default="United States", help_text="Country")
     phone_number = models.CharField(max_length=20, blank=True, help_text="If child has own phone")
     
     # Status and Notes
@@ -337,6 +377,18 @@ class Child(models.Model):
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
+    
+    @property
+    def full_address(self):
+        """Combine separate address fields into a single string"""
+        if self.street_address or self.city or self.state or self.zip_code:
+            parts = [
+                self.street_address,
+                f"{self.city}, {self.state} {self.zip_code}".strip(' ,'),
+                self.country if self.country != "United States" else ""
+            ]
+            return "\n".join(part for part in parts if part)
+        return self.address  # Fall back to legacy address field
     
     @property
     def age(self):
@@ -408,8 +460,13 @@ class BabyChristening(models.Model):
     godmother_name = models.CharField(max_length=200, blank=True, help_text="Godmother's full name")
     other_godparents = models.TextField(blank=True, help_text="Additional godparents")
     
-    # Contact Information
-    contact_address = models.TextField(blank=True, help_text="Family contact address")
+    # Contact Information - Separate Address Fields for Google Maps
+    # contact_address = models.TextField(blank=True, help_text="Family contact address (legacy field)")
+    contact_street_address = models.CharField(max_length=255, blank=True, help_text="Street address")
+    contact_city = models.CharField(max_length=100, blank=True, help_text="City")
+    contact_state = models.CharField(max_length=100, blank=True, help_text="State/Province")
+    contact_zip_code = models.CharField(max_length=20, blank=True, help_text="ZIP/Postal code")
+    contact_country = models.CharField(max_length=100, blank=True, default="United States", help_text="Country")
     contact_phone = models.CharField(max_length=20, blank=True, help_text="Primary contact phone")
     contact_email = models.EmailField(blank=True, help_text="Contact email address")
     
@@ -447,6 +504,18 @@ class BabyChristening(models.Model):
                 years = days // 365
                 return f"{years} years"
         return "Unknown"
+    
+    @property
+    def full_contact_address(self):
+        """Combine separate contact address fields into a single string"""
+        if self.contact_street_address or self.contact_city or self.contact_state or self.contact_zip_code:
+            parts = [
+                self.contact_street_address,
+                f"{self.contact_city}, {self.contact_state} {self.contact_zip_code}".strip(' ,'),
+                self.contact_country if self.contact_country != "United States" else ""
+            ]
+            return "\n".join(part for part in parts if part)
+        return ""  # No legacy field fallback
     
     @property 
     def parents_list(self):

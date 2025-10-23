@@ -1,127 +1,207 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block extra_css %}
-<style>
-/* Form field styling with borders */
-.form-field {
-    width: 100%;
-    padding: 0.75rem;
-    border: 2px solid #d1d5db;
-    border-radius: 0.5rem;
-    background-color: white;
-    color: #1f2937;
-    transition: all 0.2s ease-in-out;
-}
-
-.form-field:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    ring: 2px;
-    ring-color: #3b82f6;
-}
-
-.form-field:hover {
-    border-color: #9ca3af;
-}
-
-/* Specific styling for different input types */
-.form-field[type="text"],
-.form-field[type="email"],
-.form-field[type="number"],
-.form-field[type="date"],
-.form-field[type="password"] {
-    height: 2.75rem;
-}
-
-.form-field select {
-    height: 2.75rem;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.5rem center;
-    background-repeat: no-repeat;
-    background-size: 1.5em 1.5em;
-    padding-right: 2.5rem;
-}
-
-.form-field textarea {
-    min-height: 5rem;
-    resize: vertical;
-}
-
-.form-field[type="checkbox"] {
-    width: 1rem;
-    height: 1rem;
-    margin-right: 0.5rem;
-}
-
-/* Error state */
-.form-field.error {
-    border-color: #ef4444;
-}
-
-.form-field.error:focus {
-    border-color: #ef4444;
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-}
-</style>
-{% endblock %}
+{% block title %}{% if form.instance.pk %}Edit Member{% else %}Add New Member{% endif %} - Church Finance App{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
-    <div class="max-w-3xl mx-auto">
-        <div class="bg-white shadow-md rounded-lg p-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">{% if form.instance.pk %}Edit{% else %}Add{% endif %} Member</h2>
-            
-            <form method="post" class="space-y-6">
-                {% csrf_token %}
-                {% for field in form %}
-                <div class="space-y-1">
-                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                        {{ field.label }}
-                    </label>
-                    {% if field.field.widget.input_type == 'checkbox' %}
-                        <div class="flex items-center">
-                            <input type="checkbox" 
-                                   name="{{ field.name }}" 
-                                   id="{{ field.id_for_label }}"
-                                   class="form-field"
-                                   {% if field.value %}checked{% endif %}>
-                            <span class="ml-2 text-sm text-gray-700">{{ field.label }}</span>
-                        </div>
-                    {% else %}
-                        {{ field.as_widget }}
-                        <script>
-                            document.addEventListener('DOMContentLoaded', function() {
-                                var field = document.getElementById('{{ field.id_for_label }}');
-                                if (field) {
-                                    {% if field.errors %}
-                                        field.className = 'form-field error';
-                                    {% else %}
-                                        field.className = 'form-field';
-                                    {% endif %}
-                                }
-                            });
-                        </script>
-                    {% endif %}
-                    {% if field.help_text %}
-                    <p class="text-sm text-gray-500">{{ field.help_text }}</p>
-                    {% endif %}
-                    {% for error in field.errors %}
-                    <p class="text-red-500 text-sm">{{ error }}</p>
-                    {% endfor %}
-                </div>
-                {% endfor %}
+    <div class="max-w-6xl mx-auto">
+        <!-- Breadcrumb -->
+        <nav class="mb-6">
+            <ol class="flex items-center space-x-2 text-sm text-gray-600">
+                <li><a href="{% url 'dashboard' %}" class="hover:text-blue-600">Dashboard</a></li>
+                <li><span class="mx-2">→</span></li>
+                <li><a href="{% url 'member_list' %}" class="hover:text-blue-600">Members</a></li>
+                <li><span class="mx-2">→</span></li>
+                <li class="text-gray-800 font-medium">{% if form.instance.pk %}Edit Member{% else %}Add New Member{% endif %}</li>
+            </ol>
+        </nav>
 
-                <div class="flex justify-end space-x-4 pt-4">
-                    <a href="{% url 'member_list' %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
-                        Cancel
-                    </a>
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                        {% if form.instance.pk %}Update{% else %}Add{% endif %} Member
-                    </button>
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                        <i class="fas fa-{% if form.instance.pk %}edit{% else %}user-plus{% endif %} text-blue-600 mr-3"></i>{% if form.instance.pk %}Edit Member{% else %}Add New Member{% endif %}
+                    </h1>
+                    <p class="text-gray-600">{% if form.instance.pk %}Update member information{% else %}Register a new member in the church directory{% endif %}</p>
+                </div>
+                <a href="{% url 'member_list' %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Members
+                </a>
+            </div>
+
+            <form method="post" class="space-y-8">
+                {% csrf_token %}
+                
+                <!-- Personal Information -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-user text-blue-600 mr-3"></i>Personal Information
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-1">
+                            <label for="{{ form.first_name.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.first_name.label }} *</label>
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.first_name.id_for_label }}" name="{{ form.first_name.name }}" value="{{ form.first_name.value|default:'' }}" required>
+                            {% for error in form.first_name.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        <div class="space-y-1">
+                            <label for="{{ form.last_name.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.last_name.label }} *</label>
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.last_name.id_for_label }}" name="{{ form.last_name.name }}" value="{{ form.last_name.value|default:'' }}" required>
+                            {% for error in form.last_name.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        <div class="space-y-1">
+                            <label for="{{ form.date_of_birth.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.date_of_birth.label }}</label>
+                            <input type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.date_of_birth.id_for_label }}" name="{{ form.date_of_birth.name }}" value="{{ form.date_of_birth.value|default:'' }}">
+                            {% for error in form.date_of_birth.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        <div class="space-y-1">
+                            <label for="{{ form.marital_status.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.marital_status.label }}</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.marital_status.id_for_label }}" name="{{ form.marital_status.name }}">
+                                <option value="">Select Marital Status</option>
+                                {% for choice in form.marital_status.field.choices %}
+                                    <option value="{{ choice.0 }}" {% if choice.0 == form.marital_status.value %}selected{% endif %}>{{ choice.1 }}</option>
+                                {% endfor %}
+                            </select>
+                            {% for error in form.marital_status.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        <div class="space-y-1">
+                            <label for="{{ form.baptism_date.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.baptism_date.label }}</label>
+                            <input type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.baptism_date.id_for_label }}" name="{{ form.baptism_date.name }}" value="{{ form.baptism_date.value|default:'' }}">
+                            {% for error in form.baptism_date.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-address-book text-green-600 mr-3"></i>Contact Information
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-1">
+                            <label for="{{ form.phone_number.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.phone_number.label }}</label>
+                            <input type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.phone_number.id_for_label }}" name="{{ form.phone_number.name }}" value="{{ form.phone_number.value|default:'' }}" placeholder="(123) 456-7890">
+                            {% for error in form.phone_number.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-3">Address</label>
+                            
+                            <!-- Street Address -->
+                            <div class="space-y-1 mb-4">
+                                <label for="{{ form.street_address.id_for_label }}" class="block text-sm font-medium text-gray-600">{{ form.street_address.label }}</label>
+                                <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.street_address.id_for_label }}" name="{{ form.street_address.name }}" value="{{ form.street_address.value|default:'' }}" placeholder="123 Main Street">
+                                {% for error in form.street_address.errors %}
+                                    <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                            
+                            <!-- City, State, ZIP in a grid -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="space-y-1">
+                                    <label for="{{ form.city.id_for_label }}" class="block text-sm font-medium text-gray-600">{{ form.city.label }}</label>
+                                    <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.city.id_for_label }}" name="{{ form.city.name }}" value="{{ form.city.value|default:'' }}" placeholder="City">
+                                    {% for error in form.city.errors %}
+                                        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                                <div class="space-y-1">
+                                    <label for="{{ form.state.id_for_label }}" class="block text-sm font-medium text-gray-600">{{ form.state.label }}</label>
+                                    <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.state.id_for_label }}" name="{{ form.state.name }}" value="{{ form.state.value|default:'' }}" placeholder="State/Province">
+                                    {% for error in form.state.errors %}
+                                        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                                <div class="space-y-1">
+                                    <label for="{{ form.zip_code.id_for_label }}" class="block text-sm font-medium text-gray-600">{{ form.zip_code.label }}</label>
+                                    <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.zip_code.id_for_label }}" name="{{ form.zip_code.name }}" value="{{ form.zip_code.value|default:'' }}" placeholder="12345">
+                                    {% for error in form.zip_code.errors %}
+                                        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <!-- Country -->
+                            <div class="space-y-1 mt-4">
+                                <label for="{{ form.country.id_for_label }}" class="block text-sm font-medium text-gray-600">{{ form.country.label }}</label>
+                                <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.country.id_for_label }}" name="{{ form.country.name }}" value="{{ form.country.value|default:'United States' }}" placeholder="Country">
+                                {% for error in form.country.errors %}
+                                    <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Emergency Contact -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-phone-alt text-red-600 mr-3"></i>Emergency Contact
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-1">
+                            <label for="{{ form.emergency_contact_name.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.emergency_contact_name.label }}</label>
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.emergency_contact_name.id_for_label }}" name="{{ form.emergency_contact_name.name }}" value="{{ form.emergency_contact_name.value|default:'' }}">
+                            {% for error in form.emergency_contact_name.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        <div class="space-y-1">
+                            <label for="{{ form.emergency_contact_phone.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.emergency_contact_phone.label }}</label>
+                            <input type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.emergency_contact_phone.id_for_label }}" name="{{ form.emergency_contact_phone.name }}" value="{{ form.emergency_contact_phone.value|default:'' }}" placeholder="(123) 456-7890">
+                            {% for error in form.emergency_contact_phone.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Notes -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-sticky-note text-purple-600 mr-3"></i>Additional Notes
+                    </h2>
+                    
+                    <div class="space-y-1">
+                        <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.notes.label }}</label>
+                        <textarea class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical" id="{{ form.notes.id_for_label }}" name="{{ form.notes.name }}" rows="4" placeholder="Any additional information about the member">{{ form.notes.value|default:'' }}</textarea>
+                        {% for error in form.notes.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex justify-between items-center pt-6 border-t border-gray-200">
+                    <div>
+                        <small class="text-gray-500">* Required fields</small>
+                    </div>
+                    <div class="flex space-x-4">
+                        <a href="{% url 'member_list' %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                            <i class="fas fa-times mr-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                            <i class="fas fa-save mr-2"></i>{% if form.instance.pk %}Update Member{% else %}Save Member{% endif %}
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
 {% endblock %}

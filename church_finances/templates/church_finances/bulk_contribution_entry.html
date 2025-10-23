@@ -1,109 +1,61 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Bulk Contribution Entry - Church Books{% endblock %}
 
-{% block extra_css %}
-<style>
-/* Form field styling with borders */
-.form-field {
-    width: 100%;
-    padding: 0.75rem;
-    border: 2px solid #d1d5db;
-    border-radius: 0.5rem;
-    background-color: white;
-    color: #1f2937;
-    transition: all 0.2s ease-in-out;
-}
-
-.form-field:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.form-field:hover {
-    border-color: #9ca3af;
-}
-
-/* Specific styling for table inputs */
-.table-input {
-    padding: 0.5rem;
-    border: 1px solid #d1d5db;
-    border-radius: 0.25rem;
-    background-color: white;
-    transition: all 0.2s ease-in-out;
-}
-
-.table-input:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-}
-
-.table-select {
-    padding: 0.5rem;
-    border: 1px solid #d1d5db;
-    border-radius: 0.25rem;
-    background-color: white;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.5rem center;
-    background-repeat: no-repeat;
-    background-size: 1.5em 1.5em;
-    padding-right: 2.5rem;
-}
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="min-h-screen bg-gray-100 py-8">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Header -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div class="flex flex-wrap justify-between items-center">
-                <div>
-                    <h1 class="text-3xl font-bold text-gray-900">Bulk Contribution Entry</h1>
-                    <p class="text-gray-600 mt-2">{{ church.name }} - Enter multiple contributions at once</p>
-                </div>
-                <div class="flex space-x-3">
-                    <a href="{% url 'tithes_offerings_dashboard' %}" 
-                       class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                        </svg>
-                        Back to Dashboard
-                    </a>
-                    <a href="{% url 'contribution_add' %}" 
-                       class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
-                        Single Entry
-                    </a>
-                </div>
-            </div>
+<div class="container mx-auto px-4 py-8">
+    <!-- Header Section -->
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Bulk Contribution Entry</h1>
+        <p class="text-gray-600">{{ church.name }} - Enter multiple contributions at once</p>
+        
+        <!-- Navigation Buttons -->
+        <div class="flex flex-wrap justify-center gap-4 mt-6">
+            <a href="{% url 'tithes_offerings_dashboard' %}" 
+               class="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Back to Dashboard
+            </a>
+            <a href="{% url 'contribution_add' %}" 
+               class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                <i class="fas fa-plus mr-2"></i>
+                Single Entry
+            </a>
         </div>
+    </div>
 
-        {% if messages %}
-            {% for message in messages %}
-                <div class="mb-6 bg-{{ message.tags }}-100 border border-{{ message.tags }}-400 text-{{ message.tags }}-700 px-4 py-3 rounded">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="mb-6 p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 text-red-800{% elif message.tags == 'success' %}bg-green-50 text-green-800{% else %}bg-blue-50 text-blue-800{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
 
-        <!-- Entry Form -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <form method="post" id="bulk-contribution-form">
-                {% csrf_token %}<!-- Date and Service Information -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-blue-50 rounded-lg">
+    <!-- Main Form Container -->
+    <div class="max-w-6xl mx-auto bg-white rounded-lg shadow-sm">
+        <form method="post" id="bulk-contribution-form" class="p-6">
+            {% csrf_token %}
+            
+            <!-- Service Information Section -->
+            <div class="bg-gray-50 rounded-lg p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-calendar-alt text-blue-600 mr-3"></i>
+                    Service Information
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                        <label for="service_date" class="block text-sm font-medium text-gray-700 mb-2">Service Date</label>
+                        <label for="service_date" class="block text-sm font-medium text-gray-700 mb-2">Service Date *</label>
                         <input type="date" id="service_date" name="service_date" 
-                               value="{{ today }}" required class="form-field">
+                               value="{{ today }}" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     </div>
                     <div>
                         <label for="service_type" class="block text-sm font-medium text-gray-700 mb-2">Service Type</label>
-                        <select id="service_type" name="service_type" class="form-field">
+                        <select id="service_type" name="service_type" 
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                             <option value="">Select Service</option>
                             <option value="Sunday Morning">Sunday Morning Service</option>
                             <option value="Sunday Evening">Sunday Evening Service</option>
@@ -114,7 +66,8 @@
                     </div>
                     <div>
                         <label for="default_payment_method" class="block text-sm font-medium text-gray-700 mb-2">Default Payment Method</label>
-                        <select id="default_payment_method" name="default_payment_method" class="form-field">
+                        <select id="default_payment_method" name="default_payment_method" 
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                             <option value="cash">Cash</option>
                             <option value="check">Check</option>
                             <option value="online">Online</option>
@@ -122,69 +75,103 @@
                         </select>
                     </div>
                 </div>
+            </div>
 
-                <!-- Bulk Entry Table -->
-                <div class="overflow-x-auto">
-                    <table class="min-w-full table-auto" id="contributions-table">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">Member</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Tithe</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Offering</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Special</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Building</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Missions</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Other</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Payment</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Total</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200" id="contributions-body">
-                            <!-- Dynamic rows will be added here -->
-                        </tbody>
-                    </table>
+            <!-- Contributions Entry Section -->
+            <div class="bg-gray-50 rounded-lg p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-hand-holding-usd text-blue-600 mr-3"></i>
+                    Contributions Entry
+                </h3>
+                
+                <!-- Table Container -->
+                <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full table-auto" id="contributions-table">
+                            <thead class="bg-blue-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-48">Member</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-24">Tithe</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-24">Offering</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-24">Special</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-24">Building</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-24">Missions</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-24">Other</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-32">Payment</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-24">Total</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-16">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="contributions-body">
+                                <!-- Dynamic rows will be added here -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+            </div>
 
-                <!-- Add Row and Submit Buttons -->
-                <div class="flex justify-between items-center mt-6">
+            <!-- Form Actions -->
+            <div class="bg-white rounded-lg p-6 border-t border-gray-200">
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <!-- Add Row Button -->
                     <button type="button" id="add-row-btn" 
-                            class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
+                            class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                        <i class="fas fa-plus mr-2"></i>
                         Add Row
                     </button>
                     
-                    <div class="flex flex-wrap space-x-3">
-                        <div class="text-lg font-semibold text-gray-700">
-                            Grand Total: $<span id="grand-total">0.00</span>
+                    <!-- Grand Total and Submit -->
+                    <div class="flex flex-col sm:flex-row items-center gap-4">
+                        <div class="text-xl font-bold text-gray-900">
+                            Grand Total: $<span id="grand-total" class="text-blue-600">0.00</span>
                         </div>
                         <button type="submit" 
-                                class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 flex items-center">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
+                                class="inline-flex items-center px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                            <i class="fas fa-save mr-2"></i>
                             Save All Contributions
                         </button>
                     </div>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
+    </div>
 
-        <!-- Instructions -->
-        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-yellow-800 mb-3">Instructions</h3>
-            <ul class="list-disc list-inside space-y-2 text-yellow-700">
-                <li>Set the service date and default payment method above</li>
-                <li>Click "Add Row" to add contribution entries for members</li>
-                <li>Select a member and enter amounts for different contribution types</li>
-                <li>Amounts will automatically calculate the row total</li>
-                <li>You can override the payment method for individual entries if needed</li>
-                <li>Click "Save All Contributions" when finished to record all entries</li>
-                <li>Empty rows or rows with $0.00 total will be ignored</li>
-            </ul>
-        </div>
+    <!-- Instructions Section -->
+    <div class="max-w-4xl mx-auto mt-8 bg-yellow-50 border-l-4 border-yellow-400 rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-yellow-800 mb-4 flex items-center">
+            <i class="fas fa-info-circle text-yellow-600 mr-3"></i>
+            Instructions
+        </h3>
+        <ul class="space-y-2 text-yellow-800">
+            <li class="flex items-start">
+                <i class="fas fa-check text-yellow-600 mr-2 mt-1 flex-shrink-0"></i>
+                Set the service date and default payment method above
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check text-yellow-600 mr-2 mt-1 flex-shrink-0"></i>
+                Click "Add Row" to add contribution entries for members
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check text-yellow-600 mr-2 mt-1 flex-shrink-0"></i>
+                Select a member and enter amounts for different contribution types
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check text-yellow-600 mr-2 mt-1 flex-shrink-0"></i>
+                Amounts will automatically calculate the row total
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check text-yellow-600 mr-2 mt-1 flex-shrink-0"></i>
+                You can override the payment method for individual entries if needed
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check text-yellow-600 mr-2 mt-1 flex-shrink-0"></i>
+                Click "Save All Contributions" when finished to record all entries
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check text-yellow-600 mr-2 mt-1 flex-shrink-0"></i>
+                Empty rows or rows with $0.00 total will be ignored
+            </li>
+        </ul>
     </div>
 </div>
 
@@ -251,44 +238,44 @@ function addRow() {
     row.className = 'contribution-row';
     
     row.innerHTML = `
-        <td class="px-3 py-4">
-            <select name="contributions[${rowCounter}][member]" class="table-select w-full text-sm" required>
+        <td class="px-4 py-3">
+            <select name="contributions[${rowCounter}][member]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" required>
                 <option value="">Select Member</option>
                 ${members.map(member => `<option value="${member.id}">${member.name}</option>`).join('')}
             </select>
         </td>
-        <td class="px-3 py-4">
+        <td class="px-4 py-3">
             <input type="number" name="contributions[${rowCounter}][tithe]" step="0.01" min="0" 
-                   class="contribution-input table-input w-full text-sm text-right" 
+                   class="contribution-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-right" 
                    data-type="tithe" placeholder="0.00">
         </td>
-        <td class="px-3 py-4">
+        <td class="px-4 py-3">
             <input type="number" name="contributions[${rowCounter}][offering]" step="0.01" min="0" 
-                   class="contribution-input table-input w-full text-sm text-right" 
+                   class="contribution-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-right" 
                    data-type="offering" placeholder="0.00">
         </td>
-        <td class="px-3 py-4">
+        <td class="px-4 py-3">
             <input type="number" name="contributions[${rowCounter}][special_offering]" step="0.01" min="0" 
-                   class="contribution-input table-input w-full text-sm text-right" 
+                   class="contribution-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-right" 
                    data-type="special_offering" placeholder="0.00">
         </td>
-        <td class="px-3 py-4">
+        <td class="px-4 py-3">
             <input type="number" name="contributions[${rowCounter}][building_fund]" step="0.01" min="0" 
-                   class="contribution-input table-input w-full text-sm text-right" 
+                   class="contribution-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-right" 
                    data-type="building_fund" placeholder="0.00">
         </td>
-        <td class="px-3 py-4">
+        <td class="px-4 py-3">
             <input type="number" name="contributions[${rowCounter}][missions]" step="0.01" min="0" 
-                   class="contribution-input table-input w-full text-sm text-right" 
+                   class="contribution-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-right" 
                    data-type="missions" placeholder="0.00">
         </td>
-        <td class="px-3 py-4">
+        <td class="px-4 py-3">
             <input type="number" name="contributions[${rowCounter}][other]" step="0.01" min="0" 
-                   class="contribution-input table-input w-full text-sm text-right" 
+                   class="contribution-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-right" 
                    data-type="other" placeholder="0.00">
         </td>
-        <td class="px-3 py-4">
-            <select name="contributions[${rowCounter}][payment_method]" class="table-select w-full text-sm">
+        <td class="px-4 py-3">
+            <select name="contributions[${rowCounter}][payment_method]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                 <option value="">Use Default</option>
                 <option value="cash">Cash</option>
                 <option value="check">Check</option>
@@ -296,15 +283,13 @@ function addRow() {
                 <option value="bank_transfer">Bank Transfer</option>
             </select>
         </td>
-        <td class="px-3 py-4">
-            <div class="row-total font-semibold text-gray-900">$0.00</div>
+        <td class="px-4 py-3">
+            <div class="row-total font-semibold text-gray-900 text-right">$0.00</div>
         </td>
-        <td class="px-3 py-4">
+        <td class="px-4 py-3">
             <button type="button" onclick="removeRow(this)" 
-                    class="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                </svg>
+                    class="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-colors">
+                <i class="fas fa-trash text-sm"></i>
             </button>
         </td>
     `;

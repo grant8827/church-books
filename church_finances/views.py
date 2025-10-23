@@ -27,8 +27,9 @@ from django.views.decorators.http import require_POST
 
 # Conditional import for PDF generation
 try:
-    from xhtml2pdf import pisa
-    PDF_AVAILABLE = True
+    # Temporarily disabled due to import issues
+    # from xhtml2pdf import pisa
+    PDF_AVAILABLE = False
 except ImportError:
     PDF_AVAILABLE = False
 
@@ -660,21 +661,31 @@ def contribution_edit_view(request, pk):
 
 
 @login_required
-@login_required
 def dashboard_user_register_view(request):
     """
     Register new church staff members from the dashboard.
     These users are automatically approved since they are being added by an admin/pastor.
     """
+    # Debug: Print user info
+    print(f"DEBUG: User {request.user.username} attempting to access staff registration")
+    
     church = get_user_church(request.user)
     if not church or not church.is_approved:
+        print(f"DEBUG: Church issue - Church: {church}, Approved: {church.is_approved if church else None}")
         info(request, "Your church account is pending approval.")
         return render(request, "church_finances/pending_approval.html")
 
     # Check if user has permission to register staff
-    member = ChurchMember.objects.get(user=request.user, church=church)
-    if member.role not in ['admin', 'pastor']:
-        raise PermissionDenied("You don't have permission to register staff members.")
+    try:
+        member = ChurchMember.objects.get(user=request.user, church=church)
+        print(f"DEBUG: Found member - Role: {member.role}, Church: {member.church.name}")
+        
+        if member.role not in ['admin', 'pastor', 'bishop', 'treasurer']:
+            print(f"DEBUG: Permission denied - Role '{member.role}' not in ['admin', 'pastor', 'bishop', 'treasurer']")
+            raise PermissionDenied(f"You don't have permission to register staff members. Your role is '{member.role}' but 'admin', 'pastor', 'bishop', or 'treasurer' is required.")
+    except ChurchMember.DoesNotExist:
+        print(f"DEBUG: ChurchMember not found for user {request.user.username} in church {church.name}")
+        raise PermissionDenied("You are not a member of this church.")
 
     if request.method == "POST":
         form = DashboardUserRegistrationForm(request.POST, church=church)

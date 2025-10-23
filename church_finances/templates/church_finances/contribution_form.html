@@ -1,239 +1,162 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block extra_css %}
-<style>
-    /* Form field styling with borders */
-    .form-field {
-        width: 100%;
-        padding: 0.75rem;
-        border: 2px solid #d1d5db;
-        border-radius: 0.5rem;
-        background-color: white;
-        color: #1f2937;
-        transition: all 0.2s ease-in-out;
-    }
-
-    .form-field:focus {
-        outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        ring: 2px;
-        ring-color: #3b82f6;
-    }
-
-    .form-field:hover {
-        border-color: #9ca3af;
-    }
-
-    /* Specific styling for different input types */
-    .form-field[type="text"],
-    .form-field[type="email"],
-    .form-field[type="number"],
-    .form-field[type="date"],
-    .form-field[type="password"] {
-        height: 2.75rem;
-    }
-
-    .form-field select {
-        height: 2.75rem;
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-        background-position: right 0.5rem center;
-        background-repeat: no-repeat;
-        background-size: 1.5em 1.5em;
-        padding-right: 2.5rem;
-    }
-
-    .form-field textarea {
-        min-height: 5rem;
-        resize: vertical;
-    }
-
-    /* Error state */
-    .form-field.error {
-        border-color: #ef4444;
-    }
-
-    .form-field.error:focus {
-        border-color: #ef4444;
-        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-    }
-
-    /* Custom styles for member select dropdown */
-    .member-select {
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    
-    .member-select option {
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        padding: 8px 12px;
-    }
-    
-    /* Responsive form container */
-    .form-container {
-        max-width: 100%;
-        overflow-x: hidden;
-    }
-    
-    /* Notes textarea styling */
-    .notes-textarea {
-        resize: vertical;
-        min-height: 100px;
-        max-height: 300px;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-    }
-    
-    /* Mobile responsiveness */
-    @media (max-width: 768px) {
-        .form-container {
-            padding: 1rem;
-        }
-        
-        .member-select {
-            font-size: 14px;
-        }
-        
-        .grid {
-            grid-template-columns: 1fr;
-            gap: 1rem;
-        }
-    }
-</style>
-{% endblock %}
+{% block title %}{% if form.instance.pk %}Edit Contribution{% else %}Add New Contribution{% endif %} - Church Finance App{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
-    <div class="max-w-4xl mx-auto">
+    <div class="max-w-6xl mx-auto">
+        <!-- Breadcrumb -->
+        <nav class="mb-6">
+            <ol class="flex items-center space-x-2 text-sm text-gray-600">
+                <li><a href="{% url 'dashboard' %}" class="hover:text-blue-600">Dashboard</a></li>
+                <li><span class="mx-2">→</span></li>
+                <li><a href="{% url 'contribution_list' %}" class="hover:text-blue-600">Contributions</a></li>
+                <li><span class="mx-2">→</span></li>
+                <li class="text-gray-800 font-medium">{% if form.instance.pk %}Edit Contribution{% else %}Add New Contribution{% endif %}</li>
+            </ol>
+        </nav>
+
         <div class="bg-white shadow-md rounded-lg p-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">{% if form.instance.pk %}Edit{% else %}Add{% endif %} Contribution</h2>
-            
-            <form method="post" class="space-y-6">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                        <i class="fas fa-{% if form.instance.pk %}edit{% else %}plus-circle{% endif %} text-green-600 mr-3"></i>{% if form.instance.pk %}Edit Contribution{% else %}Record New Contribution{% endif %}
+                    </h1>
+                    <p class="text-gray-600">{% if form.instance.pk %}Update contribution information{% else %}Record a new tithe or offering contribution{% endif %}</p>
+                </div>
+                <a href="{% url 'contribution_list' %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Contributions
+                </a>
+            </div>
+
+            <form method="post" class="space-y-8">
                 {% csrf_token %}
                 
-                <!-- Grid layout for better organization -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Member field with proper overflow handling -->
-                    <div class="space-y-1 md:col-span-2">
-                        <label for="{{ form.member.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                            {{ form.member.label }}
-                        </label>
-                        <div class="relative form-container">
-                            {{ form.member }}
-                        </div>
+                <!-- Member Information -->
+                <div class="bg-blue-50 rounded-lg p-6 border-l-4 border-blue-400">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-user text-blue-600 mr-3"></i>Member Information
+                    </h2>
+                    
+                    <div class="space-y-1">
+                        <label for="{{ form.member.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.member.label }} *</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.member.id_for_label }}" name="{{ form.member.name }}" required>
+                            <option value="">Select a Member</option>
+                            {% for choice in form.member.field.queryset %}
+                                <option value="{{ choice.id }}" {% if choice.id == form.member.value %}selected{% endif %}>
+                                    {{ choice.user.get_full_name }} 
+                                    {% if choice.role %}({{ choice.get_role_display }}){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
                         {% for error in form.member.errors %}
-                        <p class="text-red-500 text-sm">{{ error }}</p>
-                        {% endfor %}
-                    </div>
-                    
-                    <!-- Date field -->
-                    <div class="space-y-1">
-                        <label for="{{ form.date.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                            {{ form.date.label }}
-                        </label>
-                        {{ form.date }}
-                        {% for error in form.date.errors %}
-                        <p class="text-red-500 text-sm">{{ error }}</p>
-                        {% endfor %}
-                    </div>
-                    
-                    <!-- Contribution Type field -->
-                    <div class="space-y-1">
-                        <label for="{{ form.contribution_type.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                            {{ form.contribution_type.label }}
-                        </label>
-                        {{ form.contribution_type }}
-                        {% for error in form.contribution_type.errors %}
-                        <p class="text-red-500 text-sm">{{ error }}</p>
-                        {% endfor %}
-                    </div>
-                    
-                    <!-- Amount field -->
-                    <div class="space-y-1">
-                        <label for="{{ form.amount.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                            {{ form.amount.label }}
-                        </label>
-                        {{ form.amount }}
-                        {% for error in form.amount.errors %}
-                        <p class="text-red-500 text-sm">{{ error }}</p>
-                        {% endfor %}
-                    </div>
-                    
-                    <!-- Payment Method field -->
-                    <div class="space-y-1">
-                        <label for="{{ form.payment_method.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                            {{ form.payment_method.label }}
-                        </label>
-                        {{ form.payment_method }}
-                        {% for error in form.payment_method.errors %}
-                        <p class="text-red-500 text-sm">{{ error }}</p>
-                        {% endfor %}
-                    </div>
-                    
-                    <!-- Reference Number field -->
-                    <div class="space-y-1 md:col-span-2">
-                        <label for="{{ form.reference_number.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                            {{ form.reference_number.label }}
-                        </label>
-                        {{ form.reference_number }}
-                        {% if form.reference_number.help_text %}
-                        <p class="text-sm text-gray-500">{{ form.reference_number.help_text }}</p>
-                        {% endif %}
-                        {% for error in form.reference_number.errors %}
-                        <p class="text-red-500 text-sm">{{ error }}</p>
-                        {% endfor %}
-                    </div>
-                    
-                    <!-- Notes field with proper responsive sizing -->
-                    <div class="space-y-1 md:col-span-2">
-                        <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                            {{ form.notes.label }}
-                        </label>
-                        <div class="form-container">
-                            {{ form.notes }}
-                        </div>
-                        {% for error in form.notes.errors %}
-                        <p class="text-red-500 text-sm">{{ error }}</p>
+                            <p class="text-red-500 text-sm mt-1">{{ error }}</p>
                         {% endfor %}
                     </div>
                 </div>
 
-                <div class="flex justify-end space-x-4 pt-4">
-                    <a href="{% url 'contribution_list' %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
-                        Cancel
-                    </a>
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                        {% if form.instance.pk %}Update{% else %}Add{% endif %} Contribution
-                    </button>
+                <!-- Contribution Details -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-hand-holding-usd text-green-600 mr-3"></i>Contribution Details
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-1">
+                            <label for="{{ form.date.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.date.label }} *</label>
+                            <input type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.date.id_for_label }}" name="{{ form.date.name }}" value="{{ form.date.value|default:'' }}" required>
+                            {% for error in form.date.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        <div class="space-y-1">
+                            <label for="{{ form.contribution_type.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.contribution_type.label }} *</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.contribution_type.id_for_label }}" name="{{ form.contribution_type.name }}" required>
+                                <option value="">Select Contribution Type</option>
+                                {% for choice in form.contribution_type.field.choices %}
+                                    <option value="{{ choice.0 }}" {% if choice.0 == form.contribution_type.value %}selected{% endif %}>{{ choice.1 }}</option>
+                                {% endfor %}
+                            </select>
+                            {% for error in form.contribution_type.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        <div class="space-y-1">
+                            <label for="{{ form.amount.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.amount.label }} *</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-500">$</span>
+                                <input type="number" class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.amount.id_for_label }}" name="{{ form.amount.name }}" value="{{ form.amount.value|default:'' }}" step="0.01" min="0" placeholder="0.00" required>
+                            </div>
+                            {% for error in form.amount.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        <div class="space-y-1">
+                            <label for="{{ form.payment_method.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.payment_method.label }} *</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.payment_method.id_for_label }}" name="{{ form.payment_method.name }}" required>
+                                <option value="">Select Payment Method</option>
+                                {% for choice in form.payment_method.field.choices %}
+                                    <option value="{{ choice.0 }}" {% if choice.0 == form.payment_method.value %}selected{% endif %}>{{ choice.1 }}</option>
+                                {% endfor %}
+                            </select>
+                            {% for error in form.payment_method.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Reference -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-receipt text-purple-600 mr-3"></i>Payment Reference
+                    </h2>
+                    
+                    <div class="space-y-1">
+                        <label for="{{ form.reference_number.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.reference_number.label }}</label>
+                        <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.reference_number.id_for_label }}" name="{{ form.reference_number.name }}" value="{{ form.reference_number.value|default:'' }}" placeholder="Check number, transaction ID, etc.">
+                        {% if form.reference_number.help_text %}
+                            <p class="text-xs text-gray-500 mt-1">{{ form.reference_number.help_text }}</p>
+                        {% endif %}
+                        {% for error in form.reference_number.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Additional Notes -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-sticky-note text-yellow-600 mr-3"></i>Additional Notes
+                    </h2>
+                    
+                    <div class="space-y-1">
+                        <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.notes.label }}</label>
+                        <textarea class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical" id="{{ form.notes.id_for_label }}" name="{{ form.notes.name }}" rows="4" placeholder="Enter any additional notes about this contribution...">{{ form.notes.value|default:'' }}</textarea>
+                        {% for error in form.notes.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex justify-between items-center pt-6 border-t border-gray-200">
+                    <div>
+                        <small class="text-gray-500">* Required fields</small>
+                    </div>
+                    <div class="flex space-x-4">
+                        <a href="{% url 'contribution_list' %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                            <i class="fas fa-times mr-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                            <i class="fas fa-save mr-2"></i>{% if form.instance.pk %}Update Contribution{% else %}Save Contribution{% endif %}
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<script>
-// Apply form-field class to all form elements
-document.addEventListener('DOMContentLoaded', function() {
-    // Get all input, select, and textarea elements within the form
-    const formElements = document.querySelectorAll('form input, form select, form textarea');
-    
-    formElements.forEach(function(element) {
-        // Skip hidden fields and submit buttons
-        if (element.type !== 'hidden' && element.type !== 'submit' && element.type !== 'button') {
-            element.classList.add('form-field');
-            
-            // Add error class if the field has errors
-            const fieldContainer = element.closest('.space-y-1');
-            if (fieldContainer && fieldContainer.querySelector('.text-red-500')) {
-                element.classList.add('error');
-            }
-        }
-    });
-});
-</script>
 {% endblock %}

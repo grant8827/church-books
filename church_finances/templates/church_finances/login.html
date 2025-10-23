@@ -1,93 +1,101 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Login - Church Finance App{% endblock %}
 
-{% block extra_css %}
-<style>
-/* Form field styling with borders */
-.form-field {
-    width: 100%;
-    padding: 0.75rem;
-    border: 2px solid #d1d5db;
-    border-radius: 0.5rem;
-    background-color: white;
-    color: #1f2937;
-    transition: all 0.2s ease-in-out;
-}
-
-.form-field:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    ring: 2px;
-    ring-color: #3b82f6;
-}
-
-.form-field:hover {
-    border-color: #9ca3af;
-}
-
-/* Specific styling for different input types */
-.form-field[type="text"],
-.form-field[type="email"],
-.form-field[type="password"] {
-    height: 2.75rem;
-}
-
-/* Error state */
-.form-field.error {
-    border-color: #ef4444;
-}
-
-.form-field.error:focus {
-    border-color: #ef4444;
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-}
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="flex items-center justify-center min-h-screen-minus-nav-footer">
-    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-        <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Login</h2>
-        <form method="post" class="space-y-4">
-            {% csrf_token %}
-            {% for field in form %}
-                <div>
-                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
-                        {{ field.label }}
-                    </label>
-                    {{ field.as_widget }}
-                    <script>
-                        document.addEventListener('DOMContentLoaded', function() {
-                            var field = document.getElementById('{{ field.id_for_label }}');
-                            if (field) {
-                                {% if field.errors %}
-                                    field.className = 'form-field error';
-                                {% else %}
-                                    field.className = 'form-field';
-                                {% endif %}
-                            }
-                        });
-                    </script>
-                    {% for error in field.errors %}
-                        <p class="text-red-500 text-sm mt-1">{{ error }}</p>
-                    {% endfor %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-md mx-auto">
+        <!-- Breadcrumb -->
+        <nav class="mb-6">
+            <ol class="flex items-center space-x-2 text-sm text-gray-600">
+                <li><a href="{% url 'home' %}" class="hover:text-blue-600">Home</a></li>
+                <li><span class="mx-2">→</span></li>
+                <li class="text-gray-800 font-medium">Login</li>
+            </ol>
+        </nav>
+
+        <div class="bg-white shadow-md rounded-lg p-8">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                    <i class="fas fa-sign-in-alt text-blue-600 mr-3"></i>Login
+                </h1>
+                <p class="text-gray-600">Sign in to access your church management dashboard</p>
+            </div>
+
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- Login Information -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-user-lock text-green-600 mr-3"></i>Account Access
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div class="space-y-1">
+                            <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.username.label }} *</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-400">
+                                    <i class="fas fa-user"></i>
+                                </span>
+                                <input type="text" class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.username.id_for_label }}" name="{{ form.username.name }}" value="{{ form.username.value|default:'' }}" placeholder="Enter your username" required>
+                            </div>
+                            {% for error in form.username.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="space-y-1">
+                            <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.password.label }} *</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-400">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                                <input type="password" class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.password.id_for_label }}" name="{{ form.password.name }}" placeholder="Enter your password" required>
+                            </div>
+                            {% for error in form.password.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
-            {% endfor %}
-            <button type="submit"
-                    class="w-full bg-[#6e003d] hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
-                Login
-            </button>
-        </form>
-        
-        <div class="mt-4 text-center space-y-2">
-            <p class="text-gray-600">
-                Don't have an account? <a href="{% url 'register' %}" class="text-blue-900 hover:underline">Register here</a>.
-            </p>
-            <p class="text-gray-600">
-                <a href="{% url 'password_reset' %}" class="text-blue-900 hover:underline">Forgot your password?</a>
-            </p>
+
+                <!-- Non-field errors -->
+                {% if form.non_field_errors %}
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        {% for error in form.non_field_errors %}
+                            <p class="text-red-600 text-sm flex items-center">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <!-- Form Actions -->
+                <div class="flex flex-col space-y-4">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md inline-flex items-center justify-center transition-colors duration-200">
+                        <i class="fas fa-sign-in-alt mr-2"></i>Sign In
+                    </button>
+                </div>
+            </form>
+
+            <!-- Additional Links -->
+            <div class="mt-8 pt-6 border-t border-gray-200">
+                <div class="text-center space-y-3">
+                    <p class="text-gray-600">
+                        Don't have an account? 
+                        <a href="{% url 'register' %}" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center">
+                            <i class="fas fa-user-plus mr-1"></i>Register here
+                        </a>
+                    </p>
+                    <p class="text-gray-600">
+                        <a href="{% url 'password_reset' %}" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center">
+                            <i class="fas fa-key mr-1"></i>Forgot your password?
+                        </a>
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 </div>

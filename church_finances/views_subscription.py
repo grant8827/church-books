@@ -139,7 +139,7 @@ def registration_form_view(request):
                 })
             
             # Validate role selection
-            valid_roles = ['admin', 'pastor', 'assistant_pastor', 'treasurer', 'deacon']
+            valid_roles = ['admin', 'pastor', 'bishop', 'assistant_pastor', 'treasurer', 'deacon']
             if role not in valid_roles:
                 messages.error(request, "Please select a valid role.")
                 return render(request, 'church_finances/registration_form.html', {
@@ -347,7 +347,7 @@ def create_paypal_subscription(request):
                 })
             
             # Validate role selection
-            valid_roles = ['admin', 'pastor', 'assistant_pastor', 'treasurer', 'deacon']
+            valid_roles = ['admin', 'pastor', 'bishop', 'assistant_pastor', 'treasurer', 'deacon']
             if role not in valid_roles:
                 messages.error(request, "Please select a valid role.")
                 return render(request, 'church_finances/paypal_subscription_form.html', {

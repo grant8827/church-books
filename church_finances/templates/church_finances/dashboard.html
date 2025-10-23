@@ -53,6 +53,9 @@
                     <a href="{% url 'member_contributions' %}" class="text-sm text-teal-600 hover:text-teal-800 block">My Contributions →</a>
                 {% else %}
                     <a href="{% url 'member_add' %}" class="text-sm text-teal-600 hover:text-teal-800 block">Add Member →</a>
+                    {% if church_role == 'admin' or church_role == 'pastor' or church_role == 'bishop' or church_role == 'treasurer' %}
+                        <a href="{% url 'dashboard_user_register' %}" class="text-sm text-teal-600 hover:text-teal-800 block">Add Staff →</a>
+                    {% endif %}
                     <a href="{% url 'bulk_contribution_entry' %}" class="text-sm text-teal-600 hover:text-teal-800 block">Bulk Entry →</a>
                 {% endif %}
                 <a href="{% url 'transaction_create' %}" class="text-sm text-teal-600 hover:text-teal-800 block">Add Transaction →</a>
@@ -144,7 +147,7 @@
     </div>
 
     <div class="bg-gray-100 mt-[80px] w-full items-center justify-center p-8 rounded-xl shadow-lg mb-6">
-        {% if church_role == 'admin' or church_role == 'pastor' %}
+        {% if church_role == 'admin' or church_role == 'pastor' or church_role == 'bishop' or church_role == 'treasurer' %}
             <div class="flex flex-col items-center space-y-4">
                 <a href="{% url 'dashboard_user_register' %}" class="bg-[#6e003d] hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
                     Register New Staff Member

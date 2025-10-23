@@ -1,261 +1,213 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Complete Your Subscription - Church Books{% endblock %}
 
-{% block extra_css %}
-<style>
-/* Form field styling with borders */
-.form-field {
-    width: 100%;
-    padding: 0.75rem;
-    border: 2px solid #d1d5db;
-    border-radius: 0.5rem;
-    background-color: white;
-    color: #1f2937;
-    transition: all 0.2s ease-in-out;
-}
-
-.form-field:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    ring: 2px;
-    ring-color: #3b82f6;
-}
-
-.form-field:hover {
-    border-color: #9ca3af;
-}
-
-/* Specific styling for different input types */
-.form-field[type="text"],
-.form-field[type="email"],
-.form-field[type="tel"],
-.form-field[type="url"],
-.form-field[type="password"] {
-    height: 2.75rem;
-}
-
-.form-field select {
-    height: 2.75rem;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.5rem center;
-    background-repeat: no-repeat;
-    background-size: 1.5em 1.5em;
-    padding-right: 2.5rem;
-}
-
-.form-field textarea {
-    min-height: 5rem;
-    resize: vertical;
-}
-
-/* Error state */
-.form-field.error {
-    border-color: #ef4444;
-}
-
-.form-field.error:focus {
-    border-color: #ef4444;
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-}
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="min-h-screen bg-gray-100 py-12">
-        <div class="max-w-md mx-auto">
-            <div class="bg-white rounded-lg shadow-md p-8">
-                <div class="text-center mb-8">
-                    <h1 class="text-2xl font-bold text-gray-900">Complete Your Subscription</h1>
-                    <p class="text-gray-600 mt-2">You've selected the <strong>{{ selected_package|title }}</strong> plan</p>
-                    <p class="text-2xl font-bold text-blue-600 mt-2">${{ package_price|floatformat:0 }}/year</p>
+<div class="container mx-auto px-4 py-8">
+    <!-- Header Section -->
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Complete Your Subscription</h1>
+        <p class="text-gray-600">You've selected the <strong>{{ selected_package|title }}</strong> plan</p>
+        <p class="text-3xl font-bold text-blue-600 mt-2">${{ package_price|floatformat:0 }}/year</p>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="mb-6 p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 text-red-800{% elif message.tags == 'success' %}bg-green-50 text-green-800{% else %}bg-blue-50 text-blue-800{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Main Form Container -->
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-sm">
+        <form method="post" action="{% url 'paypal_create_subscription' %}" class="p-6">
+            {% csrf_token %}
+            
+            <!-- Personal Information Section -->
+            <div class="bg-gray-50 rounded-lg p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-user text-blue-600 mr-3"></i>
+                    Your Information
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="first_name" class="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
+                        <input type="text" id="first_name" name="first_name" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="last_name" class="block text-sm font-medium text-gray-700 mb-2">Last Name *</label>
+                        <input type="text" id="last_name" name="last_name" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
                 </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
+                        <input type="email" id="email" name="email" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="phone_number" class="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                        <input type="tel" id="phone_number" name="phone_number" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <label for="role" class="block text-sm font-medium text-gray-700 mb-2">Your Role in the Church *</label>
+                    <select id="role" name="role" required 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Select your role</option>
+                        <option value="admin">Church Admin</option>
+                        <option value="pastor">Pastor</option>
+                        <option value="assistant_pastor">Assistant Pastor</option>
+                        <option value="treasurer">Treasurer</option>
+                        <option value="deacon">Deacon</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-2">Select your primary role in the church organization</p>
+                </div>
+            </div>
 
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="mb-4 p-4 rounded-md {% if message.tags == 'error' %}bg-red-50 text-red-800{% elif message.tags == 'success' %}bg-green-50 text-green-800{% else %}bg-blue-50 text-blue-800{% endif %}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                {% endif %}
+            <!-- Dashboard Login Credentials Section -->
+            <div class="bg-gray-50 rounded-lg p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-key text-blue-600 mr-3"></i>
+                    Dashboard Login Credentials
+                </h3>
+                <div class="bg-blue-50 p-4 rounded-lg mb-6 border-l-4 border-blue-400">
+                    <p class="text-sm text-blue-800 flex items-start">
+                        <i class="fas fa-info-circle text-blue-600 mr-2 mt-0.5 flex-shrink-0"></i>
+                        These credentials will be used to access your church dashboard after subscription approval.
+                    </p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-700 mb-2">Username *</label>
+                        <input type="text" id="username" name="username" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Choose a unique username">
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password *</label>
+                        <input type="password" id="password" name="password" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Create a strong password">
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <label for="password_confirm" class="block text-sm font-medium text-gray-700 mb-2">Confirm Password *</label>
+                    <input type="password" id="password_confirm" name="password_confirm" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="Re-enter your password">
+                    <p class="text-xs text-gray-500 mt-2">
+                        Password must be at least 8 characters long and contain a mix of letters, numbers, and symbols.
+                    </p>
+                </div>
+            </div>
 
-                <form method="post" action="{% url 'paypal_create_subscription' %}"><div class="space-y-6">
+            <!-- Church Information Section -->
+            <div class="bg-gray-50 rounded-lg p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-church text-blue-600 mr-3"></i>
+                    Church Information
+                </h3>
+                
+                <div class="space-y-6">
+                    <div>
+                        <label for="church_name" class="block text-sm font-medium text-gray-700 mb-2">Church Name *</label>
+                        <input type="text" id="church_name" name="church_name" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    
+                    <div>
+                        <label for="church_address" class="block text-sm font-medium text-gray-700 mb-2">Church Address *</label>
+                        <textarea id="church_address" name="church_address" rows="3" required 
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"></textarea>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">Your Information</h3>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label for="first_name" class="block text-sm font-medium text-gray-700">First Name *</label>
-                                    <input type="text" id="first_name" name="first_name" required 
-                                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                                </div>
-                                <div>
-                                    <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name *</label>
-                                    <input type="text" id="last_name" name="last_name" required 
-                                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                                </div>
-                            </div>
-                            <div class="mt-4">
-                                <label for="email" class="block text-sm font-medium text-gray-700">Email Address *</label>
-                                <input type="email" id="email" name="email" required 
-                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                            </div>
-                            <div class="mt-4">
-                                <label for="phone_number" class="block text-sm font-medium text-gray-700">Phone Number *</label>
-                                <input type="tel" id="phone_number" name="phone_number" required 
-                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                            </div>
-                            <div class="mt-4">
-                                <label for="role" class="block text-sm font-medium text-gray-700">Your Role in the Church *</label>
-                                <select id="role" name="role" required 
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                                    <option value="">Select your role</option>
-                                    <option value="admin">Church Admin</option>
-                                    <option value="pastor">Pastor</option>
-                                    <option value="assistant_pastor">Assistant Pastor</option>
-                                    <option value="treasurer">Treasurer</option>
-                                    <option value="deacon">Deacon</option>
-                                </select>
-                                <p class="text-xs text-gray-500 mt-1">Select your primary role in the church organization</p>
-                            </div>
+                            <label for="church_phone" class="block text-sm font-medium text-gray-700 mb-2">Church Phone *</label>
+                            <input type="tel" id="church_phone" name="church_phone" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                         </div>
-
                         <div>
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">Dashboard Login Credentials</h3>
-                            <div class="bg-blue-50 p-4 rounded-lg mb-4">
-                                <p class="text-sm text-blue-800">
-                                    <svg class="inline w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                    These credentials will be used to access your church dashboard after subscription approval.
-                                </p>
-                            </div>
-                            <div>
-                                <label for="username" class="block text-sm font-medium text-gray-700">Username *</label>
-                                <input type="text" id="username" name="username" required 
-                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                       placeholder="Choose a unique username">
-                            </div>
-                            <div class="mt-4">
-                                <label for="password" class="block text-sm font-medium text-gray-700">Password *</label>
-                                <input type="password" id="password" name="password" required 
-                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                       placeholder="Create a strong password">
-                            </div>
-                            <div class="mt-4">
-                                <label for="password_confirm" class="block text-sm font-medium text-gray-700">Confirm Password *</label>
-                                <input type="password" id="password_confirm" name="password_confirm" required 
-                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                       placeholder="Re-enter your password">
-                            </div>
-                            <div class="mt-2">
-                                <p class="text-xs text-gray-500">
-                                    Password must be at least 8 characters long and contain a mix of letters, numbers, and symbols.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">Church Information</h3>
-                            <div>
-                                <label for="church_name" class="block text-sm font-medium text-gray-700">Church Name *</label>
-                                <input type="text" id="church_name" name="church_name" required 
-                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                            </div>
-                            <div class="mt-4">
-                                <label for="church_address" class="block text-sm font-medium text-gray-700">Church Address *</label>
-                                <textarea id="church_address" name="church_address" rows="3" required 
-                                          class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
-                            </div>
-                            <div class="mt-4">
-                                <label for="church_phone" class="block text-sm font-medium text-gray-700">Church Phone *</label>
-                                <input type="tel" id="church_phone" name="church_phone" required 
-                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                            </div>
-                            <div class="mt-4">
-                                <label for="church_email" class="block text-sm font-medium text-gray-700">Church Email *</label>
-                                <input type="email" id="church_email" name="church_email" required 
-                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                            </div>
-                            <div class="mt-4">
-                                <label for="church_website" class="block text-sm font-medium text-gray-700">Church Website (Optional)</label>
-                                <input type="url" id="church_website" name="church_website" 
-                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                       placeholder="https://yourchurch.com">
-                            </div>
-                        </div>
-
-                        <div class="border-t pt-6">
-                            <div class="flex flex-col space-y-3">
-                                <div class="flex items-center justify-between">
-                                    <a href="{% url 'subscription' %}" 
-                                       class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                        <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                                        </svg>
-                                        Back
-                                    </a>
-                                    <button type="submit" name="payment_method" value="paypal"
-                                            class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-900 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                        Continue to Payment
-                                        <svg class="ml-2 -mr-1 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                                        </svg>
-                                    </button>
-                                </div>
-                                
-                                <!-- Offline Payment Option -->
-                                <div class="text-center border-t pt-4">
-                                    <p class="text-sm text-gray-600 mb-3">Or pay offline with check/bank transfer</p>
-                                    <button type="submit" name="payment_method" value="offline" id="offline-payment-btn"
-                                       class="inline-flex items-center px-6 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
-                                        <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                        </svg>
-                                        Pay Offline (Pending Approval)
-                                    </button>
-                                    <p class="text-xs text-gray-500 mt-2">
-                                        Your account will be created and await admin approval and payment confirmation
-                                    </p>
-                                </div>
-                            </div>
+                            <label for="church_email" class="block text-sm font-medium text-gray-700 mb-2">Church Email *</label>
+                            <input type="email" id="church_email" name="church_email" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                         </div>
                     </div>
-                </form>
+                    
+                    <div>
+                        <label for="church_website" class="block text-sm font-medium text-gray-700 mb-2">Church Website <span class="text-gray-400">(Optional)</span></label>
+                        <input type="url" id="church_website" name="church_website" 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="https://yourchurch.com">
+                    </div>
+                </div>
             </div>
-        </div>
+
+            <!-- Form Actions -->
+            <div class="bg-white rounded-lg p-6 border-t border-gray-200">
+                <div class="flex flex-col space-y-4">
+                    <!-- Main Action Buttons -->
+                    <div class="flex flex-col sm:flex-row gap-4 justify-between items-center">
+                        <a href="{% url 'subscription' %}" 
+                           class="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                            <i class="fas fa-arrow-left mr-2"></i>
+                            Back to Plans
+                        </a>
+                        <button type="submit" name="payment_method" value="paypal"
+                                class="inline-flex items-center px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                            <i class="fab fa-paypal mr-2"></i>
+                            Continue to PayPal
+                        </button>
+                    </div>
+                    
+                    <!-- Offline Payment Option -->
+                    <div class="text-center border-t pt-6">
+                        <p class="text-sm text-gray-600 mb-4">Or pay offline with check/bank transfer</p>
+                        <button type="submit" name="payment_method" value="offline" id="offline-payment-btn"
+                               class="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-lg text-gray-700 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors">
+                            <i class="fas fa-file-invoice mr-2"></i>
+                            Pay Offline (Pending Approval)
+                        </button>
+                        <p class="text-xs text-gray-500 mt-3 max-w-md mx-auto">
+                            Your account will be created and await admin approval and payment confirmation
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 
 <script>
-// Apply form-field styling to all form elements and add validation
 document.addEventListener('DOMContentLoaded', function() {
-    // Get all input, select, and textarea elements within the form
-    const formElements = document.querySelectorAll('form input, form select, form textarea');
-    
-    formElements.forEach(function(element) {
-        // Skip hidden fields and submit buttons
-        if (element.type !== 'hidden' && element.type !== 'submit' && element.type !== 'button') {
-            // Replace existing classes with our form-field class
-            element.className = 'form-field';
-        }
-    });
-
     // Password confirmation validation
     const password = document.getElementById('password');
     const passwordConfirm = document.getElementById('password_confirm');
-    const submitButton = document.querySelector('button[type="submit"]');
+    const paypalButton = document.querySelector('button[value="paypal"]');
     
     function validatePasswords() {
         if (password.value && passwordConfirm.value) {
             if (password.value !== passwordConfirm.value) {
                 passwordConfirm.setCustomValidity('Passwords do not match');
-                passwordConfirm.classList.add('error');
-                submitButton.disabled = true;
+                passwordConfirm.classList.add('border-red-500', 'focus:ring-red-500');
+                passwordConfirm.classList.remove('border-gray-300', 'focus:ring-blue-500');
+                if (paypalButton) paypalButton.disabled = true;
             } else {
                 passwordConfirm.setCustomValidity('');
-                passwordConfirm.classList.remove('error');
-                submitButton.disabled = false;
+                passwordConfirm.classList.remove('border-red-500', 'focus:ring-red-500');
+                passwordConfirm.classList.add('border-gray-300', 'focus:ring-blue-500');
+                if (paypalButton) paypalButton.disabled = false;
             }
         }
     }
@@ -265,17 +217,19 @@ document.addEventListener('DOMContentLoaded', function() {
         passwordConfirm.addEventListener('input', validatePasswords);
     }
     
-    // Username validation - check for valid characters
+    // Username validation
     const username = document.getElementById('username');
     if (username) {
         username.addEventListener('input', function() {
             const validUsername = /^[a-zA-Z0-9_-]+$/.test(this.value);
             if (this.value && !validUsername) {
                 this.setCustomValidity('Username can only contain letters, numbers, underscores, and hyphens');
-                this.classList.add('error');
+                this.classList.add('border-red-500', 'focus:ring-red-500');
+                this.classList.remove('border-gray-300', 'focus:ring-blue-500');
             } else {
                 this.setCustomValidity('');
-                this.classList.remove('error');
+                this.classList.remove('border-red-500', 'focus:ring-red-500');
+                this.classList.add('border-gray-300', 'focus:ring-blue-500');
             }
         });
     }
