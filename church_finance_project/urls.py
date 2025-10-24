@@ -28,7 +28,7 @@ from church_finances.startup_health import minimal_health_check, startup_debug
 
 urlpatterns = [
     path('admin/', church_admin_site.urls),
-    path('accounts/', include('django.contrib.auth.urls')), # Django's built-in auth URLs
+    # path('accounts/', include('django.contrib.auth.urls')), # Temporarily disabled - conflicts with custom auth
     path('', TemplateView.as_view(template_name='home.html'), name='home'), # Simple home page
     path('finances/', include('church_finances.urls')), # Include your app's URLs
     path('health/', health_check, name='health_check'), # Health check endpoint

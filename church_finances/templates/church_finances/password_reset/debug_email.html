@@ -1,0 +1,14 @@
+DEBUG EMAIL TEMPLATE
+
+Available variables:
+User: {{ user }}
+Domain: {{ domain }}
+Protocol: {{ protocol }}
+Site name: {{ site_name }}
+UID: {{ uid }}
+Token: {{ token }}
+
+URL Test: {% url 'password_reset_confirm' uidb64=uid token=token %}
+Full URL: {{ protocol }}://{{ domain }}{% url 'password_reset_confirm' uidb64=uid token=token %}
+
+Raw context: {{ context }}
