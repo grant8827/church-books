@@ -26,10 +26,10 @@ class MockPayPalService:
         try:
             # Determine amount based on plan
             if 'standard' in plan_id.lower():
-                amount = "100.00"
+                amount = "150.00"
                 plan_name = "Standard Plan"
             else:
-                amount = "150.00"
+                amount = "200.00"
                 plan_name = "Premium Plan"
             
             # Create mock order ID
@@ -78,7 +78,7 @@ class MockPayPalService:
                 'status': 'APPROVED',
                 'amount': {
                     'currency_code': 'USD',
-                    'value': '100.00'
+                    'value': '150.00'
                 },
                 'mock_service': True
             }

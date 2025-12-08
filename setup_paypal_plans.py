@@ -19,10 +19,10 @@ paypalrestsdk.configure({
 })
 
 def create_standard_plan():
-    """Create Standard Plan ($100/year)"""
+    """Create Standard Plan ($150/year)"""
     plan = paypalrestsdk.BillingPlan({
         "name": "Church Books Standard Plan",
-        "description": "Standard church management features - $100/year",
+        "description": "Standard church management features - $150/year",
         "type": "INFINITE",
         "payment_definitions": [{
             "name": "Standard Subscription",
@@ -30,7 +30,7 @@ def create_standard_plan():
             "frequency": "Year",
             "frequency_interval": "1",
             "amount": {
-                "value": "100",
+                "value": "150",
                 "currency": "USD"
             },
             "cycles": "0"  # Infinite cycles
@@ -60,10 +60,10 @@ def create_standard_plan():
     return None
 
 def create_premium_plan():
-    """Create Premium Plan ($150/year)"""
+    """Create Premium Plan ($200/year)"""
     plan = paypalrestsdk.BillingPlan({
         "name": "Church Books Premium Plan",
-        "description": "Premium church management features - $150/year",
+        "description": "Premium church management features - $200/year",
         "type": "INFINITE",
         "payment_definitions": [{
             "name": "Premium Subscription",
@@ -71,7 +71,7 @@ def create_premium_plan():
             "frequency": "Year",
             "frequency_interval": "1",
             "amount": {
-                "value": "150",
+                "value": "200",
                 "currency": "USD"
             },
             "cycles": "0"  # Infinite cycles

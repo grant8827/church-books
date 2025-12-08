@@ -248,7 +248,7 @@ class PayPalService:
         Get subscription amount based on plan ID
         """
         if 'standard' in plan_id.lower():
-            return 100.00
-        elif 'premium' in plan_id.lower():
             return 150.00
+        elif 'premium' in plan_id.lower():
+            return 200.00
         return 0.00

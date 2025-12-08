@@ -42,7 +42,7 @@ def subscription_view(request):
         'paypal_client_id': getattr(settings, 'PAYPAL_CLIENT_ID', ''),
         'standard_plan_id': getattr(settings, 'PAYPAL_STANDARD_PLAN_ID', ''),
         'paypal_mode': getattr(settings, 'PAYPAL_MODE', 'sandbox'),
-        'package_price': 100
+        'package_price': 150
     }
     
     # Add trial information if user is authenticated
@@ -74,7 +74,7 @@ def subscription_select(request):
         package = request.POST.get('package', 'standard')  # Default to standard
         if package == 'standard':
             request.session['selected_package'] = package
-            request.session['package_price'] = '100'
+            request.session['package_price'] = '150'
             
             # Store package selection and redirect to payment selection
             plan_id = getattr(settings, 'PAYPAL_STANDARD_PLAN_ID', '')

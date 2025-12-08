@@ -317,7 +317,7 @@ class PayPalService:
         Get subscription amount based on plan ID
         """
         if plan_id == settings.PAYPAL_STANDARD_PLAN_ID:
-            return 100.00
-        elif plan_id == settings.PAYPAL_PREMIUM_PLAN_ID:
             return 150.00
+        elif plan_id == settings.PAYPAL_PREMIUM_PLAN_ID:
+            return 200.00
         return 0.00

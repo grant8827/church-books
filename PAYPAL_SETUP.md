@@ -42,8 +42,8 @@ For production, change `PAYPAL_MODE=live`
 1. Go to PayPal Developer Dashboard
 2. Go to "Subscriptions" > "Plans"
 3. Create two plans:
-   - Standard Plan: $100/year
-   - Premium Plan: $150/year
+   - Standard Plan: $150/year
+   - Premium Plan: $200/year
 4. Copy the Plan IDs to your .env file
 
 ## Step 4: Configure Webhooks
