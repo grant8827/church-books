@@ -119,11 +119,8 @@ def register_view(request):
     Handles new church registration with user creation.
     New church registrations require admin approval.
     """
-    # Check if a subscription package was selected
-    selected_package = request.session.get('selected_package')
-    if not selected_package:
-        info(request, "Please select a subscription package first.")
-        return redirect('subscription')
+    # Set default package for free trial registration
+    selected_package = request.session.get('selected_package', 'standard')  # Default to standard package for free trial
     
     # Check if user is authenticated and already has registered a church
     if request.user.is_authenticated:
@@ -155,22 +152,23 @@ def register_view(request):
                 with transaction.atomic():
                     user = user_form.save()
                     church = church_form.save(commit=False)
-                    church.is_approved = False  # New churches require approval
+                    church.is_approved = True  # Automatically approve for 30-day trial
                     church.subscription_type = selected_package
-                    church.subscription_status = 'pending'
+                    church.subscription_status = 'pending'  # Still pending payment, but approved for trial
                     church.registered_by = user  # Set the registering user
+                    # Trial system will be set automatically by the model's save method
                     church.save()
-                    # Create an inactive church member until approved
+                    # Create an active church member for immediate trial access
                     ChurchMember.objects.create(
                         user=user,
                         church=church,
                         role='admin',  # Creator becomes church admin
-                        is_active=False  # Member is inactive until church is approved
+                        is_active=True  # Member is active for trial period
                     )
                     # Clear the subscription session data
                     request.session.pop('selected_package', None)
                     request.session.pop('package_price', None)
-                    success(request, "Registration successful! Your church is pending payment and admin approval.")
+                    success(request, f"Welcome to Church Books! Your 30-day free trial has started. You have {church.trial_days_remaining} days to explore all features.")
                     login(request, user)
                     return redirect("dashboard")
                     
@@ -358,6 +356,17 @@ def user_login_view(request):
                 if not member.church.is_approved:
                     error(request, "Your church account is pending approval. Please contact an administrator.")
                     return render(request, "church_finances/login.html", {"form": form})
+                
+                # Check trial status and redirect to payment if expired
+                if not member.church.can_access_dashboard:
+                    if member.church.is_trial_expired:
+                        warning(request, f"Your 30-day free trial has expired. Please complete payment to continue using Church Books.")
+                        # Temporarily log in user to access subscription page
+                        login(request, user)
+                        return redirect("subscription")
+                    else:
+                        error(request, "Your church account does not have access. Please contact an administrator.")
+                        return render(request, "church_finances/login.html", {"form": form})
                     
             except ChurchMember.DoesNotExist:
                 # Allow admin users without church membership
@@ -789,6 +798,11 @@ def dashboard_view(request):
         "this_month_contributions": this_month_contributions,
         "total_children": total_children,
         "total_christenings": total_christenings,
+        # Trial system information
+        "is_trial_active": church.is_trial_active,
+        "trial_days_remaining": church.trial_days_remaining,
+        "is_trial_expired": church.is_trial_expired,
+        "trial_end_date": church.trial_end_date,
     }
     return render(request, "church_finances/dashboard.html", context)
 

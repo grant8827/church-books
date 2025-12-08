@@ -64,15 +64,21 @@
 
 {% block content %}
 <div class="min-h-screen bg-gray-100 py-12">
-    <div class="max-w-md mx-auto">
+    <div class="max-w-4xl mx-auto">
         <div class="bg-white rounded-lg shadow-md p-8">
             <div class="text-center mb-8">
-                <h1 class="text-2xl font-bold text-gray-900">Complete Registration</h1>
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                    <i class="fas fa-user-plus text-blue-600 mr-3"></i>Complete Registration
+                </h1>
                 <p class="text-gray-600 mt-2">{{ selected_package|title }} Plan - ${{ package_price|floatformat:0 }}/year</p>
                 {% if payment_method == 'offline' %}
-                    <p class="text-sm text-yellow-600 mt-2 font-medium">Offline Payment - Pending Approval</p>
+                    <p class="text-sm text-yellow-600 mt-2 font-medium flex items-center justify-center">
+                        <i class="fas fa-clock mr-1"></i>Offline Payment - Pending Approval
+                    </p>
                 {% else %}
-                    <p class="text-sm text-green-600 mt-2 font-medium">PayPal Payment Selected</p>
+                    <p class="text-sm text-green-600 mt-2 font-medium flex items-center justify-center">
+                        <i class="fab fa-paypal mr-1"></i>PayPal Payment Selected
+                    </p>
                 {% endif %}
             </div>
 
@@ -84,68 +90,116 @@
                 {% endfor %}
             {% endif %}
 
-            <form method="post" action="{% url 'registration_form' %}">
+            <form method="post" action="{% url 'registration_form' %}" id="registrationForm">
                 {% csrf_token %}
                 <input type="hidden" name="payment_method" value="{{ payment_method }}">
                 
                 <div class="space-y-6">
                     <!-- Personal Information Section -->
-                    <div>
-                        <h3 class="text-lg font-medium text-gray-900 mb-4">Your Information</h3>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-6 flex items-center">
+                            <i class="fas fa-user text-green-600 mr-3"></i>Your Information
+                        </h3>
+                        <div class="grid grid-cols-2 gap-6">
+                            <div class="space-y-1">
                                 <label for="first_name" class="block text-sm font-medium text-gray-700">First Name *</label>
-                                <input type="text" id="first_name" name="first_name" required class="form-field">
+                                <div class="relative">
+                                    <span class="absolute left-3 top-2 text-gray-400">
+                                        <i class="fas fa-user"></i>
+                                    </span>
+                                    <input type="text" id="first_name" name="first_name" required class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200" placeholder="Enter your first name">
+                                </div>
                             </div>
-                            <div>
+                            <div class="space-y-1">
                                 <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name *</label>
-                                <input type="text" id="last_name" name="last_name" required class="form-field">
+                                <div class="relative">
+                                    <span class="absolute left-3 top-2 text-gray-400">
+                                        <i class="fas fa-user"></i>
+                                    </span>
+                                    <input type="text" id="last_name" name="last_name" required class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200" placeholder="Enter your last name">
+                                </div>
                             </div>
                         </div>
-                        <div class="mt-4">
+                        <div class="mt-6 space-y-1">
                             <label for="email" class="block text-sm font-medium text-gray-700">Email Address *</label>
-                            <input type="email" id="email" name="email" required class="form-field">
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-400">
+                                    <i class="fas fa-envelope"></i>
+                                </span>
+                                <input type="email" id="email" name="email" required class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200" placeholder="your.email@example.com">
+                            </div>
                         </div>
-                        <div class="mt-4">
+                        <div class="mt-6 space-y-1">
                             <label for="phone_number" class="block text-sm font-medium text-gray-700">Phone Number *</label>
-                            <input type="tel" id="phone_number" name="phone_number" required class="form-field">
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-400">
+                                    <i class="fas fa-phone"></i>
+                                </span>
+                                <input type="tel" id="phone_number" name="phone_number" required class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200" placeholder="(555) 123-4567">
+                            </div>
                         </div>
-                        <div class="mt-4">
+                        <div class="mt-6 space-y-1">
                             <label for="role" class="block text-sm font-medium text-gray-700">Role in Church *</label>
-                            <select id="role" name="role" required class="form-field">
-                                <option value="">Select your role</option>
-                                <option value="admin">Church Admin</option>
-                                <option value="pastor">Pastor</option>
-                                <option value="assistant_pastor">Assistant Pastor</option>
-                                <option value="treasurer">Treasurer</option>
-                                <option value="deacon">Deacon</option>
-                            </select>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-400 z-10">
+                                    <i class="fas fa-user-tie"></i>
+                                </span>
+                                <select id="role" name="role" required class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200">
+                                    <option value="">Select your role</option>
+                                    <option value="admin">Church Admin</option>
+                                    <option value="pastor">Pastor</option>
+                                    <option value="assistant_pastor">Assistant Pastor</option>
+                                    <option value="treasurer">Treasurer</option>
+                                    <option value="deacon">Deacon</option>
+                                </select>
+                            </div>
                             <p class="text-xs text-gray-500 mt-1">Select your primary role in the church organization</p>
                         </div>
                     </div>
 
                     <!-- Login Credentials Section -->
-                    <div>
-                        <h3 class="text-lg font-medium text-gray-900 mb-4">Dashboard Login Credentials</h3>
-                        <div class="bg-blue-50 p-4 rounded-lg mb-4">
-                            <p class="text-sm text-blue-800">
-                                <svg class="inline w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                These credentials will be used to access your church dashboard after account activation.
-                            </p>
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-6 flex items-center">
+                            <i class="fas fa-key text-purple-600 mr-3"></i>Dashboard Login Credentials
+                        </h3>
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-info-circle text-blue-400 mt-0.5"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm text-blue-800">
+                                        These credentials will be used to access your church dashboard after account activation.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
-                        <div>
+                        <div class="space-y-1">
                             <label for="username" class="block text-sm font-medium text-gray-700">Username *</label>
-                            <input type="text" id="username" name="username" required class="form-field" placeholder="Choose a unique username">
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-400">
+                                    <i class="fas fa-at"></i>
+                                </span>
+                                <input type="text" id="username" name="username" required class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200" placeholder="Choose a unique username">
+                            </div>
                         </div>
-                        <div class="mt-4">
+                        <div class="mt-6 space-y-1">
                             <label for="password" class="block text-sm font-medium text-gray-700">Password *</label>
-                            <input type="password" id="password" name="password" required class="form-field" placeholder="Create a strong password">
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-400">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                                <input type="password" id="password" name="password" required class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200" placeholder="Create a strong password">
+                            </div>
                         </div>
-                        <div class="mt-4">
+                        <div class="mt-6 space-y-1">
                             <label for="password_confirm" class="block text-sm font-medium text-gray-700">Confirm Password *</label>
-                            <input type="password" id="password_confirm" name="password_confirm" required class="form-field" placeholder="Re-enter your password">
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-400">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                                <input type="password" id="password_confirm" name="password_confirm" required class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200" placeholder="Re-enter your password">
+                            </div>
                         </div>
                         <div class="mt-2">
                             <p class="text-xs text-gray-500">
@@ -155,27 +209,54 @@
                     </div>
 
                     <!-- Church Information Section -->
-                    <div>
-                        <h3 class="text-lg font-medium text-gray-900 mb-4">Church Information</h3>
-                        <div>
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-6 flex items-center">
+                            <i class="fas fa-church text-purple-600 mr-3"></i>Church Information
+                        </h3>
+                        <div class="space-y-1">
                             <label for="church_name" class="block text-sm font-medium text-gray-700">Church Name *</label>
-                            <input type="text" id="church_name" name="church_name" required class="form-field">
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-400">
+                                    <i class="fas fa-church"></i>
+                                </span>
+                                <input type="text" id="church_name" name="church_name" required class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200" placeholder="Enter your church name">
+                            </div>
                         </div>
-                        <div class="mt-4">
+                        <div class="mt-6 space-y-1">
                             <label for="church_address" class="block text-sm font-medium text-gray-700">Church Address *</label>
-                            <textarea id="church_address" name="church_address" rows="3" required class="form-field"></textarea>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-400">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </span>
+                                <textarea id="church_address" name="church_address" rows="3" required class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 resize-vertical" placeholder="Street address, city, state, zip"></textarea>
+                            </div>
                         </div>
-                        <div class="mt-4">
+                        <div class="mt-6 space-y-1">
                             <label for="church_phone" class="block text-sm font-medium text-gray-700">Church Phone *</label>
-                            <input type="tel" id="church_phone" name="church_phone" required class="form-field">
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-400">
+                                    <i class="fas fa-phone"></i>
+                                </span>
+                                <input type="tel" id="church_phone" name="church_phone" required class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200" placeholder="(555) 123-4567">
+                            </div>
                         </div>
-                        <div class="mt-4">
+                        <div class="mt-6 space-y-1">
                             <label for="church_email" class="block text-sm font-medium text-gray-700">Church Email *</label>
-                            <input type="email" id="church_email" name="church_email" required class="form-field">
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-400">
+                                    <i class="fas fa-envelope"></i>
+                                </span>
+                                <input type="email" id="church_email" name="church_email" required class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200" placeholder="church@example.com">
+                            </div>
                         </div>
-                        <div class="mt-4">
+                        <div class="mt-6 space-y-1">
                             <label for="church_website" class="block text-sm font-medium text-gray-700">Church Website (Optional)</label>
-                            <input type="url" id="church_website" name="church_website" class="form-field" placeholder="https://yourchurch.com">
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-400">
+                                    <i class="fas fa-globe"></i>
+                                </span>
+                                <input type="url" id="church_website" name="church_website" class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200" placeholder="https://yourchurch.com">
+                            </div>
                         </div>
                     </div>
 
@@ -183,26 +264,30 @@
                     <div class="border-t pt-6">
                         <div class="flex flex-col space-y-3">
                             {% if payment_method == 'paypal' %}
-                                <button type="submit"
-                                        class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 font-medium">
-                                    <span class="flex items-center justify-center">
-                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-                                        </svg>
+                                <button type="submit" id="submitButton"
+                                        class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 font-medium transition-colors duration-200">
+                                    <span id="buttonText" class="flex items-center justify-center">
+                                        <i class="fab fa-paypal mr-2"></i>
                                         Complete Registration & Pay with PayPal
+                                    </span>
+                                    <span id="loadingText" class="hidden flex items-center justify-center">
+                                        <i class="fas fa-spinner fa-spin mr-2"></i>
+                                        Processing Registration...
                                     </span>
                                 </button>
                                 <p class="text-xs text-gray-500 text-center">
                                     You will be redirected to PayPal to complete your payment. Your account will be activated immediately upon successful payment.
                                 </p>
                             {% else %}
-                                <button type="submit"
-                                        class="w-full bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 font-medium">
-                                    <span class="flex items-center justify-center">
-                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                        </svg>
+                                <button type="submit" id="submitButton"
+                                        class="w-full bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 font-medium transition-colors duration-200">
+                                    <span id="buttonText" class="flex items-center justify-center">
+                                        <i class="fas fa-file-alt mr-2"></i>
                                         Submit Registration (Offline Payment)
+                                    </span>
+                                    <span id="loadingText" class="hidden flex items-center justify-center">
+                                        <i class="fas fa-spinner fa-spin mr-2"></i>
+                                        Submitting Registration...
                                     </span>
                                 </button>
                                 <p class="text-xs text-gray-500 text-center">
@@ -212,12 +297,10 @@
                         </div>
 
                         <!-- Back to Payment Selection -->
-                        <div class="mt-4 text-center">
+                        <div class="mt-6 text-center">
                             <a href="{% url 'payment_selection' %}" 
-                               class="inline-flex items-center text-gray-600 hover:text-gray-800 transition duration-300">
-                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                                </svg>
+                               class="inline-flex items-center text-gray-600 hover:text-blue-600 transition-colors duration-200 font-medium">
+                                <i class="fas fa-arrow-left mr-2"></i>
                                 Back to Payment Selection
                             </a>
                         </div>
@@ -229,11 +312,15 @@
 </div>
 
 <script>
-// Password confirmation validation
 document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('registrationForm');
+    const submitButton = document.getElementById('submitButton');
+    const buttonText = document.getElementById('buttonText');
+    const loadingText = document.getElementById('loadingText');
     const password = document.getElementById('password');
     const passwordConfirm = document.getElementById('password_confirm');
     
+    // Password confirmation validation
     passwordConfirm.addEventListener('input', function() {
         if (password.value !== passwordConfirm.value) {
             this.setCustomValidity('Passwords do not match');
@@ -243,6 +330,35 @@ document.addEventListener('DOMContentLoaded', function() {
             this.style.borderColor = '#d1d5db';
         }
     });
+    
+    // Form submission loading state
+    form.addEventListener('submit', function() {
+        // Disable the submit button to prevent double submission
+        submitButton.disabled = true;
+        
+        // Hide the normal button text and show loading text
+        buttonText.classList.add('hidden');
+        loadingText.classList.remove('hidden');
+        
+        // Change button appearance
+        submitButton.classList.remove('hover:bg-blue-700', 'hover:bg-gray-700');
+        submitButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+    });
+    
+    // Re-enable button if form validation fails (page doesn't redirect)
+    setTimeout(function() {
+        if (submitButton.disabled) {
+            submitButton.disabled = false;
+            buttonText.classList.remove('hidden');
+            loadingText.classList.add('hidden');
+            submitButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+            if (submitButton.classList.contains('bg-blue-600')) {
+                submitButton.classList.add('hover:bg-blue-700');
+            } else {
+                submitButton.classList.add('hover:bg-gray-700');
+            }
+        }
+    }, 5000); // Re-enable after 5 seconds if still on page
 });
 </script>
 {% endblock %}

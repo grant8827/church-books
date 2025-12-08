@@ -12,8 +12,8 @@
             <p class="text-xl md:text-2xl mb-8 text-gray-200">All-in-one solution for managing your church's finances, members, and operations</p>
             {% if not user.is_authenticated %}
                 <div class="space-x-4">
-                    <a href="{% url 'subscription' %}" class="inline-block bg-white text-[#6e003d] font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition duration-300">
-                        Get Started
+                    <a href="{% url 'register' %}" class="inline-block bg-white text-[#6e003d] font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition duration-300">
+                        Get Started For Free
                     </a>
                     <a href="{% url 'login' %}" class="inline-block bg-transparent border-2 border-white text-white font-bold py-3 px-8 rounded-full hover:bg-white hover:text-[#6e003d] transition duration-300">
                         Sign In
@@ -91,8 +91,8 @@
         <p class="text-xl mb-8">Join thousands of churches already using Church Books</p>
         {% if not user.is_authenticated %}
             <div class="space-x-4">
-                <a href="{% url 'subscription' %}" class="inline-block bg-white text-[#6e003d] font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition duration-300">
-                    Start Your Account
+                <a href="{% url 'register' %}" class="inline-block bg-white text-[#6e003d] font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition duration-300">
+                    Get Started For Free
                 </a>
             </div>
         {% else %}

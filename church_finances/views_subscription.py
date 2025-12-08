@@ -44,6 +44,26 @@ def subscription_view(request):
         'paypal_mode': getattr(settings, 'PAYPAL_MODE', 'sandbox'),
         'package_price': 100
     }
+    
+    # Add trial information if user is authenticated
+    if request.user.is_authenticated:
+        try:
+            from .models import ChurchMember
+            member = ChurchMember.objects.filter(user=request.user).first()
+            if member and member.church:
+                context.update({
+                    'church': member.church,
+                    'is_trial_active': member.church.is_trial_active,
+                    'trial_days_remaining': member.church.trial_days_remaining,
+                    'is_trial_expired': member.church.is_trial_expired,
+                    'trial_end_date': member.church.trial_end_date,
+                })
+        except Exception as e:
+            # Log error but don't break the view
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error getting trial info for user {request.user}: {e}")
+    
     return render(request, "church_finances/subscription.html", context)
 
 def subscription_select(request):

@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User, AbstractUser
 from django.conf import settings
 from django.utils import timezone
+from datetime import timedelta
 
 class Church(models.Model):
     SUBSCRIPTION_TYPES = (
@@ -27,6 +28,11 @@ class Church(models.Model):
     paypal_subscription_id = models.CharField(max_length=100, blank=True, null=True)
     subscription_start_date = models.DateTimeField(blank=True, null=True)
     subscription_end_date = models.DateTimeField(blank=True, null=True)
+    # Trial system fields
+    trial_start_date = models.DateTimeField(default=timezone.now, help_text="Date when the 30-day trial started")
+    trial_end_date = models.DateTimeField(blank=True, null=True, help_text="Date when the 30-day trial expires")
+    is_trial_active = models.BooleanField(default=True, help_text="Whether the church is currently in trial period")
+    trial_expired_notified = models.BooleanField(default=False, help_text="Whether user has been notified about trial expiration")
     # Payment / billing metadata
     PAYMENT_METHODS = (
         ('paypal', 'PayPal'),
@@ -68,6 +74,50 @@ class Church(models.Model):
         if self.registered_by:
             return f'Registered by: {self.registered_by.get_full_name() or self.registered_by.username}'
         return 'Registration user unknown (pre-existing church)'
+    
+    @property
+    def trial_days_remaining(self):
+        """Return number of days remaining in trial period"""
+        if not self.is_trial_active or not self.trial_end_date:
+            return 0
+        
+        remaining_time = self.trial_end_date - timezone.now()
+        return max(0, remaining_time.days)
+    
+    @property
+    def is_trial_expired(self):
+        """Check if trial period has expired"""
+        if not self.trial_end_date:
+            return False
+        return timezone.now() > self.trial_end_date
+    
+    @property
+    def can_access_dashboard(self):
+        """Check if church can access dashboard (trial active or paid subscription)"""
+        # If trial is active and not expired, allow access
+        if self.is_trial_active and not self.is_trial_expired:
+            return True
+        
+        # If trial has expired, only allow if payment is verified
+        if self.is_trial_expired:
+            return self.is_payment_verified and self.subscription_status == 'active'
+        
+        # If not in trial, check payment status
+        return self.is_payment_verified and self.subscription_status == 'active'
+    
+    def save(self, *args, **kwargs):
+        """Override save to set trial_end_date automatically"""
+        # Set trial_end_date if not set and we have a trial_start_date
+        if not self.trial_end_date and self.trial_start_date:
+            self.trial_end_date = self.trial_start_date + timedelta(days=30)
+        
+        # For existing churches without trial_end_date, set it based on trial_start_date
+        if not self.trial_end_date and not self.trial_start_date:
+            # New church - set both trial dates
+            self.trial_start_date = timezone.now()
+            self.trial_end_date = timezone.now() + timedelta(days=30)
+        
+        super().save(*args, **kwargs)
 
 class PayPalSubscription(models.Model):
     """
