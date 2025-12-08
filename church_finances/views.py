@@ -170,6 +170,13 @@ def register_view(request):
                     request.session.pop('package_price', None)
                     success(request, f"Welcome to Church Books! Your 30-day free trial has started. You have {church.trial_days_remaining} days to explore all features.")
                     login(request, user)
+                    
+                    # Check if there's a redirect URL in session (e.g., from PayPal payment)
+                    next_url = request.session.get('next_url')
+                    if next_url:
+                        del request.session['next_url']  # Clear it from session
+                        return redirect(next_url)
+                    
                     return redirect("dashboard")
                     
             except Exception as e:
@@ -376,6 +383,13 @@ def user_login_view(request):
             
             login(request, user)
             success(request, f"Welcome back, {user.username}!")
+            
+            # Check if there's a redirect URL in session (e.g., from PayPal payment)
+            next_url = request.session.get('next_url')
+            if next_url:
+                del request.session['next_url']  # Clear it from session
+                return redirect(next_url)
+            
             return redirect("dashboard")
         else:
             # More detailed error handling

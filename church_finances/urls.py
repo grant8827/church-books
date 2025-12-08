@@ -21,6 +21,8 @@ urlpatterns = [
     path('account-status/', views.account_status_view, name='account_status'),
     
     # PayPal URLs
+    path('paypal/subscription/', views_subscription.create_paypal_subscription, name='paypal_subscription_form'),
+    path('paypal/pay/', views_subscription.paypal_payment_direct, name='paypal_payment_direct'),
     path('paypal/create-subscription/', views_subscription.create_paypal_subscription, name='paypal_create_subscription'),
     path('subscription/success/', views_subscription.paypal_success, name='paypal_success'),
     path('subscription/cancel/', views_subscription.paypal_cancel, name='paypal_cancel'),

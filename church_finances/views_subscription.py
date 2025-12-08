@@ -4,6 +4,7 @@ from django.conf import settings
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.utils import timezone
@@ -98,13 +99,39 @@ def payment_selection_view(request):
             # Store payment method in session
             request.session['payment_method'] = payment_method
             
-            # Redirect to registration form
+            # For PayPal payment - redirect directly to PayPal since users get free trial automatically
             if payment_method == 'paypal':
-                messages.success(request, "PayPal payment selected. Please complete your registration.")
+                request.session['selected_package'] = 'standard'
+                request.session['package_price'] = '150'
+                
+                # Check if user is logged in and has church account
+                if request.user.is_authenticated:
+                    try:
+                        church_member = ChurchMember.objects.get(user=request.user)
+                        # User already has account and church - go directly to PayPal
+                        messages.success(request, "Proceeding to PayPal payment.")
+                        return redirect('paypal_payment_direct')
+                    except ChurchMember.DoesNotExist:
+                        # User logged in but no church - go to PayPal direct (will handle registration there)
+                        messages.success(request, "Proceeding to PayPal payment.")
+                        return redirect('paypal_payment_direct')
+                else:
+                    # User not logged in - go to PayPal direct (will handle login/registration there)
+                    messages.success(request, "Please login or register to proceed with PayPal payment.")
+                    return redirect('paypal_payment_direct')
             else:
-                messages.info(request, "Offline payment selected. Please complete your registration for approval.")
-            
-            return redirect('registration_form')
+                # Offline payment - requires registration and approval process
+                if request.user.is_authenticated:
+                    try:
+                        church_member = ChurchMember.objects.get(user=request.user)
+                        messages.info(request, "Offline payment selected. Please proceed with payment instructions.")
+                        return redirect('offline_payment_form')
+                    except ChurchMember.DoesNotExist:
+                        messages.info(request, "Offline payment selected. Please complete your registration for approval.")
+                        return redirect('registration_form')
+                else:
+                    messages.info(request, "Offline payment selected. Please complete your registration for approval.")
+                    return redirect('registration_form')
         else:
             messages.error(request, "Please select a valid payment method.")
     
@@ -324,6 +351,50 @@ def registration_form_view(request):
         'payment_method': payment_method,
     }
     return render(request, 'church_finances/registration_form.html', context)
+
+def paypal_payment_direct(request):
+    """
+    Direct PayPal payment - handles both existing users and new users
+    """
+    # Set up payment context
+    request.session['selected_package'] = 'standard'
+    request.session['package_price'] = '150'
+    request.session['payment_method'] = 'paypal'
+    
+    # Check if user is authenticated
+    if not request.user.is_authenticated:
+        # Store the current path to redirect back after login/registration
+        request.session['next_url'] = request.get_full_path()
+        messages.info(request, "Please login or register to proceed with PayPal payment. New users get a 30-day free trial!")
+        return redirect('login')
+    
+    try:
+        # Check if user has a church membership
+        church_member = ChurchMember.objects.get(user=request.user)
+        church = church_member.church
+        
+        if request.method == "GET":
+            context = {
+                'selected_package': 'standard',
+                'package_price': 150,
+                'church_name': church.name,
+                'user_email': request.user.email,
+                'user_first_name': request.user.first_name,
+                'user_last_name': request.user.last_name,
+                'is_existing_user': True,
+            }
+            return render(request, 'church_finances/paypal_subscription_form.html', context)
+            
+        elif request.method == "POST":
+            # Handle PayPal payment for existing user
+            return create_paypal_subscription(request)
+            
+    except ChurchMember.DoesNotExist:
+        # User is authenticated but doesn't have a church account yet
+        # Redirect to registration to complete setup, then come back to PayPal
+        request.session['next_url'] = request.get_full_path()
+        messages.info(request, "Please complete your church registration to get your 30-day free trial, then proceed with payment.")
+        return redirect('register')
 
 @ensure_csrf_cookie
 def create_paypal_subscription(request):

@@ -33,9 +33,14 @@
                     <div class="flex-1">
                         <p class="font-bold">Free Trial Expired</p>
                         <p class="text-sm">Your 30-day free trial has ended. Please complete payment to continue using Church Books.</p>
-                        <a href="{% url 'subscription' %}" class="inline-block mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
-                            Complete Payment →
-                        </a>
+                        <div class="mt-2 space-x-2">
+                            <a href="{% url 'paypal_payment_direct' %}" class="inline-block bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                                Pay with PayPal →
+                            </a>
+                            <a href="{% url 'subscription' %}" class="inline-block bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                                View Plans
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -51,9 +56,14 @@
                             You have <strong>{{ trial_days_remaining }} days remaining</strong> in your free trial. 
                             {% if trial_end_date %}Trial ends on {{ trial_end_date|date:"F j, Y" }}.{% endif %}
                         </p>
-                        <a href="{% url 'subscription' %}" class="inline-block mt-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                            Upgrade Now →
-                        </a>
+                        <div class="mt-2 space-x-2">
+                            <a href="{% url 'paypal_payment_direct' %}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                Pay with PayPal →
+                            </a>
+                            <a href="{% url 'subscription' %}" class="inline-block bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                                View Plans
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
