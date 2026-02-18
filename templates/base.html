@@ -104,8 +104,8 @@
         <div class="container mx-auto">
             <div class="flex justify-around items-center">
                 <a href="{% url 'home' %}" class="flex items-center text-white rounded-md bg-white px-3 py-1 hover:bg-gray-200 transition-colors h-[100px]">
-                    {% if user.is_authenticated and user.churchmember.church.logo %}
-                        <img src="{{ user.churchmember.church.logo.url }}" class="h-[100px] w-auto rounded" alt="{{ user.churchmember.church.name }} Logo">
+                    {% if user.is_authenticated and user.churchmember_set.first.church.logo %}
+                        <img src="{{ user.churchmember_set.first.church.logo.url }}" class="h-[100px] w-auto rounded" alt="{{ user.churchmember_set.first.church.name }} Logo">
                     {% else %}
                         <img src="{% static 'images/logo.png' %}" class="h-[100px] w-auto rounded" alt="Church Books Logo">
                     {% endif %}
@@ -132,7 +132,7 @@
                             </button>
                             <div class="absolute hidden group-hover:block bg-white text-gray-800 rounded-md shadow-lg mt-1 py-2 w-48 z-50">
                                 <a href="{% url 'tithes_offerings_dashboard' %}" class="block px-4 py-2 hover:bg-gray-100">Dashboard</a>
-                                {% if user.churchmember and user.churchmember.role == 'member' %}
+                                {% if user.churchmember_set.first and user.churchmember_set.first.role == 'member' %}
                                     <a href="{% url 'member_contributions' %}" class="block px-4 py-2 hover:bg-gray-100">My Contributions</a>
                                     <a href="{% url 'quick_tithe_entry' %}" class="block px-4 py-2 hover:bg-gray-100">Quick Entry</a>
                                 {% else %}
@@ -171,7 +171,7 @@
                         <div class="border-t border-blue-700 pt-2 flex flex-col gap-6">
                             <div class="text-blue-200 px-3 py-1 text-sm font-semibold">Tithes & Offerings</div>
                             <a href="{% url 'tithes_offerings_dashboard' %}" class="text-white hover:text-blue-200 rounded-md px-6 py-2 hover:bg-blue-600 transition-colors text-sm">Dashboard</a>
-                            {% if user.churchmember and user.churchmember.role == 'member' %}
+                            {% if user.churchmember_set.first and user.churchmember_set.first.role == 'member' %}
                                 <a href="{% url 'member_contributions' %}" class="text-white hover:text-blue-200 rounded-md px-6 py-2 hover:bg-blue-600 transition-colors text-sm">My Contributions</a>
                                 <a href="{% url 'quick_tithe_entry' %}" class="text-white hover:text-blue-200 rounded-md px-6 py-2 hover:bg-blue-600 transition-colors text-sm">Quick Entry</a>
                             {% else %}
