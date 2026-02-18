@@ -106,6 +106,12 @@
 <body>
     <div class="container">
         <div class="header">
+            {% if church.logo %}
+            <div style="margin-bottom: 10px;">
+                <img src="{{ church.logo.url }}" alt="{{ church.name }} Logo"
+                     style="max-height: 90px; max-width: 250px; object-fit: contain;">
+            </div>
+            {% endif %}
             <h1 class="church-name">{{ church.name }}</h1>
             <h2 class="report-title">{% block report_title %}{% endblock %}</h2>
             <div class="report-period">{% block report_period %}{% endblock %}</div>

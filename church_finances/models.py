@@ -18,6 +18,7 @@ class Church(models.Model):
     )
     
     name = models.CharField(max_length=200)
+    logo = models.ImageField(upload_to='church_logos/', blank=True, null=True, help_text='Upload your church logo (PNG or JPG recommended)')
     address = models.TextField()
     phone = models.CharField(max_length=20)
     email = models.EmailField()
@@ -37,6 +38,7 @@ class Church(models.Model):
     PAYMENT_METHODS = (
         ('paypal', 'PayPal'),
         ('offline', 'Offline'),
+        ('bank_transfer', 'Bank Transfer'),
     )
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default='offline')
     offline_payment_reference = models.CharField(max_length=255, blank=True, null=True, help_text="Reference # / receipt / memo for offline payment")
@@ -52,19 +54,24 @@ class Church(models.Model):
     
     def offline_verified_status(self):
         """Return status of offline payment verification"""
-        if self.payment_method != 'offline':
+        if self.payment_method == 'paypal':
             return 'N/A (PayPal)'
+        elif self.payment_method == 'bank_transfer':
+            if self.offline_verified_at:
+                return f'Bank Transfer Verified ({self.offline_verified_at.strftime("%m/%d/%Y")})'
+            else:
+                return 'Bank Transfer - Pending Approval'
         elif self.offline_verified_at:
             return f'Verified ({self.offline_verified_at.strftime("%m/%d/%Y")})'
         else:
             return 'Pending Verification'
-    offline_verified_status.short_description = 'Offline Payment Status'
+    offline_verified_status.short_description = 'Payment Status'
 
     @property
     def is_payment_verified(self):
         if self.payment_method == 'paypal':
             return self.subscription_status == 'active' and self.is_approved
-        if self.payment_method == 'offline':
+        if self.payment_method in ('offline', 'bank_transfer'):
             return self.offline_verified_at is not None
         return False
 

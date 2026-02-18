@@ -26,9 +26,11 @@ urllib3==2.0.7
 # PayPal integration
 paypalrestsdk==1.13.3
 
+# Image handling (for church logo uploads)
+Pillow==10.4.0
+
 # PDF generation (optional - install separately if needed)
 # reportlab==4.2.2
 # xhtml2pdf==0.2.16
 # beautifulsoup4==4.12.3
 # lxml==5.2.2
-# pillow==10.4.0

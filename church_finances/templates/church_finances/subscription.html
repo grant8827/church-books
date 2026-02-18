@@ -8,7 +8,7 @@
         {% if user.is_authenticated %}
             <!-- Trial Status Message -->
             {% for member in user.churchmember_set.all %}
-                {% if member.church.is_trial_expired %}
+                {% if member.church.is_trial_expired and member.church.subscription_status != 'active' %}
                     <div class="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg mb-8 max-w-2xl mx-auto">
                         <div class="flex items-center">
                             <div class="py-1">
@@ -22,7 +22,7 @@
                             </div>
                         </div>
                     </div>
-                {% elif member.church.is_trial_active %}
+                {% elif member.church.is_trial_active and member.church.subscription_status != 'active' %}
                     <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-6 py-4 rounded-lg mb-8 max-w-2xl mx-auto">
                         <div class="flex items-center">
                             <div class="py-1">
@@ -57,7 +57,7 @@
                     <h2 class="text-3xl font-bold text-gray-900">Church Books</h2>
                     <p class="text-gray-600 mb-4">Complete Church Management Solution</p>
                     <div class="text-5xl font-bold text-[#6e003d] mb-6">
-                        $150
+                        $120
                         <span class="text-lg text-gray-600">/year</span>
                     </div>
                 </div>

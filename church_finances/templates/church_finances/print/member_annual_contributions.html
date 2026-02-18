@@ -1,0 +1,109 @@
+{% extends "church_finances/print/base_print.html" %}
+
+{% block extra_head %}
+<style>
+    @media print {
+        .no-print {
+            display: none;
+        }
+        body {
+            padding: 0;
+            margin: 0;
+        }
+        @page {
+            margin: 2cm;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-8">
+    <!-- Print Controls - Only visible on screen -->
+    <div class="no-print mb-8 flex justify-between items-center">
+        <div class="flex space-x-4">
+            <form class="flex space-x-4" method="get">
+                <select name="year" class="rounded border-gray-300">
+                    {% for y in "543210"|make_list %}
+                    {% with year_option=current_year|add:y %}
+                    <option value="{{ year_option }}" {% if year_option == year %}selected{% endif %}>
+                        {{ year_option }}
+                    </option>
+                    {% endwith %}
+                    {% endfor %}
+                </select>
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">
+                    Update
+                </button>
+            </form>
+            <button onclick="window.print()" class="bg-green-500 text-white px-4 py-2 rounded">
+                Print Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Report Header -->
+    <div class="text-center mb-8">
+        <h1 class="text-2xl font-bold">{{ church.name }}</h1>
+        <h2 class="text-xl">Member Annual Contribution Summary</h2>
+        <p class="text-gray-600">Year {{ year }}</p>
+        <p class="text-sm text-gray-500">Generated on {{ print_date|date:"F d, Y H:i" }}</p>
+    </div>
+
+    <!-- Member Summary Table -->
+    <table class="min-w-full bg-white border border-gray-300 mb-8">
+        <thead>
+            <tr class="bg-gray-100">
+                <th class="border px-4 py-2 text-left">#</th>
+                <th class="border px-4 py-2 text-left">Member Name</th>
+                <th class="border px-4 py-2 text-right">Tithes</th>
+                <th class="border px-4 py-2 text-right">Offerings</th>
+                <th class="border px-4 py-2 text-right">Total</th>
+                <th class="border px-4 py-2 text-center no-print">Report</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for member in member_totals %}
+            <tr class="{% cycle 'bg-white' 'bg-gray-50' %}">
+                <td class="border px-4 py-2">{{ forloop.counter }}</td>
+                <td class="border px-4 py-2">{{ member.name }}</td>
+                <td class="border px-4 py-2 text-right">${{ member.tithe|floatformat:2 }}</td>
+                <td class="border px-4 py-2 text-right">${{ member.offering|floatformat:2 }}</td>
+                <td class="border px-4 py-2 text-right font-semibold">${{ member.total|floatformat:2 }}</td>
+                <td class="border px-4 py-2 text-center no-print">
+                    <a href="{% url 'contribution_member_detail' member.id %}?year={{ year }}"
+                       target="_blank"
+                       class="bg-blue-500 hover:bg-blue-700 text-white text-sm font-bold py-1 px-3 rounded">
+                        View Report
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="border px-4 py-4 text-center text-gray-500">No contributions recorded for {{ year }}.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="font-bold bg-gray-200">
+                <td colspan="2" class="border px-4 py-2">Grand Total</td>
+                <td class="border px-4 py-2 text-right">${{ grand_tithe|floatformat:2 }}</td>
+                <td class="border px-4 py-2 text-right">${{ grand_offering|floatformat:2 }}</td>
+                <td class="border px-4 py-2 text-right">${{ grand_total|floatformat:2 }}</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <!-- Signatures Section -->
+    <div class="mt-16 grid grid-cols-2 gap-8">
+        <div class="border-t pt-4">
+            <p class="text-center">_____________________</p>
+            <p class="text-center text-sm text-gray-600">Treasurer's Signature</p>
+        </div>
+        <div class="border-t pt-4">
+            <p class="text-center">_____________________</p>
+            <p class="text-center text-sm text-gray-600">Pastor's Signature</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

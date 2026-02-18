@@ -43,7 +43,7 @@ def subscription_view(request):
         'paypal_client_id': getattr(settings, 'PAYPAL_CLIENT_ID', ''),
         'standard_plan_id': getattr(settings, 'PAYPAL_STANDARD_PLAN_ID', ''),
         'paypal_mode': getattr(settings, 'PAYPAL_MODE', 'sandbox'),
-        'package_price': 150
+        'package_price': 120
     }
     
     # Add trial information if user is authenticated
@@ -75,7 +75,7 @@ def subscription_select(request):
         package = request.POST.get('package', 'standard')  # Default to standard
         if package == 'standard':
             request.session['selected_package'] = package
-            request.session['package_price'] = '150'
+            request.session['package_price'] = '120'
             
             # Store package selection and redirect to payment selection
             plan_id = getattr(settings, 'PAYPAL_STANDARD_PLAN_ID', '')
@@ -95,14 +95,14 @@ def payment_selection_view(request):
     if request.method == "POST":
         payment_method = request.POST.get('payment_method', '')
         
-        if payment_method in ['paypal', 'offline']:
+        if payment_method in ['paypal', 'offline', 'bank_transfer']:
             # Store payment method in session
             request.session['payment_method'] = payment_method
             
             # For PayPal payment - redirect directly to PayPal since users get free trial automatically
             if payment_method == 'paypal':
                 request.session['selected_package'] = 'standard'
-                request.session['package_price'] = '150'
+                request.session['package_price'] = '120'
                 
                 # Check if user is logged in and has church account
                 if request.user.is_authenticated:
@@ -120,17 +120,17 @@ def payment_selection_view(request):
                     messages.success(request, "Please login or register to proceed with PayPal payment.")
                     return redirect('paypal_payment_direct')
             else:
-                # Offline payment - requires registration and approval process
+                # Offline / Bank Transfer payment - requires registration and approval process
                 if request.user.is_authenticated:
                     try:
                         church_member = ChurchMember.objects.get(user=request.user)
-                        messages.info(request, "Offline payment selected. Please proceed with payment instructions.")
+                        messages.info(request, "Payment selected. Please proceed with payment instructions.")
                         return redirect('offline_payment_form')
                     except ChurchMember.DoesNotExist:
-                        messages.info(request, "Offline payment selected. Please complete your registration for approval.")
+                        messages.info(request, "Payment selected. Please complete your registration for approval.")
                         return redirect('registration_form')
                 else:
-                    messages.info(request, "Offline payment selected. Please complete your registration for approval.")
+                    messages.info(request, "Payment selected. Please complete your registration for approval.")
                     return redirect('registration_form')
         else:
             messages.error(request, "Please select a valid payment method.")
@@ -266,6 +266,11 @@ def registration_form_view(request):
                     is_approved=is_church_approved,
                     payment_method=payment_method
                 )
+                # Save logo if uploaded
+                church_logo = request.FILES.get('church_logo')
+                if church_logo:
+                    church.logo = church_logo
+                    church.save()
                 
                 print(f"DEBUG: Church created successfully with ID: {church.id}, approved: {church.is_approved}")
                 
@@ -358,7 +363,7 @@ def paypal_payment_direct(request):
     """
     # Set up payment context
     request.session['selected_package'] = 'standard'
-    request.session['package_price'] = '150'
+    request.session['package_price'] = '120'
     request.session['payment_method'] = 'paypal'
     
     # Check if user is authenticated
@@ -376,7 +381,7 @@ def paypal_payment_direct(request):
         if request.method == "GET":
             context = {
                 'selected_package': 'standard',
-                'package_price': 150,
+                'package_price': 120,
                 'church_name': church.name,
                 'user_email': request.user.email,
                 'user_first_name': request.user.first_name,
@@ -506,6 +511,11 @@ def create_paypal_subscription(request):
                 is_approved=False,
                 payment_method=('offline' if payment_method == 'offline' else 'paypal')
             )
+            # Save logo if uploaded
+            church_logo = request.FILES.get('church_logo')
+            if church_logo:
+                church.logo = church_logo
+                church.save()
             
             print(f"DEBUG: Church created successfully with ID: {church.id}")
             

@@ -53,7 +53,7 @@ class PayPalService:
                 amount = "100.00"
                 plan_name = "Standard Plan"
             else:
-                amount = "150.00"
+                amount = "120.00"
                 plan_name = "Premium Plan"
             
             # Create a simple PayPal checkout URL
@@ -250,5 +250,5 @@ class PayPalService:
         if 'standard' in plan_id.lower():
             return 100.00
         elif 'premium' in plan_id.lower():
-            return 150.00
+            return 120.00
         return 0.00

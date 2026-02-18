@@ -74,6 +74,8 @@ urlpatterns = [
     path("contributions/<int:pk>/edit/", views.contribution_edit_view, name="contribution_edit"),
     path("contributions/print/monthly/", views.contribution_print_monthly, name="contribution_print_monthly"),
     path("contributions/print/yearly/", views.contribution_print_yearly, name="contribution_print_yearly"),
+    path("contributions/print/member-annual/", views.contribution_member_annual_summary, name="contribution_member_annual"),
+    path("contributions/print/member-annual/<int:member_id>/", views.contribution_member_detail, name="contribution_member_detail"),
     
     # Enhanced Tithes & Offerings Management URLs
     path("tithes-offerings/", views.tithes_offerings_dashboard, name="tithes_offerings_dashboard"),

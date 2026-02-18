@@ -158,6 +158,11 @@ def register_view(request):
                     church.registered_by = user  # Set the registering user
                     # Trial system will be set automatically by the model's save method
                     church.save()
+                    # Save logo if uploaded
+                    logo_file = request.FILES.get('church_logo')
+                    if logo_file:
+                        church.logo = logo_file
+                        church.save()
                     # Create an active church member for immediate trial access
                     ChurchMember.objects.create(
                         user=user,
@@ -812,10 +817,10 @@ def dashboard_view(request):
         "this_month_contributions": this_month_contributions,
         "total_children": total_children,
         "total_christenings": total_christenings,
-        # Trial system information
-        "is_trial_active": church.is_trial_active,
+        # Trial system information — suppress trial banner when subscription is already active
+        "is_trial_active": church.is_trial_active and church.subscription_status != 'active',
         "trial_days_remaining": church.trial_days_remaining,
-        "is_trial_expired": church.is_trial_expired,
+        "is_trial_expired": church.is_trial_expired and church.subscription_status != 'active',
         "trial_end_date": church.trial_end_date,
     }
     return render(request, "church_finances/dashboard.html", context)
@@ -998,6 +1003,97 @@ def contribution_print_monthly(request):
     }
     
     return render(request, "church_finances/print/monthly_contributions.html", context)
+
+@login_required
+def contribution_member_annual_summary(request):
+    """
+    Generate a printable per-member annual contribution summary
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    year = int(request.GET.get('year', timezone.now().year))
+
+    contributions = Contribution.objects.filter(
+        church=church,
+        date__year=year
+    ).select_related('member__user').order_by('member__user__last_name', 'member__user__first_name')
+
+    # Build per-member totals
+    member_totals = {}
+    for contribution in contributions:
+        member = contribution.member
+        member_id = member.id
+        if member_id not in member_totals:
+            member_totals[member_id] = {
+                'id': member_id,
+                'name': member.user.get_full_name() or member.user.username,
+                'tithe': 0,
+                'offering': 0,
+                'total': 0,
+            }
+        member_totals[member_id]['total'] += contribution.amount
+        if contribution.contribution_type == 'tithe':
+            member_totals[member_id]['tithe'] += contribution.amount
+        elif contribution.contribution_type == 'offering':
+            member_totals[member_id]['offering'] += contribution.amount
+
+    grand_total = contributions.aggregate(Sum('amount'))['amount__sum'] or 0
+    grand_tithe = contributions.filter(contribution_type='tithe').aggregate(Sum('amount'))['amount__sum'] or 0
+    grand_offering = contributions.filter(contribution_type='offering').aggregate(Sum('amount'))['amount__sum'] or 0
+
+    context = {
+        'church': church,
+        'member_totals': member_totals.values(),
+        'year': year,
+        'current_year': timezone.now().year,
+        'grand_total': grand_total,
+        'grand_tithe': grand_tithe,
+        'grand_offering': grand_offering,
+        'print_date': timezone.now(),
+    }
+
+    return render(request, "church_finances/print/member_annual_contributions.html", context)
+
+@login_required
+def contribution_member_detail(request, member_id):
+    """
+    Generate a printable individual member contribution report for a given year
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    year = int(request.GET.get('year', timezone.now().year))
+
+    member = get_object_or_404(ChurchMember, id=member_id, church=church)
+
+    contributions = Contribution.objects.filter(
+        church=church,
+        member=member,
+        date__year=year
+    ).order_by('date')
+
+    total_tithe = contributions.filter(contribution_type='tithe').aggregate(Sum('amount'))['amount__sum'] or 0
+    total_offering = contributions.filter(contribution_type='offering').aggregate(Sum('amount'))['amount__sum'] or 0
+    grand_total = contributions.aggregate(Sum('amount'))['amount__sum'] or 0
+
+    context = {
+        'church': church,
+        'member': member,
+        'contributions': contributions,
+        'year': year,
+        'current_year': timezone.now().year,
+        'total_tithe': total_tithe,
+        'total_offering': total_offering,
+        'grand_total': grand_total,
+        'print_date': timezone.now(),
+    }
+
+    return render(request, "church_finances/print/member_contribution_detail.html", context)
 
 @login_required
 def contribution_print_yearly(request):

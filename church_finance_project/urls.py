@@ -44,7 +44,9 @@ urlpatterns = [
     path('favicon.ico', RedirectView.as_view(url=settings.STATIC_URL + 'images/logo.png', permanent=True)),
 ]
 
-# Serve static and media files in development
+# Serve static files in development
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Always serve media files (church logos etc.) - Django handles this directly
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

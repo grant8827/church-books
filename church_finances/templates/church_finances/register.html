@@ -1,390 +1,486 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Register - Church Finance App{% endblock %}
+{% block title %}Register - Church Books{% endblock %}
+
+{% block extra_css %}
+<style>
+.wizard-step { display: none; }
+.wizard-step.active { display: block; }
+
+.step-circle {
+    width: 2.5rem; height: 2.5rem; border-radius: 9999px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.875rem; transition: all 0.3s;
+}
+.step-circle.done   { background: #16a34a; color: #fff; }
+.step-circle.active { background: #2563eb; color: #fff; box-shadow: 0 0 0 4px rgba(37,99,235,0.2); }
+.step-circle.idle   { background: #e5e7eb; color: #6b7280; }
+
+.step-connector { height: 3px; flex: 1; background: #e5e7eb; transition: background 0.3s; }
+.step-connector.done { background: #2563eb; }
+
+#progressBar { transition: width 0.4s ease; }
+
+.field-wrap { position: relative; }
+.field-wrap .icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #9ca3af; pointer-events: none; }
+.field-wrap.textarea-wrap .icon { top: 0.875rem; transform: none; }
+.field-input {
+    width: 100%; padding: 0.65rem 0.75rem 0.65rem 2.5rem;
+    border: 1.5px solid #d1d5db; border-radius: 0.5rem;
+    font-size: 0.9rem; color: #1f2937; background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.field-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+.field-input.error { border-color: #ef4444; }
+.field-input.ok    { border-color: #16a34a; }
+select.field-input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.6rem center; background-size: 1.2em; padding-right: 2.2rem; }
+textarea.field-input { min-height: 5rem; resize: vertical; padding-top: 0.75rem; }
+
+.eye-btn { position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #9ca3af; }
+
+#logoDropzone {
+    border: 2px dashed #93c5fd; border-radius: 0.75rem;
+    padding: 2rem; text-align: center; cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+#logoDropzone:hover, #logoDropzone.dragover { border-color: #2563eb; background: #eff6ff; }
+#logoPreview { max-height: 8rem; margin: 0 auto; display: none; border-radius: 0.5rem; object-fit: contain; }
+
+.strength-bar div { height: 4px; border-radius: 2px; transition: background 0.3s; }
+.section-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.75rem; }
+.section-title { font-size: 1.05rem; font-weight: 700; color: #1e3a5f; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.6rem; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-green-50">
-    <div class="container mx-auto px-4 py-8">
-        <div class="max-w-6xl mx-auto">
-            <!-- Breadcrumb -->
-            <nav class="mb-8">
-                <ol class="flex items-center space-x-2 text-sm">
-                    <li><a href="{% url 'home' %}" class="text-gray-600 hover:text-green-600 transition-colors font-medium">Home</a></li>
-                    <li><span class="mx-2 text-gray-400">→</span></li>
-                    <li class="text-green-700 font-semibold">Free Trial Registration</li>
-                </ol>
-            </nav>
+<div class="min-h-screen py-10" style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);">
+  <div class="max-w-2xl mx-auto px-4">
 
-        <div class="bg-white shadow-2xl rounded-xl p-8 border-t-4 border-green-500">
-            <div class="text-center mb-8">
-                <h1 class="text-3xl font-bold text-gray-800 mb-2">
-                    <i class="fas fa-gift text-green-600 mr-3"></i>Start Your Free Trial
-                </h1>
-                <p class="text-gray-600 mb-4">Create your account and get instant access to Church Books</p>
-                <div class="bg-green-100 border border-green-300 text-green-800 px-6 py-3 rounded-lg inline-block">
-                    <i class="fas fa-check-circle mr-2"></i>
-                    <strong>30 Days Free</strong> - Full access to all features, no credit card required
-                </div>
-            </div>
-
-            <form method="post" class="space-y-8" id="registerForm">
-                {% csrf_token %}
-                
-                <!-- Account Information -->
-                <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 shadow-inner border border-gray-200">
-                    <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
-                        <i class="fas fa-user text-green-600 mr-3 text-lg"></i>Account Information
-                    </h2>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-1">
-                            <label for="{{ user_form.username.id_for_label }}" class="block text-sm font-semibold text-gray-800 mb-1">{{ user_form.username.label }} *</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-3 text-gray-500">
-                                    <i class="fas fa-at text-sm"></i>
-                                </span>
-                                <input type="text" class="w-full pl-10 pr-3 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 hover:border-gray-300 bg-white shadow-sm" id="{{ user_form.username.id_for_label }}" name="{{ user_form.username.name }}" value="{{ user_form.username.value|default:'' }}" placeholder="Choose a unique username" required>
-                            </div>
-                            {% if user_form.username.help_text %}
-                                <p class="text-xs text-gray-500 mt-1">{{ user_form.username.help_text }}</p>
-                            {% endif %}
-                            {% for error in user_form.username.errors %}
-                                <p class="text-red-500 text-sm mt-1 flex items-center">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i>{{ error }}
-                                </p>
-                            {% endfor %}
-                        </div>
-                        <div class="space-y-1">
-                            <label for="{{ user_form.email.id_for_label }}" class="block text-sm font-semibold text-gray-800 mb-1">{{ user_form.email.label }} *</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-2 text-gray-400">
-                                    <i class="fas fa-envelope"></i>
-                                </span>
-                                <input type="email" class="w-full pl-10 pr-3 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 hover:border-gray-300 bg-white shadow-sm" id="{{ user_form.email.id_for_label }}" name="{{ user_form.email.name }}" value="{{ user_form.email.value|default:'' }}" placeholder="Enter your email address" required>
-                            {% for error in user_form.email.errors %}
-                                <p class="text-red-500 text-sm mt-1 flex items-center">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i>{{ error }}
-                                </p>
-                            {% endfor %}
-                        </div>
-                        <div class="space-y-1">
-                            <label for="{{ user_form.first_name.id_for_label }}" class="block text-sm font-semibold text-gray-800 mb-1">{{ user_form.first_name.label }} *</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-2 text-gray-400">
-                                    <i class="fas fa-user"></i>
-                                </span>
-                                <input type="text" class="w-full pl-10 pr-3 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 hover:border-gray-300 bg-white shadow-sm" id="{{ user_form.first_name.id_for_label }}" name="{{ user_form.first_name.name }}" value="{{ user_form.first_name.value|default:'' }}" placeholder="Enter your first name" required>
-                            </div>
-                            {% for error in user_form.first_name.errors %}
-                                <p class="text-red-500 text-sm mt-1 flex items-center">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i>{{ error }}
-                                </p>
-                            {% endfor %}
-                        </div>
-                        <div class="space-y-1">
-                            <label for="{{ user_form.last_name.id_for_label }}" class="block text-sm font-semibold text-gray-800 mb-1">{{ user_form.last_name.label }} *</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-2 text-gray-400">
-                                    <i class="fas fa-user"></i>
-                                </span>
-                                <input type="text" class="w-full pl-10 pr-3 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 hover:border-gray-300 bg-white shadow-sm" id="{{ user_form.last_name.id_for_label }}" name="{{ user_form.last_name.name }}" value="{{ user_form.last_name.value|default:'' }}" placeholder="Enter your last name" required>
-                            </div>
-                            {% for error in user_form.last_name.errors %}
-                                <p class="text-red-500 text-sm mt-1 flex items-center">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i>{{ error }}
-                                </p>
-                            {% endfor %}
-                        </div>
-                        <div class="space-y-1">
-                            <label for="{{ user_form.password1.id_for_label }}" class="block text-sm font-semibold text-gray-800 mb-1">{{ user_form.password1.label }} *</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-2 text-gray-400">
-                                    <i class="fas fa-lock"></i>
-                                </span>
-                                <input type="password" class="w-full pl-10 pr-3 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 hover:border-gray-300 bg-white shadow-sm" id="{{ user_form.password1.id_for_label }}" name="{{ user_form.password1.name }}" placeholder="Create a strong password" required>
-                            </div>
-                            {% if user_form.password1.help_text %}
-                                <p class="text-xs text-gray-500 mt-1">{{ user_form.password1.help_text }}</p>
-                            {% endif %}
-                            {% for error in user_form.password1.errors %}
-                                <p class="text-red-500 text-sm mt-1 flex items-center">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i>{{ error }}
-                                </p>
-                            {% endfor %}
-                        </div>
-                        <div class="space-y-1">
-                            <label for="{{ user_form.password2.id_for_label }}" class="block text-sm font-semibold text-gray-800 mb-1">{{ user_form.password2.label }} *</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-2 text-gray-400">
-                                    <i class="fas fa-lock"></i>
-                                </span>
-                                <input type="password" class="w-full pl-10 pr-3 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 hover:border-gray-300 bg-white shadow-sm" id="{{ user_form.password2.id_for_label }}" name="{{ user_form.password2.name }}" placeholder="Confirm your password" required>
-                            </div>
-                            {% if user_form.password2.help_text %}
-                                <p class="text-xs text-gray-500 mt-1">{{ user_form.password2.help_text }}</p>
-                            {% endif %}
-                            {% for error in user_form.password2.errors %}
-                                <p class="text-red-500 text-sm mt-1 flex items-center">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i>{{ error }}
-                                </p>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Church Information -->
-                <div class="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-6 shadow-inner border border-purple-200">
-                    <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
-                        <i class="fas fa-church text-purple-600 mr-3 text-lg"></i>Church Information
-                    </h2>
-                    
-                    <!-- Policy Information -->
-                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-5 mb-6 shadow-sm">
-                        <div class="flex items-start">
-                            <div class="flex-shrink-0">
-                                <div class="bg-blue-500 rounded-full p-2">
-                                    <svg class="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
-                                    </svg>
-                                </div>
-                            </div>
-                            <div class="ml-4">
-                                <h4 class="text-base font-bold text-blue-900">One Church Per Account Policy</h4>
-                                <p class="text-sm text-blue-800 mt-2 leading-relaxed">
-                                    Each user account can only register one church. This helps maintain data integrity and prevents confusion. 
-                                    If you need to register multiple churches, please use separate user accounts for each church.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="md:col-span-2 space-y-1">
-                            <label for="{{ church_form.name.id_for_label }}" class="block text-sm font-semibold text-gray-800 mb-1">{{ church_form.name.label }} *</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-2 text-gray-400">
-                                    <i class="fas fa-church"></i>
-                                </span>
-                                <input type="text" class="w-full pl-10 pr-3 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 hover:border-gray-300 bg-white shadow-sm" id="{{ church_form.name.id_for_label }}" name="{{ church_form.name.name }}" value="{{ church_form.name.value|default:'' }}" placeholder="Enter your church name" required>
-                            </div>
-                            {% for error in church_form.name.errors %}
-                                <p class="text-red-500 text-sm mt-1 flex items-center">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i>{{ error }}
-                                </p>
-                            {% endfor %}
-                        </div>
-                        <div class="space-y-1">
-                            <label for="{{ church_form.email.id_for_label }}" class="block text-sm font-semibold text-gray-800 mb-1">{{ church_form.email.label }} *</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-2 text-gray-400">
-                                    <i class="fas fa-envelope"></i>
-                                </span>
-                                <input type="email" class="w-full pl-10 pr-3 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 hover:border-gray-300 bg-white shadow-sm" id="{{ church_form.email.id_for_label }}" name="{{ church_form.email.name }}" value="{{ church_form.email.value|default:'' }}" placeholder="church@example.com" required>
-                            </div>
-                            {% for error in church_form.email.errors %}
-                                <p class="text-red-500 text-sm mt-1 flex items-center">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i>{{ error }}
-                                </p>
-                            {% endfor %}
-                        </div>
-                        <div class="space-y-1">
-                            <label for="{{ church_form.phone.id_for_label }}" class="block text-sm font-semibold text-gray-800 mb-1">{{ church_form.phone.label }} *</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-2 text-gray-400">
-                                    <i class="fas fa-phone"></i>
-                                </span>
-                                <input type="tel" class="w-full pl-10 pr-3 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 hover:border-gray-300 bg-white shadow-sm" id="{{ church_form.phone.id_for_label }}" name="{{ church_form.phone.name }}" value="{{ church_form.phone.value|default:'' }}" placeholder="(555) 123-4567" required>
-                            </div>
-                            {% for error in church_form.phone.errors %}
-                                <p class="text-red-500 text-sm mt-1 flex items-center">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i>{{ error }}
-                                </p>
-                            {% endfor %}
-                        </div>
-                        <div class="md:col-span-2 space-y-1">
-                            <label for="{{ church_form.website.id_for_label }}" class="block text-sm font-semibold text-gray-800 mb-1">{{ church_form.website.label }}</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-2 text-gray-400">
-                                    <i class="fas fa-globe"></i>
-                                </span>
-                                <input type="url" class="w-full pl-10 pr-3 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 hover:border-gray-300 bg-white shadow-sm" id="{{ church_form.website.id_for_label }}" name="{{ church_form.website.name }}" value="{{ church_form.website.value|default:'' }}" placeholder="https://www.yourchurch.com">
-                            </div>
-                            {% for error in church_form.website.errors %}
-                                <p class="text-red-500 text-sm mt-1 flex items-center">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i>{{ error }}
-                                </p>
-                            {% endfor %}
-                        </div>
-                        <div class="md:col-span-2 space-y-1">
-                            <label for="{{ church_form.address.id_for_label }}" class="block text-sm font-semibold text-gray-800 mb-1">{{ church_form.address.label }} *</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-2 text-gray-400">
-                                    <i class="fas fa-map-marker-alt"></i>
-                                </span>
-                                <textarea class="w-full pl-10 pr-3 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-vertical transition-all duration-200 hover:border-gray-300 bg-white shadow-sm" id="{{ church_form.address.id_for_label }}" name="{{ church_form.address.name }}" rows="3" placeholder="Street address, city, state, zip" required>{{ church_form.address.value|default:'' }}</textarea>
-                            </div>
-                            {% for error in church_form.address.errors %}
-                                <p class="text-red-500 text-sm mt-1 flex items-center">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i>{{ error }}
-                                </p>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Non-field errors -->
-                {% if user_form.non_field_errors or church_form.non_field_errors %}
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                        {% for error in user_form.non_field_errors %}
-                            <p class="text-red-600 text-sm flex items-center">
-                                <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
-                            </p>
-                        {% endfor %}
-                        {% for error in church_form.non_field_errors %}
-                            <p class="text-red-600 text-sm flex items-center">
-                                <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
-                            </p>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-
-                <!-- Form Actions -->
-                <div class="flex flex-col space-y-4 pt-8 border-t-2 border-gray-200">
-                    <div class="flex justify-between items-center">
-                        <small class="text-gray-500">* Required fields</small>
-                    </div>
-                    <div class="flex flex-col sm:flex-row sm:justify-end space-y-3 sm:space-y-0 sm:space-x-4">
-                        <a href="{% url 'home' %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-md inline-flex items-center justify-center transition-colors duration-200">
-                            <i class="fas fa-times mr-2"></i>Cancel
-                        </a>
-                        <button type="submit" id="registerButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-md inline-flex items-center justify-center transition-colors duration-200">
-                            <span id="buttonText">
-                                <i class="fas fa-gift mr-2"></i>Start Free Trial
-                            </span>
-                            <span id="loadingText" class="hidden">
-                                <i class="fas fa-spinner fa-spin mr-2"></i>Starting Trial...
-                            </span>
-                        </button>
-                    </div>
-                </div>
-            </form>
-
-            <!-- Additional Links -->
-            <div class="mt-10 pt-6 border-t-2 border-gray-200">
-                <div class="text-center space-y-4">
-                    <div class="bg-gray-50 rounded-lg p-4 inline-block">
-                        <p class="text-gray-700 mb-2">
-                            Already have an account? 
-                        </p>
-                        <a href="{% url 'login' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium">
-                            <i class="fas fa-sign-in-alt mr-2"></i>Login here
-                        </a>
-                    </div>
-                    <p class="text-sm text-gray-500">
-                        <a href="{% url 'password_reset' %}" class="text-gray-600 hover:text-blue-600 font-medium inline-flex items-center transition-colors">
-                            <i class="fas fa-key mr-1"></i>Forgot your password?
-                        </a>
-                    </p>
-                </div>
-            </div>
-        </div>
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-16 h-16 bg-white bg-opacity-20 rounded-full mb-4">
+        <i class="fas fa-church text-white text-2xl"></i>
+      </div>
+      <h1 class="text-3xl font-bold text-white">Church Books</h1>
+      <p class="text-blue-100 mt-1">Start your free 30-day trial</p>
+      <span class="mt-3 inline-flex items-center px-4 py-1.5 rounded-full text-sm font-semibold bg-white text-blue-700">
+        <i class="fas fa-gift mr-2"></i> 30 Days Free — No credit card required
+      </span>
     </div>
-</div>
+
+    <!-- Card -->
+    <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+
+      <!-- Progress bar -->
+      <div class="h-1.5 bg-gray-100">
+        <div id="progressBar" class="h-full bg-blue-500 rounded-r-full" style="width:33%"></div>
+      </div>
+
+      <!-- Step indicators -->
+      <div class="flex items-center px-8 pt-6 pb-2">
+        <div class="flex flex-col items-center">
+          <div id="circle1" class="step-circle active">1</div>
+          <span class="text-xs mt-1 font-medium text-blue-600" id="label1">Your Info</span>
+        </div>
+        <div id="conn1" class="step-connector mx-2"></div>
+        <div class="flex flex-col items-center">
+          <div id="circle2" class="step-circle idle">2</div>
+          <span class="text-xs mt-1 font-medium text-gray-400" id="label2">Login</span>
+        </div>
+        <div id="conn2" class="step-connector mx-2"></div>
+        <div class="flex flex-col items-center">
+          <div id="circle3" class="step-circle idle">3</div>
+          <span class="text-xs mt-1 font-medium text-gray-400" id="label3">Church</span>
+        </div>
+      </div>
+
+      <!-- Server-side messages / form errors -->
+      {% if messages or user_form.errors or church_form.errors %}
+        <div class="px-8 pt-2 space-y-2">
+          {% for message in messages %}
+            <div class="p-3 rounded-lg text-sm {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200{% elif message.tags == 'success' %}bg-green-50 text-green-700 border border-green-200{% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
+              <i class="fas fa-exclamation-circle mr-2"></i>{{ message }}
+            </div>
+          {% endfor %}
+          {% for field in user_form %}{% for error in field.errors %}
+            <div class="p-3 rounded-lg text-sm bg-red-50 text-red-700 border border-red-200">
+              <i class="fas fa-exclamation-circle mr-2"></i><strong>{{ field.label }}:</strong> {{ error }}
+            </div>
+          {% endfor %}{% endfor %}
+          {% for field in church_form %}{% for error in field.errors %}
+            <div class="p-3 rounded-lg text-sm bg-red-50 text-red-700 border border-red-200">
+              <i class="fas fa-exclamation-circle mr-2"></i><strong>{{ field.label }}:</strong> {{ error }}
+            </div>
+          {% endfor %}{% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" id="registerForm" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        <div class="px-8 pb-8 pt-4 space-y-4">
+
+          <!-- ===== STEP 1: Personal Info ===== -->
+          <div class="wizard-step active" id="step1">
+            <div class="section-card">
+              <p class="section-title"><i class="fas fa-user text-green-500"></i> Your Information</p>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
+                  <div class="field-wrap">
+                    <i class="fas fa-user icon"></i>
+                    <input type="text" name="{{ user_form.first_name.name }}" id="{{ user_form.first_name.id_for_label }}"
+                           value="{{ user_form.first_name.value|default:'' }}" required
+                           placeholder="First name" class="field-input {% if user_form.first_name.errors %}error{% endif %}">
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Last Name <span class="text-red-500">*</span></label>
+                  <div class="field-wrap">
+                    <i class="fas fa-user icon"></i>
+                    <input type="text" name="{{ user_form.last_name.name }}" id="{{ user_form.last_name.id_for_label }}"
+                           value="{{ user_form.last_name.value|default:'' }}" required
+                           placeholder="Last name" class="field-input {% if user_form.last_name.errors %}error{% endif %}">
+                  </div>
+                </div>
+              </div>
+              <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Email Address <span class="text-red-500">*</span></label>
+                <div class="field-wrap">
+                  <i class="fas fa-envelope icon"></i>
+                  <input type="email" name="{{ user_form.email.name }}" id="{{ user_form.email.id_for_label }}"
+                         value="{{ user_form.email.value|default:'' }}" required
+                         placeholder="your@email.com" class="field-input {% if user_form.email.errors %}error{% endif %}">
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-end mt-4">
+              <button type="button" onclick="goToStep(2)"
+                class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg flex items-center gap-2 transition-colors">
+                Next <i class="fas fa-arrow-right"></i>
+              </button>
+            </div>
+          </div><!-- /step1 -->
+
+          <!-- ===== STEP 2: Login Credentials ===== -->
+          <div class="wizard-step" id="step2">
+            <div class="section-card">
+              <p class="section-title"><i class="fas fa-key text-purple-500"></i> Login Credentials</p>
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-800 flex items-start gap-2">
+                <i class="fas fa-info-circle mt-0.5 shrink-0"></i>
+                <span>You'll use these credentials to sign in to your Church Books dashboard.</span>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Username <span class="text-red-500">*</span></label>
+                <div class="field-wrap">
+                  <i class="fas fa-at icon"></i>
+                  <input type="text" name="{{ user_form.username.name }}" id="{{ user_form.username.id_for_label }}"
+                         value="{{ user_form.username.value|default:'' }}" required
+                         placeholder="Choose a unique username" class="field-input {% if user_form.username.errors %}error{% endif %}">
+                </div>
+                {% if user_form.username.help_text %}
+                  <p class="text-xs text-gray-400 mt-1">{{ user_form.username.help_text }}</p>
+                {% endif %}
+              </div>
+              <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Password <span class="text-red-500">*</span></label>
+                <div class="field-wrap">
+                  <i class="fas fa-lock icon"></i>
+                  <input type="password" name="{{ user_form.password1.name }}" id="{{ user_form.password1.id_for_label }}"
+                         required placeholder="Create a strong password"
+                         class="field-input {% if user_form.password1.errors %}error{% endif %}" style="padding-right:2.8rem">
+                  <button type="button" class="eye-btn" onclick="togglePass('{{ user_form.password1.id_for_label }}','eyeIcon1')">
+                    <i class="fas fa-eye" id="eyeIcon1"></i>
+                  </button>
+                </div>
+                <div class="mt-2 strength-bar flex gap-1">
+                  <div id="sb1" class="flex-1 bg-gray-200 rounded"></div>
+                  <div id="sb2" class="flex-1 bg-gray-200 rounded"></div>
+                  <div id="sb3" class="flex-1 bg-gray-200 rounded"></div>
+                  <div id="sb4" class="flex-1 bg-gray-200 rounded"></div>
+                </div>
+                <p class="text-xs text-gray-400 mt-1" id="strengthLabel">Enter a password</p>
+              </div>
+              <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password <span class="text-red-500">*</span></label>
+                <div class="field-wrap">
+                  <i class="fas fa-lock icon"></i>
+                  <input type="password" name="{{ user_form.password2.name }}" id="{{ user_form.password2.id_for_label }}"
+                         required placeholder="Re-enter your password"
+                         class="field-input {% if user_form.password2.errors %}error{% endif %}" style="padding-right:2.8rem">
+                  <button type="button" class="eye-btn" onclick="togglePass('{{ user_form.password2.id_for_label }}','eyeIcon2')">
+                    <i class="fas fa-eye" id="eyeIcon2"></i>
+                  </button>
+                </div>
+                <p class="text-xs mt-1 hidden text-red-500" id="pwMatchMsg"><i class="fas fa-times-circle mr-1"></i>Passwords do not match</p>
+                <p class="text-xs mt-1 hidden text-green-600" id="pwOkMsg"><i class="fas fa-check-circle mr-1"></i>Passwords match</p>
+              </div>
+            </div>
+
+            <div class="flex justify-between mt-4">
+              <button type="button" onclick="goToStep(1)"
+                class="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg flex items-center gap-2 transition-colors">
+                <i class="fas fa-arrow-left"></i> Back
+              </button>
+              <button type="button" onclick="goToStep(3)"
+                class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg flex items-center gap-2 transition-colors">
+                Next <i class="fas fa-arrow-right"></i>
+              </button>
+            </div>
+          </div><!-- /step2 -->
+
+          <!-- ===== STEP 3: Church Info ===== -->
+          <div class="wizard-step" id="step3">
+            <div class="section-card">
+              <p class="section-title"><i class="fas fa-church text-indigo-500"></i> Church Information</p>
+
+              <!-- Logo dropzone -->
+              <div class="mb-5">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Church Logo <span class="text-xs text-gray-400">(recommended)</span>
+                </label>
+                <p class="text-xs text-gray-400 mb-2">Your logo appears in the dashboard navbar and on all printed reports.</p>
+                <div id="logoDropzone" onclick="document.getElementById('church_logo').click()">
+                  <img id="logoPreview" src="#" alt="Logo preview">
+                  <div id="logoPlaceholder">
+                    <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <i class="fas fa-image text-blue-500 text-2xl"></i>
+                    </div>
+                    <p class="text-sm font-semibold text-blue-600">Click to upload your church logo</p>
+                    <p class="text-xs text-gray-400 mt-1">PNG, JPG or SVG · max 5MB</p>
+                  </div>
+                </div>
+                <input type="file" id="church_logo" name="church_logo" accept="image/*" class="hidden" onchange="handleLogoChange(this)">
+                <p class="text-xs text-gray-400 mt-1 text-center" id="logoFileName"></p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Church Name <span class="text-red-500">*</span></label>
+                <div class="field-wrap">
+                  <i class="fas fa-church icon"></i>
+                  <input type="text" name="{{ church_form.name.name }}" id="{{ church_form.name.id_for_label }}"
+                         value="{{ church_form.name.value|default:'' }}" required
+                         placeholder="e.g. Grace Community Church" class="field-input {% if church_form.name.errors %}error{% endif %}">
+                </div>
+              </div>
+              <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Church Address <span class="text-red-500">*</span></label>
+                <div class="field-wrap textarea-wrap">
+                  <i class="fas fa-map-marker-alt icon"></i>
+                  <textarea name="{{ church_form.address.name }}" id="{{ church_form.address.id_for_label }}"
+                            rows="3" required placeholder="Street, City, State, Zip"
+                            class="field-input {% if church_form.address.errors %}error{% endif %}">{{ church_form.address.value|default:'' }}</textarea>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Church Phone <span class="text-red-500">*</span></label>
+                  <div class="field-wrap">
+                    <i class="fas fa-phone icon"></i>
+                    <input type="tel" name="{{ church_form.phone.name }}" id="{{ church_form.phone.id_for_label }}"
+                           value="{{ church_form.phone.value|default:'' }}" required
+                           placeholder="(555) 123-4567" class="field-input {% if church_form.phone.errors %}error{% endif %}">
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Church Email <span class="text-red-500">*</span></label>
+                  <div class="field-wrap">
+                    <i class="fas fa-envelope icon"></i>
+                    <input type="email" name="{{ church_form.email.name }}" id="{{ church_form.email.id_for_label }}"
+                           value="{{ church_form.email.value|default:'' }}" required
+                           placeholder="church@example.com" class="field-input {% if church_form.email.errors %}error{% endif %}">
+                  </div>
+                </div>
+              </div>
+              <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Church Website <span class="text-xs text-gray-400">(optional)</span></label>
+                <div class="field-wrap">
+                  <i class="fas fa-globe icon"></i>
+                  <input type="url" name="{{ church_form.website.name }}" id="{{ church_form.website.id_for_label }}"
+                         value="{{ church_form.website.value|default:'' }}"
+                         placeholder="https://yourchurch.com" class="field-input">
+                </div>
+              </div>
+
+              <!-- Policy note -->
+              <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700 flex items-start gap-2">
+                <i class="fas fa-info-circle mt-0.5 shrink-0"></i>
+                <span>Each user account can register one church. For multiple churches, use separate accounts.</span>
+              </div>
+            </div>
+
+            <div class="flex justify-between mt-4">
+              <button type="button" onclick="goToStep(2)"
+                class="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg flex items-center gap-2 transition-colors">
+                <i class="fas fa-arrow-left"></i> Back
+              </button>
+              <button type="submit" id="submitButton"
+                class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg flex items-center gap-2 transition-colors shadow-md">
+                <span id="buttonText"><i class="fas fa-gift mr-1"></i> Start Free Trial</span>
+                <span id="loadingText" class="hidden"><i class="fas fa-spinner fa-spin mr-1"></i> Creating account…</span>
+              </button>
+            </div>
+            <p class="text-xs text-center text-gray-400 mt-3">Your 30-day trial starts immediately. No credit card needed.</p>
+          </div><!-- /step3 -->
+
+        </div>
+      </form>
+
+      <!-- Bottom links -->
+      <div class="px-8 pb-6 text-center border-t pt-4 space-y-2">
+        <p class="text-sm text-gray-500">Already have an account?
+          <a href="{% url 'login' %}" class="text-blue-600 hover:text-blue-700 font-semibold">Sign in</a>
+        </p>
+        <a href="{% url 'password_reset' %}" class="text-xs text-gray-400 hover:text-blue-600 transition-colors">
+          <i class="fas fa-key mr-1"></i> Forgot your password?
+        </a>
+      </div>
+
+    </div><!-- /card -->
+  </div>
 </div>
 
 <script>
+const totalSteps = 3;
+let currentStep = 1;
+
+// If server returned errors, open the right step
+{% if user_form.errors %}
+  {% if user_form.first_name.errors or user_form.last_name.errors or user_form.email.errors %}
+    currentStep = 1;
+  {% elif user_form.username.errors or user_form.password1.errors or user_form.password2.errors %}
+    currentStep = 2;
+  {% endif %}
+{% elif church_form.errors %}
+  currentStep = 3;
+{% endif %}
+
+function updateIndicators(step) {
+  for (let i = 1; i <= totalSteps; i++) {
+    const c = document.getElementById('circle' + i);
+    const l = document.getElementById('label' + i);
+    c.className = 'step-circle ' + (i < step ? 'done' : i === step ? 'active' : 'idle');
+    l.className = 'text-xs mt-1 font-medium ' + (i <= step ? 'text-blue-600' : 'text-gray-400');
+    if (i < step) c.innerHTML = '<i class="fas fa-check text-xs"></i>';
+    else c.textContent = i;
+  }
+  for (let i = 1; i < totalSteps; i++) {
+    const conn = document.getElementById('conn' + i);
+    if (conn) conn.className = 'step-connector mx-2 ' + (i < step ? 'done' : '');
+  }
+  document.getElementById('progressBar').style.width = (step / totalSteps * 100) + '%';
+}
+
+function goToStep(target) {
+  if (target > currentStep && !validateStep(currentStep)) return;
+  document.getElementById('step' + currentStep).classList.remove('active');
+  document.getElementById('step' + target).classList.add('active');
+  currentStep = target;
+  updateIndicators(currentStep);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function validateStep(step) {
+  const fields = document.querySelectorAll('#step' + step + ' [required]');
+  let ok = true;
+  fields.forEach(f => {
+    if (!f.value.trim()) {
+      f.classList.add('error');
+      f.addEventListener('input', () => f.classList.remove('error'), { once: true });
+      ok = false;
+    }
+  });
+  if (!ok) { const first = document.querySelector('#step' + step + ' .error'); if (first) first.focus(); return false; }
+  if (step === 2) {
+    const pw = document.getElementById('{{ user_form.password1.id_for_label }}').value;
+    const pc = document.getElementById('{{ user_form.password2.id_for_label }}').value;
+    if (pw !== pc) {
+      document.getElementById('{{ user_form.password2.id_for_label }}').classList.add('error');
+      document.getElementById('pwMatchMsg').classList.remove('hidden');
+      document.getElementById('pwOkMsg').classList.add('hidden');
+      return false;
+    }
+  }
+  return true;
+}
+
+// Init to correct step on page load (after server error)
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('registerForm');
-    const submitButton = document.getElementById('registerButton');
-    const buttonText = document.getElementById('buttonText');
-    const loadingText = document.getElementById('loadingText');
-    
-    form.addEventListener('submit', function() {
-        // Disable the submit button to prevent double submission
-        submitButton.disabled = true;
-        
-        // Hide the normal button text and show loading text
-        buttonText.classList.add('hidden');
-        loadingText.classList.remove('hidden');
-        
-        // Change button appearance
-        submitButton.classList.remove('hover:bg-green-700');
-        submitButton.classList.add('bg-green-400', 'cursor-not-allowed');
-    });
-    
-    // Re-enable button if form validation fails (page doesn't redirect)
-    setTimeout(function() {
-        if (submitButton.disabled) {
-            submitButton.disabled = false;
-            buttonText.classList.remove('hidden');
-            loadingText.classList.add('hidden');
-            submitButton.classList.remove('bg-green-400', 'cursor-not-allowed');
-            submitButton.classList.add('hover:bg-green-700');
-        }
-    }, 5000); // Re-enable after 5 seconds if still on page
+  for (let i = 1; i <= totalSteps; i++) document.getElementById('step' + i).classList.remove('active');
+  document.getElementById('step' + currentStep).classList.add('active');
+  updateIndicators(currentStep);
 });
 
-// Add subtle animations to form sections
-document.addEventListener('DOMContentLoaded', function() {
-    const formSections = document.querySelectorAll('.bg-gradient-to-br');
-    
-    formSections.forEach((section, index) => {
-        section.style.opacity = '0';
-        section.style.transform = 'translateY(20px)';
-        section.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
-        
-        setTimeout(() => {
-            section.style.opacity = '1';
-            section.style.transform = 'translateY(0)';
-        }, index * 150);
-    });
-    
-    // Add hover effects to input fields
-    const inputs = document.querySelectorAll('input, textarea');
-    inputs.forEach(input => {
-        input.addEventListener('focus', function() {
-            this.parentElement.style.transform = 'scale(1.02)';
-            this.parentElement.style.transition = 'transform 0.2s ease-out';
-        });
-        
-        input.addEventListener('blur', function() {
-            this.parentElement.style.transform = 'scale(1)';
-        });
-    });
+// Password strength
+document.getElementById('{{ user_form.password1.id_for_label }}').addEventListener('input', function () {
+  const v = this.value;
+  let score = 0;
+  if (v.length >= 8) score++;
+  if (/[A-Z]/.test(v)) score++;
+  if (/[0-9]/.test(v)) score++;
+  if (/[^A-Za-z0-9]/.test(v)) score++;
+  const colors = ['', '#ef4444', '#f97316', '#eab308', '#22c55e'];
+  const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+  for (let i = 1; i <= 4; i++) document.getElementById('sb' + i).style.background = i <= score ? colors[score] : '#e5e7eb';
+  document.getElementById('strengthLabel').textContent = v ? (labels[score] || 'Very weak') : 'Enter a password';
+  document.getElementById('strengthLabel').style.color = colors[score] || '#9ca3af';
+});
+
+// Password confirm
+document.getElementById('{{ user_form.password2.id_for_label }}').addEventListener('input', function () {
+  const match = this.value === document.getElementById('{{ user_form.password1.id_for_label }}').value;
+  document.getElementById('pwMatchMsg').classList.toggle('hidden', match);
+  document.getElementById('pwOkMsg').classList.toggle('hidden', !match);
+  this.classList.toggle('error', !match && this.value.length > 0);
+  this.classList.toggle('ok', match && this.value.length > 0);
+});
+
+function togglePass(inputId, iconId) {
+  const inp = document.getElementById(inputId);
+  const ico = document.getElementById(iconId);
+  if (inp.type === 'password') { inp.type = 'text'; ico.classList.replace('fa-eye', 'fa-eye-slash'); }
+  else { inp.type = 'password'; ico.classList.replace('fa-eye-slash', 'fa-eye'); }
+}
+
+// Logo drag & drop
+const dropzone = document.getElementById('logoDropzone');
+const preview  = document.getElementById('logoPreview');
+const placeholder = document.getElementById('logoPlaceholder');
+
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault(); dropzone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) applyLogoFile(file);
+});
+
+function handleLogoChange(input) { if (input.files && input.files[0]) applyLogoFile(input.files[0]); }
+
+function applyLogoFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    preview.src = e.target.result; preview.style.display = 'block'; placeholder.style.display = 'none';
+    document.getElementById('logoFileName').textContent = file.name;
+    const dt = new DataTransfer(); dt.items.add(file);
+    document.getElementById('church_logo').files = dt.files;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Submit loading state
+document.getElementById('registerForm').addEventListener('submit', function () {
+  const btn = document.getElementById('submitButton');
+  document.getElementById('buttonText').classList.add('hidden');
+  document.getElementById('loadingText').classList.remove('hidden');
+  btn.disabled = true;
+  setTimeout(() => {
+    btn.disabled = false;
+    document.getElementById('buttonText').classList.remove('hidden');
+    document.getElementById('loadingText').classList.add('hidden');
+  }, 8000);
 });
 </script>
-
-<style>
-/* Additional custom styles for enhanced form experience */
-.form-field-group {
-    transform: translateY(0);
-    transition: all 0.3s ease;
-}
-
-.form-field-group:hover {
-    transform: translateY(-1px);
-}
-
-/* Custom focus ring for better accessibility */
-.form-input:focus {
-    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
-}
-
-/* Smooth transitions for all interactive elements */
-* {
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Loading state styles */
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-.loading {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-</style>
-
 {% endblock %}

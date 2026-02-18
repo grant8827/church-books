@@ -292,6 +292,10 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# Media files (user uploads, e.g. church logos)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
