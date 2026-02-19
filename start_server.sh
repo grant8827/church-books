@@ -31,6 +31,9 @@ python manage.py migrate --noinput || {
     echo "Migration failed, but continuing..."
 }
 
+# Ensure the local media directory exists (used when USE_S3 is not set / Railway Volume)
+mkdir -p /app/media/church_logos
+
 echo "Collecting static files..."
 python manage.py collectstatic --noinput --clear || {
     echo "Static file collection failed, but continuing..."

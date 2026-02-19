@@ -269,8 +269,7 @@ def registration_form_view(request):
                 # Save logo if uploaded
                 church_logo = request.FILES.get('church_logo')
                 if church_logo:
-                    church.logo = church_logo
-                    church.save()
+                    church.save_logo(church_logo)
                 
                 print(f"DEBUG: Church created successfully with ID: {church.id}, approved: {church.is_approved}")
                 
@@ -514,8 +513,7 @@ def create_paypal_subscription(request):
             # Save logo if uploaded
             church_logo = request.FILES.get('church_logo')
             if church_logo:
-                church.logo = church_logo
-                church.save()
+                church.save_logo(church_logo)
             
             print(f"DEBUG: Church created successfully with ID: {church.id}")
             

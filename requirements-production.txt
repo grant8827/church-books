@@ -29,6 +29,10 @@ paypalrestsdk==1.13.3
 # Image handling (for church logo uploads)
 Pillow==10.4.0
 
+# Cloud storage for media files (logos) - persists across Railway deploys
+django-storages[s3]==1.14.2
+boto3==1.34.69
+
 # PDF generation (optional - install separately if needed)
 # reportlab==4.2.2
 # xhtml2pdf==0.2.16

@@ -64,3 +64,11 @@ class ChurchAdmin(admin.ModelAdmin):
         updated = queryset.update(is_approved=False, subscription_status='suspended')
         self.message_user(request, f"{updated} church(es) suspended.")
     suspend_churches.short_description = "Suspend selected churches"
+
+    def save_model(self, request, obj, form, change):
+        """When a new logo is uploaded via admin, also store it as base64 for print reports."""
+        logo_file = request.FILES.get('logo')
+        if logo_file:
+            obj.save_logo(logo_file)
+        else:
+            super().save_model(request, obj, form, change)

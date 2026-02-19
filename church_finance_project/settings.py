@@ -148,6 +148,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",
+    'storages',        # django-storages: S3/R2 media file backend
     'church_finances',
    
 ]
@@ -293,8 +294,40 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 # Media files (user uploads, e.g. church logos)
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# In production on Railway, media is stored in S3/R2 so it persists across deploys.
+# Set USE_S3=True in Railway env vars along with the AWS_* credentials below.
+USE_S3 = os.getenv('USE_S3', 'False').lower() == 'true'
+
+if USE_S3:
+    # AWS S3 or any S3-compatible store (e.g. Cloudflare R2)
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID', '')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY', '')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME', '')
+    # For Cloudflare R2: https://<account_id>.r2.cloudflarestorage.com
+    # Leave blank for standard AWS S3
+    AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL', '') or None
+    AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
+    # Optional public custom domain (e.g. CDN / R2 public URL)
+    AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN', '')
+    AWS_DEFAULT_ACL = 'public-read'
+    AWS_QUERYSTRING_AUTH = False  # Public URLs without expiry
+    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_LOCATION = 'media'  # Store uploads under a media/ prefix inside the bucket
+
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+    if AWS_S3_CUSTOM_DOMAIN:
+        MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
+    elif AWS_S3_ENDPOINT_URL:
+        MEDIA_URL = f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/media/'
+    else:
+        MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/media/'
+    MEDIA_ROOT = ''
+else:
+    # Local filesystem fallback (development, or Railway Volume if mounted at /app/media)
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
 
 STATICFILES_DIRS = [
     BASE_DIR / 'static',

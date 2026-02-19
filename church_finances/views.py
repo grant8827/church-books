@@ -161,8 +161,7 @@ def register_view(request):
                     # Save logo if uploaded
                     logo_file = request.FILES.get('church_logo')
                     if logo_file:
-                        church.logo = logo_file
-                        church.save()
+                        church.save_logo(logo_file)
                     # Create an active church member for immediate trial access
                     ChurchMember.objects.create(
                         user=user,

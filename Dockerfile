@@ -30,8 +30,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project
 COPY . .
 
-# Make sure the staticfiles directory exists
-RUN mkdir -p /app/staticfiles
+# Make sure required directories exist
+RUN mkdir -p /app/staticfiles /app/media/church_logos
 
 # Collect static files - set environment to force SQLite usage during build
 ENV DJANGO_COLLECTSTATIC_BUILD=1

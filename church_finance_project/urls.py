@@ -49,7 +49,10 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
-# Always serve media files (church logos etc.) regardless of DEBUG mode
-urlpatterns += [
-    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
-]
+# Serve media files (church logos etc.) from local disk when NOT using cloud storage.
+# When USE_S3=True the media URLs point directly to S3/R2, so this is not needed.
+USE_S3 = getattr(settings, 'USE_S3', False)
+if not USE_S3:
+    urlpatterns += [
+        re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    ]

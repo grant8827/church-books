@@ -106,7 +106,13 @@
 <body>
     <div class="container">
         <div class="header">
-            {% if church.logo %}
+            {% if church.logo_base64 %}
+            <div style="margin-bottom: 10px;">
+                {# base64 data is stored in DB — works in production without file storage #}
+                <img src="{{ church.logo_base64 }}" alt="{{ church.name }} Logo"
+                     style="max-height: 90px; max-width: 250px; object-fit: contain;">
+            </div>
+            {% elif church.logo %}
             <div style="margin-bottom: 10px;">
                 <img src="{{ church.logo.url }}" alt="{{ church.name }} Logo"
                      style="max-height: 90px; max-width: 250px; object-fit: contain;">

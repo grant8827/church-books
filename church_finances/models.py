@@ -1,3 +1,4 @@
+import base64
 from django.db import models
 from django.contrib.auth.models import User, AbstractUser
 from django.conf import settings
@@ -19,6 +20,7 @@ class Church(models.Model):
     
     name = models.CharField(max_length=200)
     logo = models.ImageField(upload_to='church_logos/', blank=True, null=True, help_text='Upload your church logo (PNG or JPG recommended)')
+    logo_base64 = models.TextField(blank=True, null=True, help_text='Base64-encoded logo for print reports (stored in DB, survives server restarts)')
     address = models.TextField()
     phone = models.CharField(max_length=20)
     email = models.EmailField()
@@ -112,6 +114,20 @@ class Church(models.Model):
         # If not in trial, check payment status
         return self.is_payment_verified and self.subscription_status == 'active'
     
+    def save_logo(self, logo_file):
+        """Save a logo file to both the ImageField and as base64 in the database.
+        The base64 copy is used on print reports and survives server restarts."""
+        self.logo = logo_file
+        try:
+            logo_file.seek(0)
+            file_bytes = logo_file.read()
+            content_type = getattr(logo_file, 'content_type', 'image/png') or 'image/png'
+            b64 = base64.b64encode(file_bytes).decode('utf-8')
+            self.logo_base64 = f'data:{content_type};base64,{b64}'
+        except Exception:
+            pass  # Don't fail the upload if base64 encoding fails
+        self.save()
+
     def save(self, *args, **kwargs):
         """Override save to set trial_end_date automatically"""
         # Set trial_end_date if not set and we have a trial_start_date
