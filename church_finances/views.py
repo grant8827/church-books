@@ -67,24 +67,14 @@ def pricing_view(request):
 
 def choose_plan_view(request):
     """
-    Display the Choose Your Plan page and handle plan selection
+    Display the single plan with free-trial info.
+    No payment required — clicking "Start Free Trial" routes to register.
     """
     if request.method == 'POST':
-        # Handle plan selection form submission
-        plan = request.POST.get('plan')
-        church_name = request.POST.get('church_name')
-        contact_name = request.POST.get('contact_name')
-        contact_email = request.POST.get('contact_email')
-        
-        # Store the selected plan in session
-        request.session['selected_package'] = plan
-        request.session['church_name'] = church_name
-        request.session['contact_name'] = contact_name
-        request.session['contact_email'] = contact_email
-        
-        success(request, f"Thank you for choosing the {plan.title()} plan! Please complete your registration.")
+        # There is only one plan — always 'standard'
+        request.session['selected_package'] = 'standard'
         return redirect('register')
-    
+
     return render(request, 'choose_plan.html')
 
 def is_superadmin(user):
@@ -237,14 +227,13 @@ def approve_church(request, church_id):
 
     church.is_approved = True
     church.subscription_status = 'active'
+    # End any trial period since they are now fully subscribed
+    church.is_trial_active = False
     if not church.subscription_start_date:
         church.subscription_start_date = timezone.now()
     if not church.subscription_end_date:
         church.subscription_end_date = timezone.now() + timezone.timedelta(days=365)
     church.save()
-
-    from .models import ChurchMember
-    church_members = ChurchMember.objects.filter(church=church)
 
     activated_users = []
     for member in church_members:
@@ -299,9 +288,10 @@ def verify_offline_payment(request, church_id):
     church.offline_notes = notes
     church.offline_verified_by = request.user
     church.offline_verified_at = timezone.now()
-    # Approve and activate subscription
+    # Approve and activate subscription, end trial
     church.is_approved = True
     church.subscription_status = 'active'
+    church.is_trial_active = False
     if not church.subscription_start_date:
         church.subscription_start_date = timezone.now()
     if not church.subscription_end_date:
@@ -371,10 +361,9 @@ def user_login_view(request):
                 # Check trial status and redirect to payment if expired
                 if not member.church.can_access_dashboard:
                     if member.church.is_trial_expired:
-                        warning(request, f"Your 30-day free trial has expired. Please complete payment to continue using Church Books.")
-                        # Temporarily log in user to access subscription page
+                        # Log the user in so the payment page can access their church info
                         login(request, user)
-                        return redirect("subscription")
+                        return redirect("trial_expired_payment")
                     else:
                         error(request, "Your church account does not have access. Please contact an administrator.")
                         return render(request, "church_finances/login.html", {"form": form})
@@ -1236,6 +1225,55 @@ def pending_approval_view(request):
     """
     Display the pending approval page
     """
+    return render(request, "church_finances/pending_approval.html")
+
+
+@login_required
+def trial_expired_payment_view(request):
+    """
+    Shown when a user's 30-day trial has expired.
+    They can pay with Stripe (credit card) or submit an offline payment request.
+    Admin can also activate them from the admin panel.
+    """
+    try:
+        member = ChurchMember.objects.get(user=request.user)
+        church = member.church
+    except ChurchMember.DoesNotExist:
+        return redirect('dashboard')
+
+    # If their subscription is already active (e.g. admin approved), send to dashboard
+    if church.subscription_status == 'active' and church.is_approved:
+        return redirect('dashboard')
+
+    context = {
+        'church': church,
+        'stripe_publishable_key': getattr(settings, 'STRIPE_PUBLISHABLE_KEY', ''),
+    }
+    return render(request, "church_finances/trial_expired_payment.html", context)
+
+
+@login_required
+@require_POST
+def trial_expired_offline_request(request):
+    """
+    Handle offline payment request from the trial-expired page.
+    Sets payment_method='offline' and marks the church as pending admin approval.
+    """
+    try:
+        member = ChurchMember.objects.get(user=request.user)
+        church = member.church
+    except ChurchMember.DoesNotExist:
+        return redirect('dashboard')
+
+    offline_notes = request.POST.get('offline_notes', '').strip()
+    church.payment_method = 'offline'
+    church.subscription_status = 'pending'
+    church.is_approved = False  # Needs admin to approve after payment confirmation
+    if offline_notes:
+        church.offline_notes = offline_notes
+    church.save()
+
+    success(request, "Your offline payment request has been submitted. An administrator will activate your account once payment is confirmed.")
     return render(request, "church_finances/pending_approval.html")
 
 @login_required

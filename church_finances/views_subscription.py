@@ -975,18 +975,36 @@ def stripe_success(request):
 def stripe_cancel(request):
     """
     Stripe redirects here when the user cancels the checkout.
-    Cleans up the pending church and user records.
+    If it was a new registration (inactive user), clean up the pending records.
+    If it was an existing trial-expired user, just send them back to the payment page.
     """
-    church_id = request.session.get('church_id')
     user_id   = request.session.get('pending_user_id')
+    church_id = request.session.get('church_id')
 
-    if church_id:
-        Church.objects.filter(id=church_id, subscription_status='pending').delete()
-    if user_id:
-        User.objects.filter(id=user_id, is_active=False).delete()
+    # Only delete if this was a brand-new (inactive) pending registration
+    if user_id and church_id:
+        try:
+            pending_user = User.objects.get(id=user_id, is_active=False)
+            Church.objects.filter(id=church_id, subscription_status='pending').delete()
+            pending_user.delete()
+        except User.DoesNotExist:
+            pass  # Active user — don't delete
 
     for key in ['selected_package', 'package_price', 'pending_user_id', 'church_id', 'payment_method']:
         request.session.pop(key, None)
+
+    # If user is logged in and their trial is expired, send back to payment page
+    if request.user.is_authenticated:
+        try:
+            member = ChurchMember.objects.get(user=request.user)
+            if member.church.is_trial_expired and member.church.subscription_status != 'active':
+                messages.info(request, "Payment was cancelled. You can try again below.")
+                return redirect('trial_expired_payment')
+        except ChurchMember.DoesNotExist:
+            pass
+
+    messages.info(request, "Payment was cancelled. You can try again when you're ready.")
+    return redirect('subscription')
 
     messages.warning(request, "Payment cancelled. You can try again anytime.")
     return redirect('subscription')

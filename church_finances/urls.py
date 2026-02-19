@@ -19,6 +19,9 @@ urlpatterns = [
     path('subscription/register/', views_subscription.registration_form_view, name='registration_form'),
     path('pending-approval/', views.pending_approval_view, name='pending_approval'),
     path('account-status/', views.account_status_view, name='account_status'),
+    # Trial expired — payment page
+    path('trial-expired/', views.trial_expired_payment_view, name='trial_expired_payment'),
+    path('trial-expired/offline/', views.trial_expired_offline_request, name='trial_expired_offline_request'),
     
     # PayPal URLs (kept for backward compatibility with existing subscribers)
     path('paypal/subscription/', views_subscription.create_paypal_subscription, name='paypal_subscription_form'),
