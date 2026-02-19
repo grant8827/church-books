@@ -38,6 +38,7 @@ class Church(models.Model):
     trial_expired_notified = models.BooleanField(default=False, help_text="Whether user has been notified about trial expiration")
     # Payment / billing metadata
     PAYMENT_METHODS = (
+        ('stripe', 'Stripe'),
         ('paypal', 'PayPal'),
         ('offline', 'Offline'),
         ('bank_transfer', 'Bank Transfer'),

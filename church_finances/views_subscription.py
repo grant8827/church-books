@@ -13,8 +13,10 @@ from django.contrib.auth import login
 from django.db import transaction
 from datetime import timedelta
 import json
+import stripe as stripe_lib
 from .models import Church, PayPalSubscription, ChurchMember
 from .paypal_service import PayPalService
+from .stripe_service import create_checkout_session, retrieve_checkout_session, construct_webhook_event
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.utils import timezone
@@ -95,12 +97,12 @@ def payment_selection_view(request):
     if request.method == "POST":
         payment_method = request.POST.get('payment_method', '')
         
-        if payment_method in ['paypal', 'offline', 'bank_transfer']:
+        if payment_method in ['stripe', 'offline', 'bank_transfer']:
             # Store payment method in session
             request.session['payment_method'] = payment_method
             
-            # For PayPal payment - redirect directly to PayPal since users get free trial automatically
-            if payment_method == 'paypal':
+            # For Stripe payment - redirect to registration (which will then redirect to Stripe Checkout)
+            if payment_method == 'stripe':
                 request.session['selected_package'] = 'standard'
                 request.session['package_price'] = '120'
                 
@@ -108,17 +110,17 @@ def payment_selection_view(request):
                 if request.user.is_authenticated:
                     try:
                         church_member = ChurchMember.objects.get(user=request.user)
-                        # User already has account and church - go directly to PayPal
-                        messages.success(request, "Proceeding to PayPal payment.")
-                        return redirect('paypal_payment_direct')
+                        # User already has account and church - go directly to Stripe
+                        messages.success(request, "Proceeding to Stripe payment.")
+                        return redirect('stripe_payment_direct')
                     except ChurchMember.DoesNotExist:
-                        # User logged in but no church - go to PayPal direct (will handle registration there)
-                        messages.success(request, "Proceeding to PayPal payment.")
-                        return redirect('paypal_payment_direct')
+                        # User logged in but no church - go to registration first
+                        messages.success(request, "Please complete your registration to proceed with payment.")
+                        return redirect('registration_form')
                 else:
-                    # User not logged in - go to PayPal direct (will handle login/registration there)
-                    messages.success(request, "Please login or register to proceed with PayPal payment.")
-                    return redirect('paypal_payment_direct')
+                    # User not logged in - go to registration
+                    messages.success(request, "Please register to proceed with Stripe payment.")
+                    return redirect('registration_form')
             else:
                 # Offline / Bank Transfer payment - requires registration and approval process
                 if request.user.is_authenticated:
@@ -224,8 +226,7 @@ def registration_form_view(request):
             
             # Get selected package from session
             selected_package = request.session.get('selected_package')
-            plan_id = request.session.get('paypal_plan_id')
-            
+
             if not selected_package:
                 messages.error(request, "Please select a subscription package first.")
                 return redirect('subscription')
@@ -234,13 +235,12 @@ def registration_form_view(request):
             
             # Use database transaction to ensure data consistency
             with transaction.atomic():
-                # Determine if user should be active based on payment method
-                # PayPal users: immediately active (will complete payment process separately)
-                # Offline users: active but church needs approval for full access
-                is_user_active = True  # Users can login immediately after registration
-                is_church_approved = True if payment_method == 'paypal' else False
-                church_status = 'active' if payment_method == 'paypal' else 'pending'
-                is_member_active = True  # Members are active, but church approval controls access
+                # Stripe: user inactive until payment confirmed
+                # Offline: user active, church pending admin approval
+                is_user_active   = payment_method != 'stripe'
+                is_church_approved = False
+                church_status    = 'pending'
+                is_member_active = payment_method != 'stripe'
                 
                 # Create user account
                 user = User.objects.create_user(
@@ -289,47 +289,36 @@ def registration_form_view(request):
             
             # Handle payment method
             if payment_method == 'offline':
-                # For offline payment, create records and user can login but payment still needed
-                messages.success(request, f"Registration successful! Your user account '{username}' is now active and you can login. Your church account '{church_name}' is pending offline payment confirmation. You will receive an email with payment instructions.")
+                # For offline payment, create records - admin approval needed
+                messages.success(request, f"Registration successful! Your account '{username}' is pending admin approval. You will receive payment instructions once approved.")
                 
-                # Clear session data except user/church IDs (needed for admin approval)
                 request.session.pop('selected_package', None)
                 request.session.pop('package_price', None)
-                request.session.pop('paypal_plan_id', None)
                 request.session.pop('payment_method', None)
                 
-                # Redirect to pending approval page
                 return redirect('pending_approval')
             
-            # Handle PayPal payment
-            elif payment_method == 'paypal':
+            # Handle Stripe payment — redirect to Stripe Checkout
+            elif payment_method == 'stripe':
                 try:
-                    paypal_service = get_paypal_service()
-                    payer_info = {
-                        'first_name': first_name,
-                        'last_name': last_name,
-                        'email': email
-                    }
-                    
-                    # Use simple plan identifiers
-                    plan_identifier = f"church_books_{selected_package}_plan"
-                    
-                    result = paypal_service.create_subscription(plan_identifier, payer_info, church.id)
-                    
-                    if result['success']:
-                        # Store subscription ID for later reference
-                        request.session['pending_subscription_id'] = result['subscription_id']
-                        
-                        # Redirect to PayPal for approval
-                        return redirect(result['approval_url'])
-                    else:
-                        # Clean up if PayPal subscription creation failed
-                        messages.error(request, f"Failed to create subscription: {result['error']}")
-                        return redirect('subscription')
+                    success_url = request.build_absolute_uri('/finances/stripe/success/')
+                    cancel_url  = request.build_absolute_uri('/finances/stripe/cancel/')
+
+                    session = create_checkout_session(
+                        church_id=church.id,
+                        user_id=user.id,
+                        email=email,
+                        church_name=church_name,
+                        success_url=success_url,
+                        cancel_url=cancel_url,
+                    )
+                    return redirect(session.url, permanent=False)
                 except Exception as e:
-                    # If PayPal fails, provide offline option
-                    print(f"PayPal service error: {str(e)}")
-                    messages.warning(request, "PayPal service temporarily unavailable. Please try again later or contact support for offline payment options.")
+                    print(f"Stripe error: {str(e)}")
+                    messages.error(request, f"Could not start Stripe payment: {str(e)}")
+                    # Clean up pending records
+                    church.delete()
+                    user.delete()
                     return redirect('subscription')
                 
         except Exception as e:
@@ -761,3 +750,298 @@ def paypal_webhook(request):
             
     except Exception as e:
         return HttpResponse(f"Error: {str(e)}", status=500)
+
+
+# ---------------------------------------------------------------------------
+# STRIPE VIEWS
+# ---------------------------------------------------------------------------
+
+@login_required
+def stripe_payment_direct(request):
+    """
+    Initiates Stripe Checkout for an existing church account that still needs to pay.
+    """
+    try:
+        church_member = ChurchMember.objects.get(user=request.user)
+        church = church_member.church
+    except ChurchMember.DoesNotExist:
+        messages.info(request, "Please complete your church registration first.")
+        return redirect('register')
+
+    success_url = request.build_absolute_uri('/finances/stripe/success/')
+    cancel_url = request.build_absolute_uri('/finances/stripe/cancel/')
+
+    try:
+        session = create_checkout_session(
+            church_id=church.id,
+            user_id=request.user.id,
+            email=request.user.email,
+            church_name=church.name,
+            success_url=success_url,
+            cancel_url=cancel_url,
+        )
+        return redirect(session.url, permanent=False)
+    except Exception as e:
+        messages.error(request, f"Could not start payment: {str(e)}")
+        return redirect('dashboard')
+
+
+@ensure_csrf_cookie
+def create_stripe_checkout(request):
+    """
+    Processes the registration form and creates a Stripe Checkout Session.
+    The user and church are created as inactive; they are activated in stripe_success.
+    """
+    if request.method != "POST":
+        selected_package = request.session.get('selected_package')
+        if not selected_package:
+            messages.error(request, "Please select a subscription package first.")
+            return redirect('subscription')
+        return render(request, 'church_finances/stripe_checkout_form.html', {
+            'selected_package': selected_package,
+            'package_price': request.session.get('package_price', '120'),
+        })
+
+    try:
+        payment_method = request.POST.get('payment_method', 'stripe')
+        first_name    = request.POST.get('first_name', '')
+        last_name     = request.POST.get('last_name', '')
+        email         = request.POST.get('email', '')
+        phone_number  = request.POST.get('phone_number', '')
+        role          = request.POST.get('role', '')
+        username      = request.POST.get('username', '')
+        password      = request.POST.get('password', '')
+        password_confirm = request.POST.get('password_confirm', '')
+        church_name   = request.POST.get('church_name', '')
+        church_address = request.POST.get('church_address', '')
+        church_phone  = request.POST.get('church_phone', '')
+        church_email  = request.POST.get('church_email', '')
+        church_website = request.POST.get('church_website', '')
+
+        # -- Validation --
+        if not all([username, password, email, first_name, last_name, role, church_name, church_address]):
+            messages.error(request, "All required fields must be filled out.")
+            return redirect('paypal_subscription_form')
+
+        valid_roles = ['admin', 'pastor', 'bishop', 'assistant_pastor', 'treasurer', 'deacon']
+        if role not in valid_roles:
+            messages.error(request, "Please select a valid role.")
+            return redirect('paypal_subscription_form')
+
+        if password != password_confirm:
+            messages.error(request, "Passwords do not match.")
+            return redirect('paypal_subscription_form')
+
+        if User.objects.filter(username=username).exists():
+            messages.error(request, "Username already exists. Please choose a different username.")
+            return redirect('paypal_subscription_form')
+
+        if User.objects.filter(email=email).exists():
+            messages.error(request, "An account with this email already exists.")
+            return redirect('paypal_subscription_form')
+
+        selected_package = request.session.get('selected_package', 'standard')
+
+        # -- Create user (inactive until payment confirmed) --
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            is_active=False,
+        )
+
+        # -- Create church (not approved until payment confirmed) --
+        church = Church.objects.create(
+            name=church_name,
+            address=church_address,
+            phone=church_phone,
+            email=church_email,
+            website=church_website,
+            subscription_type=selected_package,
+            subscription_status='pending',
+            is_approved=False,
+            payment_method='offline' if payment_method == 'offline' else 'stripe',
+        )
+        church_logo = request.FILES.get('church_logo')
+        if church_logo:
+            church.save_logo(church_logo)
+
+        ChurchMember.objects.create(
+            user=user,
+            church=church,
+            role=role,
+            phone_number=phone_number,
+            is_active=False,
+        )
+
+        request.session['pending_user_id'] = user.id
+        request.session['church_id'] = church.id
+
+        # -- Offline path --
+        if payment_method == 'offline':
+            messages.success(request, f"Registration submitted! Your account '{username}' is pending admin approval.")
+            request.session.pop('selected_package', None)
+            request.session.pop('package_price', None)
+            return redirect('pending_approval')
+
+        # -- Stripe path: create checkout session and redirect --
+        success_url = request.build_absolute_uri('/finances/stripe/success/')
+        cancel_url  = request.build_absolute_uri('/finances/stripe/cancel/')
+
+        session = create_checkout_session(
+            church_id=church.id,
+            user_id=user.id,
+            email=email,
+            church_name=church_name,
+            success_url=success_url,
+            cancel_url=cancel_url,
+        )
+        return redirect(session.url, permanent=False)
+
+    except Exception as e:
+        print(f"create_stripe_checkout error: {e}")
+        messages.error(request, f"An error occurred: {str(e)}")
+        return redirect('subscription')
+
+
+def stripe_success(request):
+    """
+    Stripe redirects here after successful payment.
+    Verifies the session and activates the church account.
+    """
+    session_id = request.GET.get('session_id')
+    if not session_id:
+        messages.error(request, "Invalid payment response.")
+        return redirect('subscription')
+
+    try:
+        session = retrieve_checkout_session(session_id)
+
+        if session.payment_status not in ('paid', 'no_payment_required') and session.status != 'complete':
+            messages.error(request, "Payment not completed. Please try again.")
+            return redirect('subscription')
+
+        church_id = session.metadata.get('church_id')
+        user_id   = session.metadata.get('user_id')
+
+        if not church_id or not user_id:
+            messages.error(request, "Could not find account details. Please contact support.")
+            return redirect('subscription')
+
+        church = Church.objects.get(id=church_id)
+        user   = User.objects.get(id=user_id)
+
+        # Activate church
+        church.is_approved = True
+        church.subscription_status = 'active'
+        church.payment_method = 'stripe'
+        church.subscription_start_date = timezone.now()
+        church.subscription_end_date = timezone.now() + timedelta(days=365)
+        church.is_trial_active = False
+        church.save()
+
+        # Activate user and church member
+        user.is_active = True
+        user.save()
+
+        church_member = ChurchMember.objects.filter(user=user, church=church).first()
+        if church_member:
+            church_member.is_active = True
+            church_member.save()
+
+        # Log the user in
+        login(request, user)
+
+        # Clear session
+        for key in ['selected_package', 'package_price', 'pending_user_id', 'church_id', 'payment_method']:
+            request.session.pop(key, None)
+
+        messages.success(request, f"Payment successful! Welcome {user.first_name}! Your Church Books account is now active.")
+        return redirect('dashboard')
+
+    except Church.DoesNotExist:
+        messages.error(request, "Church account not found. Please contact support.")
+        return redirect('subscription')
+    except User.DoesNotExist:
+        messages.error(request, "User account not found. Please contact support.")
+        return redirect('subscription')
+    except Exception as e:
+        messages.error(request, f"An error occurred verifying your payment: {str(e)}")
+        return redirect('subscription')
+
+
+def stripe_cancel(request):
+    """
+    Stripe redirects here when the user cancels the checkout.
+    Cleans up the pending church and user records.
+    """
+    church_id = request.session.get('church_id')
+    user_id   = request.session.get('pending_user_id')
+
+    if church_id:
+        Church.objects.filter(id=church_id, subscription_status='pending').delete()
+    if user_id:
+        User.objects.filter(id=user_id, is_active=False).delete()
+
+    for key in ['selected_package', 'package_price', 'pending_user_id', 'church_id', 'payment_method']:
+        request.session.pop(key, None)
+
+    messages.warning(request, "Payment cancelled. You can try again anytime.")
+    return redirect('subscription')
+
+
+@require_http_methods(["POST"])
+def stripe_webhook(request):
+    """
+    Handles Stripe webhook events for reliable payment confirmation.
+    Set the webhook URL in the Stripe dashboard to:
+    https://churchbooksmanagement.com/finances/stripe/webhook/
+    """
+    payload    = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', '')
+
+    try:
+        event = construct_webhook_event(payload, sig_header)
+    except stripe_lib.error.SignatureVerificationError:
+        return HttpResponse("Invalid signature", status=400)
+    except Exception as e:
+        return HttpResponse(f"Webhook error: {str(e)}", status=400)
+
+    # Handle subscription activated
+    if event['type'] in ('checkout.session.completed', 'invoice.payment_succeeded'):
+        obj = event['data']['object']
+        metadata = obj.get('metadata', {})
+        church_id = metadata.get('church_id')
+        user_id   = metadata.get('user_id')
+
+        if church_id:
+            try:
+                church = Church.objects.get(id=church_id)
+                if church.subscription_status != 'active':
+                    church.is_approved = True
+                    church.subscription_status = 'active'
+                    church.payment_method = 'stripe'
+                    church.subscription_start_date = timezone.now()
+                    church.subscription_end_date   = timezone.now() + timedelta(days=365)
+                    church.is_trial_active = False
+                    church.save()
+                if user_id:
+                    user = User.objects.filter(id=user_id).first()
+                    if user and not user.is_active:
+                        user.is_active = True
+                        user.save()
+                        ChurchMember.objects.filter(user=user, church=church).update(is_active=True)
+            except Church.DoesNotExist:
+                pass
+
+    # Handle subscription cancelled
+    elif event['type'] == 'customer.subscription.deleted':
+        subscription = event['data']['object']
+        metadata = subscription.get('metadata', {})
+        church_id = metadata.get('church_id')
+        if church_id:
+            Church.objects.filter(id=church_id).update(subscription_status='cancelled')
+
+    return HttpResponse("OK", status=200)

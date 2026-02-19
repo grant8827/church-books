@@ -26,5 +26,5 @@ Pillow==10.4.0
 django-storages[s3]==1.14.2
 boto3==1.34.69
 
-# PayPal payments (optional)
-paypalrestsdk==1.13.1
+# Stripe payments
+stripe==10.4.0

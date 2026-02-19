@@ -20,13 +20,20 @@ urlpatterns = [
     path('pending-approval/', views.pending_approval_view, name='pending_approval'),
     path('account-status/', views.account_status_view, name='account_status'),
     
-    # PayPal URLs
+    # PayPal URLs (kept for backward compatibility with existing subscribers)
     path('paypal/subscription/', views_subscription.create_paypal_subscription, name='paypal_subscription_form'),
     path('paypal/pay/', views_subscription.paypal_payment_direct, name='paypal_payment_direct'),
     path('paypal/create-subscription/', views_subscription.create_paypal_subscription, name='paypal_create_subscription'),
     path('subscription/success/', views_subscription.paypal_success, name='paypal_success'),
     path('subscription/cancel/', views_subscription.paypal_cancel, name='paypal_cancel'),
     path('paypal/webhook/', views_subscription.paypal_webhook, name='paypal_webhook'),
+
+    # Stripe URLs
+    path('stripe/pay/', views_subscription.stripe_payment_direct, name='stripe_payment_direct'),
+    path('stripe/create-checkout/', views_subscription.create_stripe_checkout, name='stripe_create_checkout'),
+    path('stripe/success/', views_subscription.stripe_success, name='stripe_success'),
+    path('stripe/cancel/', views_subscription.stripe_cancel, name='stripe_cancel'),
+    path('stripe/webhook/', views_subscription.stripe_webhook, name='stripe_webhook'),
     # Password Reset URLs
     path('password_reset/', auth_views.PasswordResetView.as_view(
         template_name='church_finances/password_reset/password_reset_form.html',

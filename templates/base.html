@@ -104,8 +104,14 @@
         <div class="container mx-auto">
             <div class="flex justify-around items-center">
                 <a href="{% url 'home' %}" class="flex items-center text-white rounded-md bg-white px-3 py-1 hover:bg-gray-200 transition-colors h-[100px]">
-                    {% if user.is_authenticated and user.churchmember_set.first.church.logo %}
+                    {% if user.is_authenticated and user.churchmember_set.first.church.logo_base64 %}
+                        <img src="{{ user.churchmember_set.first.church.logo_base64 }}" class="h-[100px] w-auto rounded" alt="{{ user.churchmember_set.first.church.name }} Logo">
+                    {% elif user.is_authenticated and user.churchmember_set.first.church.logo %}
                         <img src="{{ user.churchmember_set.first.church.logo.url }}" class="h-[100px] w-auto rounded" alt="{{ user.churchmember_set.first.church.name }} Logo">
+                    {% elif user.is_authenticated and user.churchmember_set.first.church %}
+                        <span class="text-blue-900 font-bold text-center leading-tight px-2" style="font-size: clamp(0.75rem, 2vw, 1.1rem); max-width: 200px; word-break: break-word;">
+                            {{ user.churchmember_set.first.church.name }}
+                        </span>
                     {% else %}
                         <img src="{% static 'images/logo.png' %}" class="h-[100px] w-auto rounded" alt="Church Books Logo">
                     {% endif %}
