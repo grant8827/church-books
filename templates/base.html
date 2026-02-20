@@ -207,6 +207,7 @@
     </nav>
 
     <main class="flex-grow container mx-auto px-4 sm:px-6 py-6">
+        {% block messages %}
         {% if messages %}
             <ul class="messages mx-2">
                 {% for message in messages %}
@@ -214,6 +215,7 @@
                 {% endfor %}
             </ul>
         {% endif %}
+        {% endblock %}
         <div class="max-w-7xl mx-auto">
             {% block content %}
             {% endblock %}
