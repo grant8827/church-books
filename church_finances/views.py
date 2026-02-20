@@ -375,7 +375,6 @@ def user_login_view(request):
                     return render(request, "church_finances/login.html", {"form": form})
             
             login(request, user)
-            success(request, f"Welcome back, {user.username}!")
             
             # Check if there's a redirect URL in session (e.g., from PayPal payment)
             next_url = request.session.get('next_url')
@@ -385,8 +384,8 @@ def user_login_view(request):
             
             return redirect("dashboard")
         else:
-            # No error message displayed for security
-            pass
+            # Simple error message for any login failure
+            error(request, "Something went wrong. Please check your credentials and try again.")
     else:
         form = AuthenticationForm()
     
