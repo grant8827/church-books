@@ -591,8 +591,12 @@ def baptism_add_view(request):
         info(request, "Your church account is pending approval.")
         return render(request, "church_finances/pending_approval.html")
 
-    user_member = ChurchMember.objects.get(user=request.user, church=church)
-    if user_member.role not in ['admin', 'pastor', 'bishop', 'assistant_pastor', 'deacon']:
+    # Allow church founder or any recognised staff role to record baptisms
+    ALLOWED_ROLES = ['admin', 'pastor', 'bishop', 'assistant_pastor', 'deacon', 'treasurer']
+    is_founder = (church.registered_by_id == request.user.pk)
+    user_member = ChurchMember.objects.filter(user=request.user, church=church).first()
+    has_role = user_member and user_member.role in ALLOWED_ROLES
+    if not is_founder and not has_role:
         raise PermissionDenied("You don't have permission to record baptisms.")
 
     # Members not yet baptised (for the dropdown)
