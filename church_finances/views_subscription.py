@@ -357,47 +357,81 @@ def registration_form_view(request):
 
 def paypal_payment_direct(request):
     """
-    Direct PayPal payment - handles both existing users and new users
+    Show the PayPal subscription button page for an authenticated user with a pending church.
     """
-    # Set up payment context
-    request.session['selected_package'] = 'standard'
-    request.session['package_price'] = '120'
-    request.session['payment_method'] = 'paypal'
-    
-    # Check if user is authenticated
     if not request.user.is_authenticated:
-        # Store the current path to redirect back after login/registration
-        request.session['next_url'] = request.get_full_path()
-        messages.info(request, "Please login or register to proceed with PayPal payment. New users get a 30-day free trial!")
+        request.session['next_url'] = '/finances/paypal/pay/'
+        messages.info(request, "Please log in to complete your PayPal payment.")
         return redirect('login')
-    
-    try:
-        # Check if user has a church membership
-        church_member = ChurchMember.objects.get(user=request.user)
-        church = church_member.church
-        
-        if request.method == "GET":
-            context = {
-                'selected_package': 'standard',
-                'package_price': 120,
-                'church_name': church.name,
-                'user_email': request.user.email,
-                'user_first_name': request.user.first_name,
-                'user_last_name': request.user.last_name,
-                'is_existing_user': True,
-            }
-            return render(request, 'church_finances/paypal_subscription_form.html', context)
-            
-        elif request.method == "POST":
-            # Handle PayPal payment for existing user
-            return create_paypal_subscription(request)
-            
-    except ChurchMember.DoesNotExist:
-        # User is authenticated but doesn't have a church account yet
-        # Redirect to registration to complete setup, then come back to PayPal
-        request.session['next_url'] = request.get_full_path()
-        messages.info(request, "Please complete your church registration to get your 30-day free trial, then proceed with payment.")
+
+    # Get church even if not yet approved/active
+    church_member = ChurchMember.objects.filter(user=request.user).first()
+    if not church_member:
+        messages.info(request, "Please register your church first.")
         return redirect('register')
+
+    church = church_member.church
+
+    # Already paid and active — send to dashboard
+    if church.subscription_status == 'active' and church.is_approved:
+        return redirect('dashboard')
+
+    paypal_client_id = getattr(settings, 'PAYPAL_CLIENT_ID', '')
+    plan_id = getattr(settings, 'PAYPAL_STANDARD_PLAN_ID', '')
+
+    return render(request, 'church_finances/paypal_checkout.html', {
+        'church': church,
+        'paypal_client_id': paypal_client_id,
+        'plan_id': plan_id,
+        'package_price': 120,
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def paypal_activate_subscription(request):
+    """
+    Called via AJAX from paypal_checkout.html after the PayPal subscription button
+    is approved. Receives the subscriptionID and activates the church account.
+    """
+    try:
+        data = json.loads(request.body)
+        subscription_id = data.get('subscription_id', '').strip()
+    except (json.JSONDecodeError, ValueError):
+        subscription_id = request.POST.get('subscription_id', '').strip()
+
+    if not subscription_id:
+        return JsonResponse({'success': False, 'error': 'No subscription ID provided.'}, status=400)
+
+    church_member = ChurchMember.objects.filter(user=request.user).first()
+    if not church_member:
+        return JsonResponse({'success': False, 'error': 'No church account found.'}, status=400)
+
+    church = church_member.church
+
+    # Activate the church
+    church.paypal_subscription_id = subscription_id
+    church.subscription_status = 'active'
+    church.is_approved = True
+    church.is_trial_active = False
+    church.payment_method = 'paypal'
+    if not church.subscription_start_date:
+        church.subscription_start_date = timezone.now()
+    if not church.subscription_end_date:
+        church.subscription_end_date = timezone.now() + timedelta(days=365)
+    church.save()
+
+    # Activate the member
+    church_member.is_active = True
+    church_member.save()
+
+    # Activate the user account if inactive
+    if not request.user.is_active:
+        request.user.is_active = True
+        request.user.save()
+
+    print(f"PayPal subscription activated: church={church.name}, subscription_id={subscription_id}")
+    return JsonResponse({'success': True, 'redirect': '/finances/dashboard/'})
 
 @ensure_csrf_cookie
 def create_paypal_subscription(request):
