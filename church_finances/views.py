@@ -550,6 +550,84 @@ def member_deactivate_view(request, pk):
     success(request, f"Member {member.user.get_full_name()} has been deactivated.")
     return redirect('member_list')
 
+
+@login_required
+def baptism_list_view(request):
+    """
+    Display all members who have been baptised.
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    baptised = ChurchMember.objects.filter(
+        church=church,
+        baptism_date__isnull=False
+    ).select_related('user').order_by('-baptism_date')
+
+    not_yet_baptised = ChurchMember.objects.filter(
+        church=church,
+        is_active=True,
+        baptism_date__isnull=True
+    ).select_related('user').order_by('user__last_name', 'user__first_name')
+
+    return render(request, "church_finances/baptism_list.html", {
+        "church": church,
+        "baptised": baptised,
+        "not_yet_baptised": not_yet_baptised,
+        "total_baptised": baptised.count(),
+    })
+
+
+@login_required
+def baptism_add_view(request):
+    """
+    Record a baptism for an existing member.
+    Sets the baptism_date on their ChurchMember record.
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    user_member = ChurchMember.objects.get(user=request.user, church=church)
+    if user_member.role not in ['admin', 'pastor', 'bishop', 'assistant_pastor', 'deacon']:
+        raise PermissionDenied("You don't have permission to record baptisms.")
+
+    # Members not yet baptised (for the dropdown)
+    not_yet_baptised = ChurchMember.objects.filter(
+        church=church,
+        baptism_date__isnull=True
+    ).select_related('user').order_by('user__last_name', 'user__first_name')
+
+    if request.method == "POST":
+        member_id      = request.POST.get('member_id', '').strip()
+        baptism_date   = request.POST.get('baptism_date', '').strip()
+        baptism_location = request.POST.get('baptism_location', '').strip()
+        notes          = request.POST.get('notes', '').strip()
+
+        if not member_id or not baptism_date:
+            error(request, "Please select a member and enter the baptism date.")
+        else:
+            member = get_object_or_404(ChurchMember, pk=member_id, church=church)
+            member.baptism_date = baptism_date
+            if notes:
+                member.notes = (member.notes + "\n" + f"Baptism notes: {notes}").strip()
+            member.save()
+            success(request, f"{member.user.get_full_name() or member.user.username} has been recorded as baptised on {baptism_date}.")
+            return redirect('baptism_list')
+
+    from datetime import date as _date
+    preselected_member_id = request.GET.get('member', '')
+
+    return render(request, "church_finances/baptism_add.html", {
+        "church": church,
+        "not_yet_baptised": not_yet_baptised,
+        "today_date": _date.today().isoformat(),
+        "preselected_member_id": preselected_member_id,
+    })
+
 @login_required
 def member_edit_view(request, pk):
     """

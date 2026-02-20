@@ -76,6 +76,9 @@ urlpatterns = [
     path("members/<int:pk>/edit/", views.member_edit_view, name="member_edit"),
     path("members/<int:pk>/activate/", views.member_activate_view, name="member_activate"),
     path("members/<int:pk>/deactivate/", views.member_deactivate_view, name="member_deactivate"),
+    # Baptism URLs
+    path("members/baptisms/", views.baptism_list_view, name="baptism_list"),
+    path("members/baptisms/add/", views.baptism_add_view, name="baptism_add"),
     
     # Contribution management URLs
     path("contributions/", views.contribution_list_view, name="contribution_list"),
