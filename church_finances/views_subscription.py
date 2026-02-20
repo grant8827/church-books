@@ -208,6 +208,48 @@ def registration_form_view(request):
                     'payment_method': payment_method,
                 })
             
+            # Validate password strength
+            import re
+            if len(password) < 8:
+                messages.error(request, "Password must be at least 8 characters long.")
+                return render(request, 'church_finances/registration_form.html', {
+                    'selected_package': request.session.get('selected_package'),
+                    'package_price': request.session.get('package_price'),
+                    'payment_method': payment_method,
+                })
+            
+            if not re.search(r'[A-Z]', password):
+                messages.error(request, "Password must contain at least one uppercase letter.")
+                return render(request, 'church_finances/registration_form.html', {
+                    'selected_package': request.session.get('selected_package'),
+                    'package_price': request.session.get('package_price'),
+                    'payment_method': payment_method,
+                })
+            
+            if not re.search(r'[a-z]', password):
+                messages.error(request, "Password must contain at least one lowercase letter.")
+                return render(request, 'church_finances/registration_form.html', {
+                    'selected_package': request.session.get('selected_package'),
+                    'package_price': request.session.get('package_price'),
+                    'payment_method': payment_method,
+                })
+            
+            if not re.search(r'[0-9]', password):
+                messages.error(request, "Password must contain at least one number.")
+                return render(request, 'church_finances/registration_form.html', {
+                    'selected_package': request.session.get('selected_package'),
+                    'package_price': request.session.get('package_price'),
+                    'payment_method': payment_method,
+                })
+            
+            if not re.search(r'[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\;/]', password):
+                messages.error(request, "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>_-+=[];/\\).")
+                return render(request, 'church_finances/registration_form.html', {
+                    'selected_package': request.session.get('selected_package'),
+                    'package_price': request.session.get('package_price'),
+                    'payment_method': payment_method,
+                })
+            
             # Check if username already exists
             if User.objects.filter(username=username).exists():
                 messages.error(request, "Username already exists. Please choose a different username.")
