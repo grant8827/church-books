@@ -385,8 +385,8 @@ def user_login_view(request):
             
             return redirect("dashboard")
         else:
-            # Simple error message for any login failure
-            error(request, "Something went wrong. Please check your credentials and try again.")
+            # No error message displayed for security
+            pass
     else:
         form = AuthenticationForm()
     
