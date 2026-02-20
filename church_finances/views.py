@@ -385,13 +385,8 @@ def user_login_view(request):
             
             return redirect("dashboard")
         else:
-            # More detailed error handling
-            if form.errors:
-                for field, field_errors in form.errors.items():
-                    for err_msg in field_errors:
-                        error(request, f"{field}: {err_msg}")
-            else:
-                error(request, "Invalid username or password.")
+            # Simple error message for any login failure
+            error(request, "Something went wrong. Please check your credentials and try again.")
     else:
         form = AuthenticationForm()
     
