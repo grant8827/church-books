@@ -162,6 +162,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "church_finances.middleware.TrialExpirationMiddleware",  # Restrict access when trial expires
 ]
 
 ROOT_URLCONF = "church_finance_project.urls"
