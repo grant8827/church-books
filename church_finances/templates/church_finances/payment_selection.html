@@ -21,15 +21,15 @@
             {% endif %}
 
             <div class="space-y-4">
-                <!-- Stripe Online Payment Option -->
+                <!-- PayPal Online Payment Option -->
                 <div class="border-2 border-blue-200 rounded-lg p-6 hover:border-blue-400 transition-colors">
                     <div class="flex items-center mb-4">
                         <svg class="w-8 h-8 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
                         </svg>
-                        <h3 class="text-lg font-semibold text-gray-900">Pay Online with Stripe</h3>
+                        <h3 class="text-lg font-semibold text-gray-900">Pay Online with PayPal</h3>
                     </div>
-                    <p class="text-gray-600 mb-4">Secure payment with Stripe. All major credit &amp; debit cards accepted. Instant account activation.</p>
+                    <p class="text-gray-600 mb-4">Secure payment with PayPal. Pay with your PayPal account or any major credit &amp; debit card. Instant account activation.</p>
                     <div class="flex items-center mb-4">
                         <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -44,13 +44,13 @@
                     </div>
                     <form method="post" action="{% url 'payment_selection' %}">
                         {% csrf_token %}
-                        <button type="submit" name="payment_method" value="stripe"
+                        <button type="submit" name="payment_method" value="paypal"
                                 class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 font-medium">
                             <span class="flex items-center justify-center">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
                                 </svg>
-                                Continue to Stripe Payment
+                                Continue to PayPal Payment
                             </span>
                         </button>
                     </form>

@@ -1329,7 +1329,7 @@ def trial_expired_payment_view(request):
 
     context = {
         'church': church,
-        'stripe_publishable_key': getattr(settings, 'STRIPE_PUBLISHABLE_KEY', ''),
+        'paypal_client_id': getattr(settings, 'PAYPAL_CLIENT_ID', ''),
     }
     return render(request, "church_finances/trial_expired_payment.html", context)
 

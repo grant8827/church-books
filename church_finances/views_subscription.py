@@ -97,29 +97,31 @@ def payment_selection_view(request):
     if request.method == "POST":
         payment_method = request.POST.get('payment_method', '')
         
-        if payment_method in ['stripe', 'offline', 'bank_transfer']:
+        if payment_method in ['paypal', 'stripe', 'offline', 'bank_transfer']:
             # Store payment method in session
             request.session['payment_method'] = payment_method
             
-            # For Stripe payment - redirect to registration (which will then redirect to Stripe Checkout)
-            if payment_method == 'stripe':
+            # For PayPal payment
+            if payment_method in ['paypal', 'stripe']:
                 request.session['selected_package'] = 'standard'
                 request.session['package_price'] = '120'
+                plan_id = getattr(settings, 'PAYPAL_STANDARD_PLAN_ID', '')
+                request.session['paypal_plan_id'] = plan_id
                 
                 # Check if user is logged in and has church account
                 if request.user.is_authenticated:
                     try:
                         church_member = ChurchMember.objects.get(user=request.user)
-                        # User already has account and church - go directly to Stripe
-                        messages.success(request, "Proceeding to Stripe payment.")
-                        return redirect('stripe_payment_direct')
+                        # User already has account and church - go directly to PayPal
+                        messages.success(request, "Proceeding to PayPal payment.")
+                        return redirect('paypal_payment_direct')
                     except ChurchMember.DoesNotExist:
                         # User logged in but no church - go to registration first
                         messages.success(request, "Please complete your registration to proceed with payment.")
                         return redirect('registration_form')
                 else:
                     # User not logged in - go to registration
-                    messages.success(request, "Please register to proceed with Stripe payment.")
+                    messages.success(request, "Please register to proceed with PayPal payment.")
                     return redirect('registration_form')
             else:
                 # Offline / Bank Transfer payment - requires registration and approval process
@@ -297,8 +299,16 @@ def registration_form_view(request):
                 request.session.pop('payment_method', None)
                 
                 return redirect('pending_approval')
+
+            # Handle PayPal payment — log user in and redirect to PayPal form
+            elif payment_method == 'paypal':
+                plan_id = getattr(settings, 'PAYPAL_STANDARD_PLAN_ID', '')
+                request.session['paypal_plan_id'] = plan_id
+                login(request, user)
+                messages.success(request, f"Account created! Please complete your PayPal payment to activate.")
+                return redirect('paypal_payment_direct')
             
-            # Handle Stripe payment — redirect to Stripe Checkout
+            # Handle Stripe payment — redirect to Stripe Checkout (legacy, kept for compatibility)
             elif payment_method == 'stripe':
                 try:
                     success_url = request.build_absolute_uri('/finances/stripe/success/')
