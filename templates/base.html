@@ -12,7 +12,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="icon" href="{% static 'images/churchbooks-bg.png' %}" type="image/png">
     <link rel="shortcut icon" href="{% static 'images/churchbooks-bg.png' %}" type="image/png">
-    <!-- CSRF Debug Info (only in development) -->
     {% if debug %}
     <script>
         console.log('CSRF Token from Meta:', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
@@ -22,93 +21,146 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* Light gray background */
+            background-color: #f3f4f6;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
-        .messages {
-            list-style: none;
-            padding: 0;
-            margin-bottom: 1rem;
-        }
-        .messages li {
-            padding: 0.75rem 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-        }
-        .messages .success {
-            background-color: #d1fae5; /* green-100 */
-            color: #065f46; /* green-800 */
-            border: 1px solid #34d399; /* green-400 */
-        }
-        .messages .error {
-            background-color: #fee2e2; /* red-100 */
-            color: #991b1b; /* red-800 */
-            border: 1px solid #f87171; /* red-400 */
-        }
-        .messages .info {
-            background-color: #e0f2fe; /* blue-100 */
-            color: #1e40af; /* blue-800 */
-            border: 1px solid #60a5fa; /* blue-400 */
-        }
-        
-        /* Responsive table styles */
-        @media (max-width: 1030px) {
-            .responsive-table {
-                display: block;
-                width: 100%;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-            
-            .responsive-table table {
-                width: 100%;
-                min-width: 500px;
-            }
-        }
-
-        /* Card styles for mobile */
-        .card {
-            background: white;
-            border-radius: 0.5rem;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        /* Form responsiveness */
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        
-        .form-control {
-            width: 100%;
-            padding: 0.5rem;
-            border-radius: 0.375rem;
-            border: 1px solid #d1d5db;
-        }
+        .messages { list-style: none; padding: 0; margin-bottom: 1rem; }
+        .messages li { padding: 0.75rem 1rem; border-radius: 0.5rem; margin-bottom: 0.5rem; font-weight: 600; }
+        .messages .success { background-color: #d1fae5; color: #065f46; border: 1px solid #34d399; }
+        .messages .error { background-color: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
+        .messages .info { background-color: #e0f2fe; color: #1e40af; border: 1px solid #60a5fa; }
 
         @media (max-width: 1030px) {
-            .container {
-                padding-left: 1rem;
-                padding-right: 1rem;
+            .responsive-table { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .responsive-table table { width: 100%; min-width: 500px; }
+        }
+        .card { background: white; border-radius: 0.5rem; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1); padding: 1rem; margin-bottom: 1rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-control { width: 100%; padding: 0.5rem; border-radius: 0.375rem; border: 1px solid #d1d5db; }
+        @media (max-width: 1030px) {
+            .container { padding-left: 1rem; padding-right: 1rem; }
+        }
+
+        /* ===== SIDEBAR ===== */
+        #sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 16rem;
+            z-index: 45;
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: width 0.3s ease, transform 0.3s ease;
+            padding-top: 132px; /* matches navbar height */
+        }
+        #sidebar.sidebar-collapsed {
+            width: 4rem;
+        }
+        #sidebar.sidebar-collapsed .sidebar-label,
+        #sidebar.sidebar-collapsed .sidebar-section-title,
+        #sidebar.sidebar-collapsed .sidebar-submenu,
+        #sidebar.sidebar-collapsed .sidebar-chevron {
+            display: none !important;
+        }
+        #sidebar.sidebar-collapsed .sidebar-item-link {
+            justify-content: center;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+        }
+        /* Tooltip on hover when collapsed */
+        #sidebar.sidebar-collapsed .sidebar-item {
+            position: relative;
+        }
+        #sidebar.sidebar-collapsed .sidebar-item:hover .sidebar-tooltip {
+            display: block;
+        }
+        .sidebar-tooltip {
+            display: none;
+            position: absolute;
+            left: calc(100% + 6px);
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #1e3a5f;
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 6px;
+            white-space: nowrap;
+            font-size: 0.78rem;
+            z-index: 200;
+            pointer-events: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        /* Submenu accordion */
+        .sidebar-submenu {
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            max-height: 0;
+        }
+        .sidebar-submenu.open {
+            max-height: 300px;
+        }
+        /* Main content wrapper offset */
+        #main-wrapper {
+            transition: margin-left 0.3s ease;
+        }
+        /* Mobile: sidebar is off-screen and becomes full-height overlay */
+        @media (max-width: 1023px) {
+            #sidebar {
+                transform: translateX(-100%);
+                padding-top: 0;
+                z-index: 55;
+                width: 16rem !important; /* never collapse on mobile */
+            }
+            #sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            #main-wrapper {
+                margin-left: 0 !important;
+            }
+            #sidebar .sidebar-label,
+            #sidebar .sidebar-section-title,
+            #sidebar .sidebar-chevron {
+                display: inline !important;
+            }
+            #sidebar .sidebar-item-link {
+                justify-content: flex-start !important;
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
             }
         }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body class="flex flex-col min-h-screen">
-    <nav class="bg-blue-900 p-4 shadow-md">
-        <div class="container mx-auto">
-            <div class="flex justify-around items-center">
+
+    <!-- ===== NAVBAR ===== -->
+    <nav class="bg-blue-900 p-4 shadow-md relative z-50">
+        {% if user.is_authenticated %}
+        <div class="flex items-center justify-between">
+            <!-- Left: toggle buttons + logo -->
+            <div class="flex items-center gap-3">
+                <!-- Mobile sidebar toggle -->
+                <button id="sidebar-mobile-toggle" class="lg:hidden text-white hover:text-blue-200 p-1 rounded focus:outline-none" aria-label="Open navigation">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+                <!-- Desktop collapse toggle -->
+                <button id="sidebar-desktop-toggle" class="hidden lg:flex items-center justify-center text-white hover:text-blue-200 p-1 rounded focus:outline-none" aria-label="Collapse sidebar">
+                    <svg id="sidebar-toggle-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+                    </svg>
+                </button>
+                <!-- Logo -->
                 <a href="{% url 'home' %}" class="flex items-center text-white rounded-md bg-white px-3 py-1 hover:bg-gray-200 transition-colors h-[100px]">
-                    {% if user.is_authenticated and user.churchmember_set.first.church.logo_base64 %}
+                    {% if user.churchmember_set.first.church.logo_base64 %}
                         <img src="{{ user.churchmember_set.first.church.logo_base64 }}" class="h-[100px] w-auto rounded" alt="{{ user.churchmember_set.first.church.name }} Logo">
-                    {% elif user.is_authenticated and user.churchmember_set.first.church.logo %}
+                    {% elif user.churchmember_set.first.church.logo %}
                         <img src="{{ user.churchmember_set.first.church.logo.url }}" class="h-[100px] w-auto rounded" alt="{{ user.churchmember_set.first.church.name }} Logo">
-                    {% elif user.is_authenticated and user.churchmember_set.first.church %}
+                    {% elif user.churchmember_set.first.church %}
                         <span class="text-blue-900 font-bold text-center leading-tight px-2" style="font-size: clamp(0.75rem, 2vw, 1.1rem); max-width: 200px; word-break: break-word;">
                             {{ user.churchmember_set.first.church.name }}
                         </span>
@@ -116,143 +168,292 @@
                         <img src="{% static 'images/logo.png' %}" class="h-[100px] w-auto rounded" alt="Church Books Logo">
                     {% endif %}
                 </a>
-                <!-- Mobile menu button -->
+            </div>
+            <!-- Right: Hello + Logout -->
+            <div class="flex items-center gap-3">
+                <span class="text-blue-200 text-sm hidden sm:inline">Hello, {{ user.username }}!</span>
+                <a href="{% url 'logout' %}" class="border border-[#6e003d] hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 text-sm whitespace-nowrap">Logout</a>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- Non-authenticated: full nav -->
+        <div class="container mx-auto">
+            <div class="flex justify-around items-center">
+                <a href="{% url 'home' %}" class="flex items-center text-white rounded-md bg-white px-3 py-1 hover:bg-gray-200 transition-colors h-[100px]">
+                    <img src="{% static 'images/logo.png' %}" class="h-[100px] w-auto rounded" alt="Church Books Logo">
+                </a>
                 <button id="mobile-menu-button" class="block lg:hidden text-white hover:text-blue-200">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
-                <!-- Desktop menu -->
                 <div class="hidden lg:flex lg:items-center lg:space-x-4">
-                    {% if user.is_authenticated %}
-                        <a href="{% url 'dashboard' %}" class="text-white hover:text-white rounded-md px-3 py-1 hover:bg-red-600 transition-colors">Dashboard</a>
-                        <a href="{% url 'member_list' %}" class="text-white hover:text-white rounded-md px-3 py-1 hover:bg-red-600 transition-colors">Members</a>
-                        <a href="{% url 'contribution_list' %}" class="text-white hover:text-white rounded-md px-3 py-1 hover:bg-red-600 transition-colors">Contributions</a>
-                        <!-- Tithes & Offerings Dropdown -->
-                        <div class="relative group">
-                            <button class="text-white hover:text-white rounded-md px-3 py-1 hover:bg-red-600 transition-colors flex items-center">
-                                Tithes & Offerings
-                                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </button>
-                            <div class="absolute hidden group-hover:block bg-white text-gray-800 rounded-md shadow-lg mt-1 py-2 w-48 z-50">
-                                <a href="{% url 'tithes_offerings_dashboard' %}" class="block px-4 py-2 hover:bg-gray-100">Dashboard</a>
-                                {% if user.churchmember_set.first and user.churchmember_set.first.role == 'member' %}
-                                    <a href="{% url 'member_contributions' %}" class="block px-4 py-2 hover:bg-gray-100">My Contributions</a>
-                                    <a href="{% url 'quick_tithe_entry' %}" class="block px-4 py-2 hover:bg-gray-100">Quick Entry</a>
-                                {% else %}
-                                    <a href="{% url 'contribution_list' %}" class="block px-4 py-2 hover:bg-gray-100">All Contributions</a>
-                                    <a href="{% url 'contribution_add' %}" class="block px-4 py-2 hover:bg-gray-100">Add Contribution</a>
-                                    <a href="{% url 'bulk_contribution_entry' %}" class="block px-4 py-2 hover:bg-gray-100">Bulk Entry</a>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <a href="{% url 'transaction_list' %}" class="text-white hover:text-white rounded-md px-3 py-1 hover:bg-red-600 transition-colors">Transactions</a>
-                        {% if user.is_superuser %}
-                            <a href="{% url 'church_approval_list' %}" class="text-white hover:text-blue-900 rounded-md px-3 py-1 hover:bg-blue-600 transition-colors">Church Approvals</a>
-                        {% endif %}
-                        <span class="text-blue-200">Hello, {{ user.username }}!</span>
-                        <a href="{% url 'logout' %}" class="border border-[#6e003d] hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">Logout</a>
-                    {% else %}
                     <a href="{% url 'home' %}" class="text-white hover:text-white rounded-md px-3 py-1 hover:bg-red-600 transition-colors">Home</a>
                     <a href="{% url 'about' %}" class="text-white hover:text-white rounded-md px-3 py-1 hover:bg-red-600 transition-colors">About</a>
                     <a href="{% url 'contact' %}" class="text-white hover:text-white rounded-md px-3 py-1 hover:bg-red-600 transition-colors">Contact</a>
                     <a href="{% url 'choose_plan' %}" class="text-white hover:text-white rounded-md px-3 py-1 hover:bg-red-600 transition-colors">Pricing</a>
                     <a href="{% url 'login' %}" class="hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 border border-[#6e003d]">Login</a>
                     <a href="{% url 'choose_plan' %}" class="bg-[#6e003d] hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">Get Started</a>
-                        <!--<a href="{% url 'register' %}" class="bg-[#6e003d] hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">Register</a>-->
-                    {% endif %}
                 </div>
             </div>
-            
-            <!-- Mobile menu -->
+            <!-- Non-auth mobile menu -->
             <div id="mobile-menu" class="hidden lg:hidden mt-4 pb-2">
                 <div class="flex flex-col space-y-3">
-                    {% if user.is_authenticated %}
-                        <a href="{% url 'dashboard' %}" class="text-white hover:text-blue-200 rounded-md px-3 py-2 hover:bg-blue-600 transition-colors">Dashboard</a>
-                        <a href="{% url 'member_list' %}" class="text-white hover:text-blue-200 rounded-md px-3 py-2 hover:bg-blue-600 transition-colors">Members</a>
-                        
-                        <!-- Tithes & Offerings Mobile -->
-                        <div class="border-t border-blue-700 pt-2 flex flex-col gap-6">
-                            <div class="text-blue-200 px-3 py-1 text-sm font-semibold">Tithes & Offerings</div>
-                            <a href="{% url 'tithes_offerings_dashboard' %}" class="text-white hover:text-blue-200 rounded-md px-6 py-2 hover:bg-blue-600 transition-colors text-sm">Dashboard</a>
-                            {% if user.churchmember_set.first and user.churchmember_set.first.role == 'member' %}
-                                <a href="{% url 'member_contributions' %}" class="text-white hover:text-blue-200 rounded-md px-6 py-2 hover:bg-blue-600 transition-colors text-sm">My Contributions</a>
-                                <a href="{% url 'quick_tithe_entry' %}" class="text-white hover:text-blue-200 rounded-md px-6 py-2 hover:bg-blue-600 transition-colors text-sm">Quick Entry</a>
-                            {% else %}
-                                <a href="{% url 'contribution_list' %}" class="text-white hover:text-blue-200 rounded-md px-6 py-2 hover:bg-blue-600 transition-colors text-sm">All Contributions</a>
-                                <a href="{% url 'contribution_add' %}" class="text-white hover:text-blue-200 rounded-md px-6 py-2 hover:bg-blue-600 transition-colors text-sm">Add Contribution</a>
-                                <a href="{% url 'bulk_contribution_entry' %}" class="text-white hover:text-blue-200 rounded-md px-6 py-2 hover:bg-blue-600 transition-colors text-sm">Bulk Entry</a>
-                            {% endif %}
-                        </div>
-                        
-                        <a href="{% url 'transaction_list' %}" class="text-white hover:text-blue-200 rounded-md px-3 py-2 hover:bg-blue-600 transition-colors">Transactions</a>
-                        {% if user.is_superuser %}
-                            <a href="{% url 'church_approval_list' %}" class="text-white hover:text-blue-200 rounded-md px-3 py-2 hover:bg-blue-600 transition-colors">Church Approvals</a>
-                        {% endif %}
-                        <span class="text-blue-200 px-3 py-2">Hello, {{ user.username }}!</span>
-                        <a href="{% url 'logout' %}" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out text-center">Logout</a>
-                    {% else %}
-                        <a href="{% url 'home' %}" class="text-white hover:text-blue-200 rounded-md px-3 py-2 hover:bg-blue-600 transition-colors">Home</a>
-                        <a href="{% url 'about' %}" class="text-white hover:text-blue-200 rounded-md px-3 py-2 hover:bg-blue-600 transition-colors">About</a>
-                        <a href="{% url 'contact' %}" class="text-white hover:text-blue-200 rounded-md px-3 py-2 hover:bg-blue-600 transition-colors">Contact</a>
-                        <a href="{% url 'choose_plan' %}" class="text-white hover:text-blue-200 rounded-md px-3 py-2 hover:bg-blue-600 transition-colors">Pricing</a>
-                        <a href="{% url 'login' %}" class="border border-[#6e003d] hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out text-center">Login</a>
-                        <a href="{% url 'choose_plan' %}" class="bg-[#6e003d] hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out text-center">Get Started</a>
-                        <!--<a href="{% url 'register' %}" class="bg-[#6e003d] hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out text-center">Register</a>-->
-                    {% endif %}
+                    <a href="{% url 'home' %}" class="text-white hover:text-blue-200 rounded-md px-3 py-2 hover:bg-blue-600 transition-colors">Home</a>
+                    <a href="{% url 'about' %}" class="text-white hover:text-blue-200 rounded-md px-3 py-2 hover:bg-blue-600 transition-colors">About</a>
+                    <a href="{% url 'contact' %}" class="text-white hover:text-blue-200 rounded-md px-3 py-2 hover:bg-blue-600 transition-colors">Contact</a>
+                    <a href="{% url 'choose_plan' %}" class="text-white hover:text-blue-200 rounded-md px-3 py-2 hover:bg-blue-600 transition-colors">Pricing</a>
+                    <a href="{% url 'login' %}" class="border border-[#6e003d] hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out text-center">Login</a>
+                    <a href="{% url 'choose_plan' %}" class="bg-[#6e003d] hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out text-center">Get Started</a>
                 </div>
             </div>
         </div>
+        {% endif %}
     </nav>
 
-    <main class="flex-grow container mx-auto px-4 sm:px-6 py-6">
-        {% block messages %}
-        {% if messages %}
-            <ul class="messages mx-2">
-                {% for message in messages %}
-                    <li{% if message.tags %} class="{{ message.tags }} text-sm md:text-base"{% endif %}>{{ message }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-        {% endblock %}
-        <div class="max-w-7xl mx-auto">
-            {% block content %}
-            {% endblock %}
-        </div>
-    </main>
+    {% if user.is_authenticated %}
+    <!-- ===== SIDEBAR OVERLAY (mobile) ===== -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-[50] hidden"></div>
 
-    <footer class="bg-gray-800 text-white p-4 text-center mt-auto">
-        <div class="container mx-auto">
-            &copy; 2024 Church Books. All rights reserved.
-        </div>
-    </footer>
+    <!-- ===== SIDEBAR ===== -->
+    <aside id="sidebar" class="flex flex-col" style="background: linear-gradient(180deg, #1e3a5f 0%, #4a0020 100%);">
+
+        <nav class="px-2 py-4 flex-1">
+
+            <!-- Dashboard -->
+            <div class="sidebar-item">
+                <a href="{% url 'dashboard' %}" class="sidebar-item-link flex items-center gap-3 text-white hover:bg-blue-700 rounded-lg px-3 py-2.5 transition-colors group">
+                    <svg class="h-5 w-5 flex-shrink-0 text-blue-300 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                    </svg>
+                    <span class="sidebar-label text-sm font-medium">Dashboard</span>
+                </a>
+                <span class="sidebar-tooltip">Dashboard</span>
+            </div>
+
+            <!-- Members -->
+            <div class="sidebar-item mt-1">
+                <a href="{% url 'member_list' %}" class="sidebar-item-link flex items-center gap-3 text-white hover:bg-blue-700 rounded-lg px-3 py-2.5 transition-colors group">
+                    <svg class="h-5 w-5 flex-shrink-0 text-blue-300 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                    <span class="sidebar-label text-sm font-medium">Members</span>
+                </a>
+                <span class="sidebar-tooltip">Members</span>
+            </div>
+
+            <!-- Contributions -->
+            <div class="sidebar-item mt-1">
+                <a href="{% url 'contribution_list' %}" class="sidebar-item-link flex items-center gap-3 text-white hover:bg-blue-700 rounded-lg px-3 py-2.5 transition-colors group">
+                    <svg class="h-5 w-5 flex-shrink-0 text-blue-300 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    <span class="sidebar-label text-sm font-medium">Contributions</span>
+                </a>
+                <span class="sidebar-tooltip">Contributions</span>
+            </div>
+
+            <!-- Tithes & Offerings (expandable) -->
+            <div class="sidebar-item mt-1">
+                <button onclick="toggleSubmenu('tithes-submenu', this)" class="sidebar-item-link w-full flex items-center gap-3 text-white hover:bg-blue-700 rounded-lg px-3 py-2.5 transition-colors group">
+                    <svg class="h-5 w-5 flex-shrink-0 text-blue-300 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                    </svg>
+                    <span class="sidebar-label text-sm font-medium flex-1 text-left">Tithes &amp; Offerings</span>
+                    <svg class="sidebar-chevron h-4 w-4 flex-shrink-0 text-blue-300 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <span class="sidebar-tooltip">Tithes &amp; Offerings</span>
+                <div id="tithes-submenu" class="sidebar-submenu pl-11 pr-2">
+                    <a href="{% url 'tithes_offerings_dashboard' %}" class="block text-blue-200 hover:text-white text-sm py-1.5 px-2 rounded hover:bg-blue-700 transition-colors">Overview</a>
+                    {% if user.churchmember_set.first and user.churchmember_set.first.role == 'member' %}
+                        <a href="{% url 'member_contributions' %}" class="block text-blue-200 hover:text-white text-sm py-1.5 px-2 rounded hover:bg-blue-700 transition-colors">My Contributions</a>
+                        <a href="{% url 'quick_tithe_entry' %}" class="block text-blue-200 hover:text-white text-sm py-1.5 px-2 rounded hover:bg-blue-700 transition-colors">Quick Entry</a>
+                    {% else %}
+                        <a href="{% url 'contribution_list' %}" class="block text-blue-200 hover:text-white text-sm py-1.5 px-2 rounded hover:bg-blue-700 transition-colors">All Contributions</a>
+                        <a href="{% url 'contribution_add' %}" class="block text-blue-200 hover:text-white text-sm py-1.5 px-2 rounded hover:bg-blue-700 transition-colors">Add Contribution</a>
+                        <a href="{% url 'bulk_contribution_entry' %}" class="block text-blue-200 hover:text-white text-sm py-1.5 px-2 rounded hover:bg-blue-700 transition-colors">Bulk Entry</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Transactions -->
+            <div class="sidebar-item mt-1">
+                <a href="{% url 'transaction_list' %}" class="sidebar-item-link flex items-center gap-3 text-white hover:bg-blue-700 rounded-lg px-3 py-2.5 transition-colors group">
+                    <svg class="h-5 w-5 flex-shrink-0 text-blue-300 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                    </svg>
+                    <span class="sidebar-label text-sm font-medium">Transactions</span>
+                </a>
+                <span class="sidebar-tooltip">Transactions</span>
+            </div>
+
+            <!-- Children Ministry -->
+            <div class="sidebar-item mt-1">
+                <a href="{% url 'children_list' %}" class="sidebar-item-link flex items-center gap-3 text-white hover:bg-blue-700 rounded-lg px-3 py-2.5 transition-colors group">
+                    <svg class="h-5 w-5 flex-shrink-0 text-blue-300 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                    </svg>
+                    <span class="sidebar-label text-sm font-medium">Children Ministry</span>
+                </a>
+                <span class="sidebar-tooltip">Children Ministry</span>
+            </div>
+
+            <!-- Baptisms -->
+            <div class="sidebar-item mt-1">
+                <a href="{% url 'baptism_list' %}" class="sidebar-item-link flex items-center gap-3 text-white hover:bg-blue-700 rounded-lg px-3 py-2.5 transition-colors group">
+                    <svg class="h-5 w-5 flex-shrink-0 text-blue-300 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                    <span class="sidebar-label text-sm font-medium">Baptisms</span>
+                </a>
+                <span class="sidebar-tooltip">Baptisms</span>
+            </div>
+
+            {% if user.is_superuser %}
+            <!-- Church Approvals (superuser only) -->
+            <div class="sidebar-item mt-1">
+                <a href="{% url 'church_approval_list' %}" class="sidebar-item-link flex items-center gap-3 text-white hover:bg-blue-700 rounded-lg px-3 py-2.5 transition-colors group">
+                    <svg class="h-5 w-5 flex-shrink-0 text-blue-300 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="sidebar-label text-sm font-medium">Church Approvals</span>
+                </a>
+                <span class="sidebar-tooltip">Church Approvals</span>
+            </div>
+            {% endif %}
+
+            <!-- Divider + Hello username on mobile -->
+            <div class="mt-4 pt-4 border-t border-blue-700 lg:hidden">
+                <p class="text-blue-300 text-sm px-3 py-1">Hello, {{ user.username }}!</p>
+            </div>
+
+        </nav>
+    </aside>
+    {% endif %}
+
+    <!-- ===== MAIN CONTENT WRAPPER ===== -->
+    {% if user.is_authenticated %}
+    <div class="flex flex-col flex-1" id="main-wrapper" style="margin-left: 16rem;">
+    {% else %}
+    <div class="flex flex-col flex-1" id="main-wrapper">
+    {% endif %}
+        <main class="flex-grow container mx-auto px-4 sm:px-6 py-6">
+            {% block messages %}
+            {% if messages %}
+                <ul class="messages mx-2">
+                    {% for message in messages %}
+                        <li{% if message.tags %} class="{{ message.tags }} text-sm md:text-base"{% endif %}>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            {% endblock %}
+            <div class="max-w-7xl mx-auto">
+                {% block content %}
+                {% endblock %}
+            </div>
+        </main>
+
+        <footer class="bg-gray-800 text-white p-4 text-center mt-auto">
+            <div class="container mx-auto">
+                {% now "Y" as current_year %}
+                Copyright &copy; {{ current_year }} Church Books. All rights reserved.
+            </div>
+        </footer>
+    </div>
 
     <script>
-        // Mobile menu toggle
+        // ===== Non-authenticated mobile menu =====
         const mobileMenuButton = document.getElementById('mobile-menu-button');
         const mobileMenu = document.getElementById('mobile-menu');
-        
-        mobileMenuButton.addEventListener('click', () => {
-            mobileMenu.classList.toggle('hidden');
-        });
+        if (mobileMenuButton && mobileMenu) {
+            mobileMenuButton.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+            document.addEventListener('click', (e) => {
+                if (!mobileMenu.contains(e.target) && !mobileMenuButton.contains(e.target)) {
+                    mobileMenu.classList.add('hidden');
+                }
+            });
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 1024) mobileMenu.classList.add('hidden');
+            });
+        }
 
-        // Close mobile menu when clicking outside
-        document.addEventListener('click', (event) => {
-            if (!mobileMenu.contains(event.target) && !mobileMenuButton.contains(event.target)) {
-                mobileMenu.classList.add('hidden');
-            }
-        });
+        // ===== Authenticated sidebar =====
+        const sidebar = document.getElementById('sidebar');
+        const mainWrapper = document.getElementById('main-wrapper');
+        const overlay = document.getElementById('sidebar-overlay');
+        const mobileToggle = document.getElementById('sidebar-mobile-toggle');
+        const desktopToggle = document.getElementById('sidebar-desktop-toggle');
+        const toggleIcon = document.getElementById('sidebar-toggle-icon');
 
-        // Close mobile menu when window is resized to desktop view
-        window.addEventListener('resize', () => {
-            if (window.innerWidth >= 1030) { // Updated breakpoint to match our responsive design
-                mobileMenu.classList.add('hidden');
+        if (sidebar) {
+            let isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+
+            // Apply saved collapsed state on load (desktop only)
+            if (isCollapsed && window.innerWidth >= 1024) {
+                sidebar.classList.add('sidebar-collapsed');
+                if (mainWrapper) mainWrapper.style.marginLeft = '4rem';
+                if (toggleIcon) toggleIcon.style.transform = 'rotate(180deg)';
             }
-        });
+
+            // Mobile: open sidebar
+            if (mobileToggle) {
+                mobileToggle.addEventListener('click', () => {
+                    sidebar.classList.add('mobile-open');
+                    if (overlay) overlay.classList.remove('hidden');
+                });
+            }
+
+            // Close sidebar via overlay tap (mobile)
+            if (overlay) {
+                overlay.addEventListener('click', () => {
+                    sidebar.classList.remove('mobile-open');
+                    overlay.classList.add('hidden');
+                });
+            }
+
+            // Desktop: collapse/expand toggle
+            if (desktopToggle) {
+                desktopToggle.addEventListener('click', () => {
+                    isCollapsed = !isCollapsed;
+                    sidebar.classList.toggle('sidebar-collapsed', isCollapsed);
+                    if (mainWrapper) {
+                        mainWrapper.style.marginLeft = isCollapsed ? '4rem' : '16rem';
+                    }
+                    localStorage.setItem('sidebarCollapsed', isCollapsed);
+                    if (toggleIcon) {
+                        toggleIcon.style.transform = isCollapsed ? 'rotate(180deg)' : '';
+                    }
+                });
+            }
+
+            // On resize to desktop: close any open mobile overlay state
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 1024) {
+                    sidebar.classList.remove('mobile-open');
+                    if (overlay) overlay.classList.add('hidden');
+                    // Re-apply collapsed margin
+                    if (mainWrapper) {
+                        mainWrapper.style.marginLeft = isCollapsed ? '4rem' : '16rem';
+                    }
+                } else {
+                    if (mainWrapper) mainWrapper.style.marginLeft = '0';
+                }
+            });
+        }
+
+        // ===== Submenu accordion =====
+        function toggleSubmenu(id, btn) {
+            const submenu = document.getElementById(id);
+            const chevron = btn ? btn.querySelector('.sidebar-chevron') : null;
+            if (submenu) {
+                const isOpen = submenu.classList.toggle('open');
+                if (chevron) chevron.style.transform = isOpen ? 'rotate(180deg)' : '';
+            }
+        }
     </script>
-    
+
 </body>
 </html>
