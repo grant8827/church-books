@@ -3,7 +3,7 @@
 {% block title %}Start Your Free Trial - Church Books{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12 px-4">
+<div class="min-h-screen bg-gradient-to-b from-slate-50 to-white py-12 px-4">
 
     <!-- Hero -->
     <div class="text-center mb-12">
@@ -18,13 +18,13 @@
 
     <!-- Single Plan Card -->
     <div class="max-w-lg mx-auto">
-        <div class="bg-white rounded-2xl shadow-2xl border-2 border-blue-500 overflow-hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border-2 border-amber-500 overflow-hidden">
 
             <!-- Card Header -->
-            <div class="bg-blue-600 text-white px-8 py-6 text-center">
+            <div class="text-white px-8 py-6 text-center" style="background-color: #0F172A;">
                 <div class="text-sm font-semibold uppercase tracking-widest mb-1 opacity-80">Church Books Plan</div>
                 <div class="text-5xl font-extrabold mb-1">$120</div>
-                <div class="text-blue-200 text-sm">per year &nbsp;·&nbsp; billed annually</div>
+                <div class="text-slate-300 text-sm">per year &nbsp;·&nbsp; billed annually</div>
                 <div class="mt-3 bg-yellow-400 text-yellow-900 font-bold text-sm py-1 px-4 rounded-full inline-block">
                     First 30 days FREE
                 </div>
@@ -47,7 +47,7 @@
                 <form method="post" class="mt-8">
                     {% csrf_token %}
                     <button type="submit"
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl text-lg shadow-md transition duration-200 transform hover:scale-105">
+                            class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-4 px-6 rounded-xl text-lg shadow-md transition duration-200 transform hover:scale-105">
                         <i class="fas fa-rocket mr-2"></i>Start Free Trial — No Payment Needed
                     </button>
                     <p class="text-center text-xs text-gray-400 mt-3">
@@ -60,15 +60,15 @@
         <!-- Trust badges -->
         <div class="mt-8 grid grid-cols-3 gap-4 text-center text-sm text-gray-500">
             <div>
-                <i class="fas fa-lock text-blue-400 text-xl mb-1"></i>
+                <i class="fas fa-lock text-amber-500 text-xl mb-1"></i>
                 <div>Secure &amp; Encrypted</div>
             </div>
             <div>
-                <i class="fas fa-headset text-blue-400 text-xl mb-1"></i>
+                <i class="fas fa-headset text-amber-500 text-xl mb-1"></i>
                 <div>Email Support</div>
             </div>
             <div>
-                <i class="fas fa-calendar-check text-blue-400 text-xl mb-1"></i>
+                <i class="fas fa-calendar-check text-amber-500 text-xl mb-1"></i>
                 <div>Cancel Anytime</div>
             </div>
         </div>

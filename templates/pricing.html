@@ -15,7 +15,7 @@
     <div class="flex justify-center mb-12">
         <div class="bg-gray-100 rounded-lg p-1">
             <div class="flex">
-                <button id="monthly-btn" class="px-6 py-2 rounded-md font-medium text-sm transition-colors bg-blue-600 text-white">
+                <button id="monthly-btn" class="px-6 py-2 rounded-md font-medium text-sm transition-colors bg-amber-600 text-white">
                     Monthly
                 </button>
                 <button id="annual-btn" class="px-6 py-2 rounded-md font-medium text-sm transition-colors text-gray-700 hover:text-gray-900">
@@ -72,9 +72,9 @@
         </div>
 
         <!-- Professional Plan -->
-        <div class="border-2 border-blue-600 rounded-lg p-8 relative">
+        <div class="border-2 border-amber-600 rounded-lg p-8 relative">
             <div class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                <span class="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium">Most Popular</span>
+                <span class="bg-amber-600 text-white px-4 py-1 rounded-full text-sm font-medium">Most Popular</span>
             </div>
             
             <div class="text-center">
@@ -120,7 +120,7 @@
                 </li>
             </ul>
             
-            <a href="{% url 'choose_plan' %}" class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">
+            <a href="{% url 'choose_plan' %}" class="block w-full text-center bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">
                 Choose Professional
             </a>
         </div>
@@ -200,11 +200,11 @@
     </div>
 
     <!-- CTA Section -->
-    <div class="bg-blue-50 rounded-lg p-8 mt-12 text-center">
+    <div class="bg-slate-50 rounded-lg p-8 mt-12 text-center">
         <h2 class="text-2xl font-bold text-gray-900 mb-4">Still have questions?</h2>
         <p class="text-gray-600 mb-6">Our team is here to help you choose the right plan for your church.</p>
         <div class="space-x-4">
-            <a href="{% url 'contact' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">
+            <a href="{% url 'contact' %}" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">
                 Contact Sales
             </a>
             <a href="#" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">
@@ -222,20 +222,20 @@
     const annualPrices = document.querySelectorAll('.annual-price');
 
     monthlyBtn.addEventListener('click', () => {
-        monthlyBtn.classList.add('bg-blue-600', 'text-white');
+        monthlyBtn.classList.add('bg-amber-600', 'text-white');
         monthlyBtn.classList.remove('text-gray-700', 'hover:text-gray-900');
         annualBtn.classList.add('text-gray-700', 'hover:text-gray-900');
-        annualBtn.classList.remove('bg-blue-600', 'text-white');
+        annualBtn.classList.remove('bg-amber-600', 'text-white');
         
         monthlyPrices.forEach(price => price.classList.remove('hidden'));
         annualPrices.forEach(price => price.classList.add('hidden'));
     });
 
     annualBtn.addEventListener('click', () => {
-        annualBtn.classList.add('bg-blue-600', 'text-white');
+        annualBtn.classList.add('bg-amber-600', 'text-white');
         annualBtn.classList.remove('text-gray-700', 'hover:text-gray-900');
         monthlyBtn.classList.add('text-gray-700', 'hover:text-gray-900');
-        monthlyBtn.classList.remove('bg-blue-600', 'text-white');
+        monthlyBtn.classList.remove('bg-amber-600', 'text-white');
         
         annualPrices.forEach(price => price.classList.remove('hidden'));
         monthlyPrices.forEach(price => price.classList.add('hidden'));
