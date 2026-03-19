@@ -21,7 +21,7 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            background-color: #F8FAFC;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -83,7 +83,7 @@
             left: calc(100% + 6px);
             top: 50%;
             transform: translateY(-50%);
-            background-color: #1e3a5f;
+            background-color: #0F172A;
             color: #fff;
             padding: 4px 10px;
             border-radius: 6px;
@@ -107,6 +107,56 @@
             transition: margin-left 0.3s ease;
         }
         /* Mobile: sidebar is off-screen and becomes full-height overlay */
+        /* ===== PRIMARY BUTTON GLOBAL THEME (Gold #D97706 / Amber-600) ===== */
+        /* Targets <a> and <button> elements with bg-blue-600 / bg-blue-500 inside main content */
+        #main-wrapper a.bg-blue-600,
+        #main-wrapper button.bg-blue-600,
+        #main-wrapper a.bg-blue-500,
+        #main-wrapper button.bg-blue-500 {
+            background-color: #D97706 !important;
+        }
+        #main-wrapper a.hover\:bg-blue-700:hover,
+        #main-wrapper button.hover\:bg-blue-700:hover,
+        #main-wrapper a.hover\:bg-blue-600:hover,
+        #main-wrapper button.hover\:bg-blue-600:hover,
+        #main-wrapper a.hover\:bg-blue-500:hover,
+        #main-wrapper button.hover\:bg-blue-500:hover {
+            background-color: #b45309 !important; /* amber-700 */
+        }
+        /* Focus rings on blue buttons → amber */
+        #main-wrapper .focus\:ring-blue-500:focus {
+            --tw-ring-color: #D97706 !important;
+        }
+
+        /* ===== SIDEBAR NAVY + GOLD THEME ===== */
+        /* Active state → Muted Gold (#D97706) */
+        #sidebar .bg-blue-700 {
+            background-color: #D97706 !important;
+        }
+        /* Hover state → Slate-700 */
+        #sidebar .hover\:bg-blue-700:hover,
+        #sidebar .sidebar-submenu a:hover {
+            background-color: #334155 !important;
+        }
+        /* Icon colours */
+        #sidebar .text-blue-300 {
+            color: #94a3b8 !important; /* slate-400 */
+        }
+        /* Submenu link text */
+        #sidebar .sidebar-submenu a {
+            color: #cbd5e1 !important; /* slate-300 */
+        }
+        #sidebar .sidebar-submenu a:hover {
+            color: #ffffff !important;
+        }
+        /* Mobile divider */
+        #sidebar .border-blue-700 {
+            border-color: #334155 !important; /* slate-700 */
+        }
+        #sidebar .text-blue-300.text-sm {
+            color: #94a3b8 !important;
+        }
+
         @media (max-width: 1023px) {
             #sidebar {
                 transform: translateX(-100%);
@@ -137,42 +187,42 @@
 <body class="flex flex-col min-h-screen">
 
     <!-- ===== NAVBAR ===== -->
-    <nav class="p-4 shadow-md fixed top-0 left-0 right-0 z-50" style="background-color: rgb(120 4 4);">
+    <nav class="p-4 shadow-md fixed top-0 left-0 right-0 z-50" style="background-color: #0F172A;">
         {% if user.is_authenticated %}
         <div class="flex items-center justify-between">
             <!-- Left: toggle buttons + logo -->
             <div class="flex items-center gap-3">
                 <!-- Mobile sidebar toggle -->
-                <button id="sidebar-mobile-toggle" class="lg:hidden text-white hover:text-blue-200 p-1 rounded focus:outline-none" aria-label="Open navigation">
+                <button id="sidebar-mobile-toggle" class="lg:hidden text-white hover:text-amber-400 p-1 rounded focus:outline-none" aria-label="Open navigation">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
                 <!-- Desktop collapse toggle -->
-                <button id="sidebar-desktop-toggle" class="hidden lg:flex items-center justify-center text-white hover:text-blue-200 p-1 rounded focus:outline-none" aria-label="Collapse sidebar">
+                <button id="sidebar-desktop-toggle" class="hidden lg:flex items-center justify-center text-white hover:text-amber-400 p-1 rounded focus:outline-none" aria-label="Collapse sidebar">
                     <svg id="sidebar-toggle-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
                     </svg>
                 </button>
                 <!-- Logo -->
-                <a href="{% url 'home' %}" class="flex items-center text-white rounded-md bg-white px-3 py-1 hover:bg-gray-200 transition-colors h-[100px]">
+                <a href="{% url 'home' %}" class="flex items-center rounded-md px-3 py-1 hover:opacity-90 transition-opacity h-[100px]">
                     {% if user.churchmember_set.first.church.logo_base64 %}
                         <img src="{{ user.churchmember_set.first.church.logo_base64 }}" class="h-[100px] w-auto rounded" alt="{{ user.churchmember_set.first.church.name }} Logo">
                     {% elif user.churchmember_set.first.church.logo %}
                         <img src="{{ user.churchmember_set.first.church.logo.url }}" class="h-[100px] w-auto rounded" alt="{{ user.churchmember_set.first.church.name }} Logo">
                     {% elif user.churchmember_set.first.church %}
-                        <span class="text-blue-900 font-bold text-center leading-tight px-2" style="font-size: clamp(0.75rem, 2vw, 1.1rem); max-width: 200px; word-break: break-word;">
+                        <span class="text-white font-bold text-center leading-tight px-2" style="font-size: clamp(0.75rem, 2vw, 1.1rem); max-width: 200px; word-break: break-word;">
                             {{ user.churchmember_set.first.church.name }}
                         </span>
                     {% else %}
-                        <img src="{% static 'images/logo.png' %}" class="h-[100px] w-auto rounded" alt="Church Books Logo">
+                        <img src="{% static 'images/church-books-management2.png' %}" class="h-[90px] w-auto" style="border-radius: 20px;" alt="Church Books Logo">
                     {% endif %}
                 </a>
             </div>
             <!-- Right: Hello + Logout -->
             <div class="flex items-center gap-3">
-                <span class="text-blue-200 text-sm hidden sm:inline">Hello, {{ user.username }}!</span>
-                <a href="{% url 'logout' %}" class="bg-blue-900 border border-blue-700 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 text-sm whitespace-nowrap">Logout</a>
+                <span class="text-slate-300 text-sm hidden sm:inline">Hello, {{ user.username }}!</span>
+                <a href="{% url 'logout' %}" class="bg-amber-600 border border-amber-500 hover:bg-amber-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 text-sm whitespace-nowrap">Logout</a>
             </div>
         </div>
 
@@ -180,32 +230,32 @@
         <!-- Non-authenticated: full nav -->
         <div class="container mx-auto">
             <div class="flex justify-around items-center">
-                <a href="{% url 'home' %}" class="flex items-center text-white rounded-md bg-white px-3 py-1 hover:bg-gray-200 transition-colors h-[100px]">
-                    <img src="{% static 'images/logo.png' %}" class="h-[100px] w-auto rounded" alt="Church Books Logo">
+                <a href="{% url 'home' %}" class="flex items-center rounded-md px-3 py-1 hover:opacity-90 transition-opacity h-[100px]">
+                    <img src="{% static 'images/church-books-management2.png' %}" class="h-[120px] w-auto" style="border-radius: 50px;" alt="Church Books Logo">
                 </a>
-                <button id="mobile-menu-button" class="block lg:hidden text-white hover:text-blue-200">
+                <button id="mobile-menu-button" class="block lg:hidden text-white hover:text-amber-400">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
                 <div class="hidden lg:flex lg:items-center lg:space-x-4">
-                    <a href="{% url 'home' %}" class="text-white hover:text-white rounded-md px-3 py-1 hover:bg-red-600 transition-colors">Home</a>
-                    <a href="{% url 'about' %}" class="text-white hover:text-white rounded-md px-3 py-1 hover:bg-red-600 transition-colors">About</a>
-                    <a href="{% url 'contact' %}" class="text-white hover:text-white rounded-md px-3 py-1 hover:bg-red-600 transition-colors">Contact</a>
-                    <a href="{% url 'choose_plan' %}" class="text-white hover:text-white rounded-md px-3 py-1 hover:bg-red-600 transition-colors">Pricing</a>
-                    <a href="{% url 'login' %}" class="bg-blue-900 border border-blue-700 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">Login</a>
-                    <a href="{% url 'choose_plan' %}" class="bg-blue-800 border border-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">Get Started</a>
+                    <a href="{% url 'home' %}" class="text-slate-300 hover:text-white rounded-md px-3 py-1 hover:bg-slate-700 transition-colors">Home</a>
+                    <a href="{% url 'about' %}" class="text-slate-300 hover:text-white rounded-md px-3 py-1 hover:bg-slate-700 transition-colors">About</a>
+                    <a href="{% url 'contact' %}" class="text-slate-300 hover:text-white rounded-md px-3 py-1 hover:bg-slate-700 transition-colors">Contact</a>
+                    <a href="{% url 'choose_plan' %}" class="text-slate-300 hover:text-white rounded-md px-3 py-1 hover:bg-slate-700 transition-colors">Pricing</a>
+                    <a href="{% url 'login' %}" class="bg-slate-700 border border-slate-600 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">Login</a>
+                    <a href="{% url 'choose_plan' %}" class="bg-amber-600 border border-amber-500 hover:bg-amber-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">Get Started</a>
                 </div>
             </div>
             <!-- Non-auth mobile menu -->
             <div id="mobile-menu" class="hidden lg:hidden mt-4 pb-2">
                 <div class="flex flex-col space-y-3">
-                    <a href="{% url 'home' %}" class="text-white hover:text-blue-200 rounded-md px-3 py-2 hover:bg-blue-600 transition-colors">Home</a>
-                    <a href="{% url 'about' %}" class="text-white hover:text-blue-200 rounded-md px-3 py-2 hover:bg-blue-600 transition-colors">About</a>
-                    <a href="{% url 'contact' %}" class="text-white hover:text-blue-200 rounded-md px-3 py-2 hover:bg-blue-600 transition-colors">Contact</a>
-                    <a href="{% url 'choose_plan' %}" class="text-white hover:text-blue-200 rounded-md px-3 py-2 hover:bg-blue-600 transition-colors">Pricing</a>
-                    <a href="{% url 'login' %}" class="bg-blue-900 border border-blue-700 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out text-center">Login</a>
-                        <a href="{% url 'choose_plan' %}" class="bg-blue-800 border border-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out text-center">Get Started</a>
+                    <a href="{% url 'home' %}" class="text-slate-300 hover:text-white rounded-md px-3 py-2 hover:bg-slate-700 transition-colors">Home</a>
+                    <a href="{% url 'about' %}" class="text-slate-300 hover:text-white rounded-md px-3 py-2 hover:bg-slate-700 transition-colors">About</a>
+                    <a href="{% url 'contact' %}" class="text-slate-300 hover:text-white rounded-md px-3 py-2 hover:bg-slate-700 transition-colors">Contact</a>
+                    <a href="{% url 'choose_plan' %}" class="text-slate-300 hover:text-white rounded-md px-3 py-2 hover:bg-slate-700 transition-colors">Pricing</a>
+                    <a href="{% url 'login' %}" class="bg-slate-700 border border-slate-600 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out text-center">Login</a>
+                        <a href="{% url 'choose_plan' %}" class="bg-amber-600 border border-amber-500 hover:bg-amber-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out text-center">Get Started</a>
                 </div>
             </div>
         </div>
@@ -217,7 +267,7 @@
     <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-[50] hidden"></div>
 
     <!-- ===== SIDEBAR ===== -->
-    <aside id="sidebar" class="flex flex-col" style="background: linear-gradient(180deg, rgb(120 4 4) 0%, #1e3a5f 100%);">
+    <aside id="sidebar" class="flex flex-col" style="background-color: #0F172A;">
 
         <nav class="px-2 py-4 flex-1">
 

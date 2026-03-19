@@ -10,21 +10,21 @@
             <div class="flex flex-wrap gap-3 space-x-4">
                 {% if user.churchmember.role != 'member' %}
                 <a href="{% url 'contribution_add' %}" 
-                   class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                   class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded">
                     Add Contribution
                 </a>
                 {% endif %}
                 <div class="gap-3 flex flex-wrap">
                     <a href="{% url 'contribution_print_monthly' %}" target="_blank"
-                       class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                       class="bg-slate-600 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded">
                         Monthly Report
                     </a>
                     <a href="{% url 'contribution_print_yearly' %}" target="_blank"
-                       class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                       class="bg-slate-600 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded">
                         Yearly Report
                     </a>
                     <a href="{% url 'contribution_member_annual' %}" target="_blank"
-                       class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded">
+                       class="bg-slate-600 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded">
                         Member Annual Summary
                     </a>
                 </div>
@@ -84,17 +84,17 @@
 
     <!-- Summary Section -->
     <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Total Tithes</h3>
-            <p class="text-3xl font-bold text-green-600">${{ total_tithes }}</p>
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-100">
+            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Total Tithes</h3>
+            <p class="text-3xl font-bold text-slate-900">${{ total_tithes }}</p>
         </div>
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Total Offerings</h3>
-            <p class="text-3xl font-bold text-blue-600">${{ total_offerings }}</p>
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-100">
+            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Total Offerings</h3>
+            <p class="text-3xl font-bold text-slate-900">${{ total_offerings }}</p>
         </div>
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Total Contributions</h3>
-            <p class="text-3xl font-bold text-purple-600">${{ total_contributions }}</p>
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-100">
+            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Total Contributions</h3>
+            <p class="text-3xl font-bold text-slate-900">${{ total_contributions }}</p>
         </div>
     </div>
     {% else %}
