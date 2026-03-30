@@ -1,7 +1,60 @@
 from django.contrib import admin
 from django.utils import timezone
-from .models import Church
+from .models import Church, Member, Contribution, Transaction, Child, BabyChristening, ChurchMember
 from .admin_site import church_admin_site
+
+
+@admin.register(Member, site=church_admin_site)
+class MemberAdmin(admin.ModelAdmin):
+    list_display = ['full_name', 'email', 'phone_number', 'church', 'is_active', 'membership_date']
+    list_filter = ['church', 'is_active', 'marital_status']
+    search_fields = ['first_name', 'last_name', 'email', 'phone_number']
+    readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(Contribution, site=church_admin_site)
+class ContributionAdmin(admin.ModelAdmin):
+    list_display = ['member', 'church', 'date', 'contribution_type', 'amount', 'payment_method']
+    list_filter = ['church', 'contribution_type', 'payment_method']
+    search_fields = ['member__first_name', 'member__last_name', 'reference_number']
+    readonly_fields = ['created_at', 'updated_at']
+    date_hierarchy = 'date'
+
+
+@admin.register(Transaction, site=church_admin_site)
+class TransactionAdmin(admin.ModelAdmin):
+    list_display = ['date', 'type', 'category', 'amount', 'church', 'recorded_by']
+    list_filter = ['church', 'type', 'category']
+    search_fields = ['description', 'category']
+    readonly_fields = ['created_at', 'updated_at']
+    date_hierarchy = 'date'
+
+
+@admin.register(Child, site=church_admin_site)
+class ChildAdmin(admin.ModelAdmin):
+    list_display = ['first_name', 'last_name', 'church', 'date_of_birth', 'is_active']
+    list_filter = ['church', 'is_active', 'grade_level']
+    search_fields = ['first_name', 'last_name']
+    readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(BabyChristening, site=church_admin_site)
+class BabyChristeningAdmin(admin.ModelAdmin):
+    list_display = ['baby_first_name', 'baby_last_name', 'church', 'christening_date', 'is_active']
+    list_filter = ['church', 'is_active']
+    search_fields = ['baby_first_name', 'baby_last_name', 'father_name', 'mother_name']
+    readonly_fields = ['date_recorded', 'last_modified']
+
+
+@admin.register(ChurchMember, site=church_admin_site)
+class ChurchMemberAdmin(admin.ModelAdmin):
+    list_display = ['user', 'church', 'role', 'is_active', 'created_at']
+    list_filter = ['church', 'role', 'is_active']
+    search_fields = ['user__username', 'user__first_name', 'user__last_name']
+    readonly_fields = ['created_at', 'updated_at']
+
+
+
 
 
 @admin.register(Church, site=church_admin_site)

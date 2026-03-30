@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Annual Contribution Statement - {{ member.user.first_name }} {{ member.user.last_name }}</title>
+    <title>Annual Contribution Statement - {{ member.full_name }}</title>
     <style>
         @page {
             size: letter;
@@ -206,7 +206,7 @@
     <div class="member-info">
         <h3>Member Information</h3>
         <div class="info-row">
-            <span><strong>Name:</strong> {{ member.user.first_name }} {{ member.user.last_name }}</span>
+            <span><strong>Name:</strong> {{ member.full_name }}</span>
             <span><strong>Member ID:</strong> {{ member.id }}</span>
         </div>
         {% if member.address %}

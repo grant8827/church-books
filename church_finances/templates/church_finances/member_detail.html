@@ -34,11 +34,11 @@
                         <dl class="space-y-3">
                             <div>
                                 <dt class="text-sm font-medium text-gray-500">Name</dt>
-                                <dd class="text-base text-gray-900">{{ member.user.get_full_name }}</dd>
+                                <dd class="text-base text-gray-900">{{ member.full_name }}</dd>
                             </div>
                             <div>
                                 <dt class="text-sm font-medium text-gray-500">Email</dt>
-                                <dd class="text-base text-gray-900">{{ member.user.email }}</dd>
+                                <dd class="text-base text-gray-900">{{ member.email }}</dd>
                             </div>
                             <div>
                                 <dt class="text-sm font-medium text-gray-500">Phone</dt>
@@ -67,7 +67,7 @@
                             </div>
                             <div>
                                 <dt class="text-sm font-medium text-gray-500">Role</dt>
-                                <dd class="text-base text-gray-900">{{ member.get_role_display }}</dd>
+                                <dd class="text-base text-gray-900">Congregation Member</dd>
                             </div>
                             <div>
                                 <dt class="text-sm font-medium text-gray-500">Baptism Date</dt>

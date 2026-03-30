@@ -1,16 +1,278 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-800">Church Approvals</h2>
-        <div class="text-sm text-gray-500">
-            Total pending: {{ pending_churches.count }}
-        </div>
+<div class="container mx-auto px-4 py-8 max-w-7xl">
+
+  <div class="flex justify-between items-center mb-8">
+    <h1 class="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
+    <span class="text-sm text-gray-400">Platform Overview</span>
+  </div>
+
+  <!-- ── Stats Row ── -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+    <div class="bg-white rounded-xl shadow p-5 border-l-4 border-blue-500">
+      <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Accounts</div>
+      <div class="text-3xl font-bold text-blue-600">{{ total_accounts }}</div>
+      <div class="text-xs text-gray-400 mt-1">registered churches</div>
     </div>
-    
+    <div class="bg-white rounded-xl shadow p-5 border-l-4 border-green-500">
+      <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Active Accounts</div>
+      <div class="text-3xl font-bold text-green-600">{{ active_accounts }}</div>
+      <div class="text-xs text-gray-400 mt-1">approved &amp; subscribed</div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-5 border-l-4 border-purple-500">
+      <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Members</div>
+      <div class="text-3xl font-bold text-purple-600">{{ total_members }}</div>
+      <div class="text-xs text-gray-400 mt-1">congregation members</div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-5 border-l-4 {% if pending_count > 0 %}border-orange-500{% else %}border-gray-300{% endif %}">
+      <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Awaiting Action</div>
+      <div class="text-3xl font-bold {% if pending_count > 0 %}text-orange-500{% else %}text-gray-400{% endif %}">{{ pending_count }}</div>
+      <div class="text-xs text-gray-400 mt-1">pending approvals</div>
+    </div>
+  </div>
+
+  <!-- ── Pending Account Approvals ── -->
+  <div class="mb-10">
+    <h2 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+      <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 text-orange-600 text-xs font-bold">{{ pending_count }}</span>
+      Pending Account Approvals
+    </h2>
+
     {% if pending_churches %}
-    <div class="bg-white shadow-md rounded-lg overflow-hidden">
+    <div class="bg-white shadow rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Church</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Payment Decision</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-100">
+            {% for church in pending_churches %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-4">
+                <div class="font-medium text-gray-900">{{ church.name }}</div>
+                <div class="text-xs text-gray-400">Added {{ church.created_at|date:"M d, Y" }}</div>
+                {% if church.website %}<a href="{{ church.website }}" target="_blank" class="text-xs text-blue-500 hover:underline">website</a>{% endif %}
+              </td>
+              <td class="px-4 py-4 text-gray-600">
+                <div>{{ church.email }}</div>
+                <div>{{ church.phone }}</div>
+              </td>
+              <td class="px-4 py-4">
+                {% if church.payment_method == 'paypal' %}
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">PayPal</span>
+                {% elif church.payment_method == 'bank_transfer' %}
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">Bank Transfer</span>
+                {% else %}
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Offline</span>
+                {% endif %}
+                {% if church.offline_payment_reference %}
+                  <div class="mt-1 text-xs text-gray-500 font-mono">Ref: {{ church.offline_payment_reference }}</div>
+                {% endif %}
+                {% if church.offline_verified_at %}
+                  <div class="mt-1 text-xs text-green-600">Verified {{ church.offline_verified_at|date:"M d, Y" }}</div>
+                {% endif %}
+              </td>
+              <!-- Actions -->
+              <td class="px-4 py-4">
+                <div class="flex flex-col gap-2 items-center">
+                  <form action="{% url 'approve_church' church.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium text-white bg-green-600 hover:bg-green-700">
+                      ✓ Approve
+                    </button>
+                  </form>
+                  <form action="{% url 'reject_church' church.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" onclick="return confirm('Permanently delete {{ church.name }}?')"
+                      class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium text-white bg-red-600 hover:bg-red-700">
+                      ✕ Reject
+                    </button>
+                  </form>
+                </div>
+              </td>
+              <!-- Payment Decision -->
+              <td class="px-4 py-4">
+                {% if church.payment_method == 'paypal' %}
+                  <span class="text-xs text-gray-400">Via PayPal</span>
+                {% elif church.payment_method in 'offline,bank_transfer' %}
+                  {% if church.offline_verified_at %}
+                    <span class="text-xs text-green-600 font-medium">✓ Payment verified</span>
+                  {% elif church.offline_payment_reference %}
+                    <div class="flex flex-col gap-2 items-center">
+                      <form action="{% url 'verify_offline_payment' church.id %}" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="offline_payment_reference" value="{{ church.offline_payment_reference }}">
+                        <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium text-white bg-green-600 hover:bg-green-700">
+                          ✓ Approve Payment
+                        </button>
+                      </form>
+                      <form action="{% url 'deny_payment' church.id %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" onclick="return confirm('Deny this payment?')"
+                          class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium text-white bg-red-500 hover:bg-red-600">
+                          ✕ Deny Payment
+                        </button>
+                      </form>
+                    </div>
+                  {% else %}
+                    <form action="{% url 'verify_offline_payment' church.id %}" method="post" class="space-y-1 w-44">
+                      {% csrf_token %}
+                      <input type="text" name="offline_payment_reference" placeholder="Payment reference"
+                        class="w-full px-2 py-1 text-xs border rounded" required>
+                      <button type="submit" class="w-full text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-2 py-1 rounded">
+                        Verify &amp; Approve
+                      </button>
+                    </form>
+                  {% endif %}
+                {% else %}
+                  <span class="text-xs text-gray-400">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+    <div class="bg-white shadow rounded-xl p-8 text-center text-gray-400">
+      <svg class="mx-auto h-10 w-10 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <p class="text-sm">No pending approvals.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Outstanding Payment Submissions ── -->
+  {% if pending_payments %}
+  <div class="mb-10">
+    <h2 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+      <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-yellow-100 text-yellow-600 text-xs font-bold">{{ pending_payments|length }}</span>
+      Outstanding Payment Submissions
+    </h2>
+    <div class="bg-white shadow rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Church</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reference Submitted</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Payment Decision</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-100">
+            {% for church in pending_payments %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-4">
+                <div class="font-medium text-gray-900">{{ church.name }}</div>
+                <div class="text-xs text-gray-400">{{ church.email }}</div>
+              </td>
+              <td class="px-4 py-4">
+                {% if church.payment_method == 'bank_transfer' %}
+                  <span class="px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">Bank Transfer</span>
+                {% else %}
+                  <span class="px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Offline</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-4 text-gray-700 font-mono text-xs">{{ church.offline_payment_reference }}</td>
+              <td class="px-4 py-4">
+                <div class="flex gap-2 justify-center">
+                  <form action="{% url 'verify_offline_payment' church.id %}" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="offline_payment_reference" value="{{ church.offline_payment_reference }}">
+                    <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium text-white bg-green-600 hover:bg-green-700">
+                      ✓ Approve Payment
+                    </button>
+                  </form>
+                  <form action="{% url 'deny_payment' church.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" onclick="return confirm('Deny payment from {{ church.name }}?')"
+                      class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium text-white bg-red-500 hover:bg-red-600">
+                      ✕ Deny Payment
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── All Accounts ── -->
+  <div>
+    <h2 class="text-lg font-semibold text-gray-700 mb-4">All Accounts ({{ all_churches|length }})</h2>
+    {% if all_churches %}
+    <div class="bg-white shadow rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Church</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Members</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Registered</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Delete</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-100">
+            {% for church in all_churches %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-4">
+                <div class="font-medium text-gray-900">{{ church.name }}</div>
+                <div class="text-xs text-gray-400">{{ church.email }}</div>
+              </td>
+              <td class="px-4 py-4">
+                {% if church.subscription_status == 'active' and church.is_approved %}
+                  <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>
+                {% elif church.is_trial_active %}
+                  <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Trial</span>
+                {% elif church.subscription_status == 'suspended' %}
+                  <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Suspended</span>
+                {% elif church.subscription_status == 'cancelled' %}
+                  <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Cancelled</span>
+                {% else %}
+                  <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">Pending</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-4 text-gray-500 text-xs capitalize">{{ church.payment_method|default:"—" }}</td>
+              <td class="px-4 py-4 text-center font-semibold text-gray-700">{{ church.member_set.count }}</td>
+              <td class="px-4 py-4 text-gray-500 text-xs">{{ church.created_at|date:"M d, Y" }}</td>
+              <td class="px-4 py-4 text-center">
+                <form action="{% url 'admin_delete_church' church.id %}" method="post"
+                  onsubmit="return confirm('Permanently delete {{ church.name }} and ALL its data? This cannot be undone.')">
+                  {% csrf_token %}
+                  <button type="submit" class="inline-flex items-center px-2 py-1 rounded text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50">
+                    Delete
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">No accounts yet.</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">

@@ -10,7 +10,7 @@
             <div class="flex justify-between items-center">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900">Quick Tithe & Offering Entry</h1>
-                    <p class="text-gray-600 mt-2">{{ member.user.first_name }} {{ member.user.last_name }} - {{ church.name }}</p>
+                    <p class="text-gray-600 mt-2">{{ member.user.get_full_name }} - {{ church.name }}</p>
                 </div>
                 <a href="{% url 'member_contributions' %}" 
                    class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 flex items-center">

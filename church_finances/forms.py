@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User, Group
-from .models import Transaction, Church, ChurchMember, Contribution, Child, BabyChristening
+from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, BabyChristening
 from django.db import transaction
 
 
@@ -68,6 +68,18 @@ class CustomUserCreationForm(UserCreationForm):
         # Add CSS classes to form fields
         for field_name, field in self.fields.items():
             field.widget.attrs['class'] = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
+
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError('Email already registered.')
+        return email
+
+    def clean_username(self):
+        username = (self.cleaned_data.get('username') or '').strip()
+        if User.objects.filter(username__iexact=username).exists():
+            raise forms.ValidationError('Username already exists.')
+        return username
 
 
 class ChurchMemberForm(forms.ModelForm):
@@ -151,6 +163,72 @@ class ChurchMemberForm(forms.ModelForm):
             instance.save()
         return instance
 
+
+class MemberForm(forms.ModelForm):
+    """
+    Form for adding and editing congregation members (dedicated Member table,
+    no login account required).
+    """
+    class Meta:
+        model = Member
+        fields = [
+            'first_name', 'last_name', 'email', 'phone_number',
+            'street_address', 'city', 'state', 'zip_code', 'country',
+            'date_of_birth', 'marital_status', 'baptism_date', 'membership_date',
+            'emergency_contact_name', 'emergency_contact_phone', 'notes',
+        ]
+        widgets = {
+            'first_name': forms.TextInput(
+                attrs={'class': 'form-input rounded-md shadow-sm'}
+            ),
+            'last_name': forms.TextInput(
+                attrs={'class': 'form-input rounded-md shadow-sm'}
+            ),
+            'email': forms.EmailInput(
+                attrs={'class': 'form-input rounded-md shadow-sm'}
+            ),
+            'phone_number': forms.TextInput(
+                attrs={'class': 'form-input rounded-md shadow-sm'}
+            ),
+            'street_address': forms.TextInput(
+                attrs={'class': 'form-input rounded-md shadow-sm', 'placeholder': '123 Main Street'}
+            ),
+            'city': forms.TextInput(
+                attrs={'class': 'form-input rounded-md shadow-sm', 'placeholder': 'City'}
+            ),
+            'state': forms.TextInput(
+                attrs={'class': 'form-input rounded-md shadow-sm', 'placeholder': 'State/Province'}
+            ),
+            'zip_code': forms.TextInput(
+                attrs={'class': 'form-input rounded-md shadow-sm', 'placeholder': '12345'}
+            ),
+            'country': forms.TextInput(
+                attrs={'class': 'form-input rounded-md shadow-sm'}
+            ),
+            'date_of_birth': forms.DateInput(
+                attrs={'type': 'date', 'class': 'form-input rounded-md shadow-sm'}
+            ),
+            'marital_status': forms.Select(
+                attrs={'class': 'form-select rounded-md shadow-sm'}
+            ),
+            'baptism_date': forms.DateInput(
+                attrs={'type': 'date', 'class': 'form-input rounded-md shadow-sm'}
+            ),
+            'membership_date': forms.DateInput(
+                attrs={'type': 'date', 'class': 'form-input rounded-md shadow-sm'}
+            ),
+            'emergency_contact_name': forms.TextInput(
+                attrs={'class': 'form-input rounded-md shadow-sm'}
+            ),
+            'emergency_contact_phone': forms.TextInput(
+                attrs={'class': 'form-input rounded-md shadow-sm'}
+            ),
+            'notes': forms.Textarea(
+                attrs={'rows': 3, 'class': 'form-textarea rounded-md shadow-sm'}
+            ),
+        }
+
+
 class ContributionForm(forms.ModelForm):
     """
     Form for recording tithes and offerings
@@ -207,7 +285,7 @@ class ContributionForm(forms.ModelForm):
         church = kwargs.pop('church', None)
         super().__init__(*args, **kwargs)
         if church:
-            self.fields['member'].queryset = ChurchMember.objects.filter(church=church)
+            self.fields['member'].queryset = Member.objects.filter(church=church, is_active=True).order_by('last_name', 'first_name')
 
 class DashboardUserRegistrationForm(UserCreationForm):
     """
@@ -247,9 +325,21 @@ class DashboardUserRegistrationForm(UserCreationForm):
         for field_name in ['username', 'password1', 'password2']:
             self.fields[field_name].widget.attrs['class'] = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
 
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError('Email already has an account.')
+        return email
+
+    def clean_username(self):
+        username = (self.cleaned_data.get('username') or '').strip()
+        if User.objects.filter(username__iexact=username).exists():
+            raise forms.ValidationError('Username already exists.')
+        return username
+
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.email = self.cleaned_data['email']
+        user.email = (self.cleaned_data['email'] or '').strip().lower()
         user.first_name = self.cleaned_data['first_name']
         user.last_name = self.cleaned_data['last_name']
         
@@ -520,4 +610,4 @@ class BabyChristeningForm(forms.ModelForm):
         church = kwargs.pop('church', None)
         super().__init__(*args, **kwargs)
         if church:
-            self.fields['parent_members'].queryset = ChurchMember.objects.filter(church=church, is_active=True)
+            self.fields['parent_members'].queryset = Member.objects.filter(church=church, is_active=True)

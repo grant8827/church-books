@@ -168,7 +168,7 @@ def registration_form_view(request):
             # Get form data
             first_name = request.POST.get('first_name', '').strip()
             last_name = request.POST.get('last_name', '').strip()
-            email = request.POST.get('email', '').strip()
+            email = request.POST.get('email', '').strip().lower()
             phone_number = request.POST.get('phone_number', '').strip()
             role = request.POST.get('role', '').strip()
             username = request.POST.get('username', '').strip()
@@ -250,18 +250,18 @@ def registration_form_view(request):
                     'payment_method': payment_method,
                 })
             
-            # Check if username already exists
-            if User.objects.filter(username=username).exists():
-                messages.error(request, "Username already exists. Please choose a different username.")
+            # Check if username already exists (case-insensitive)
+            if User.objects.filter(username__iexact=username).exists():
+                messages.error(request, "Username already exists.")
                 return render(request, 'church_finances/registration_form.html', {
                     'selected_package': request.session.get('selected_package'),
                     'package_price': request.session.get('package_price'),
                     'payment_method': payment_method,
                 })
             
-            # Check if email already exists
-            if User.objects.filter(email=email).exists():
-                messages.error(request, "An account with this email already exists.")
+            # Check if email already exists (case-insensitive)
+            if User.objects.filter(email__iexact=email).exists():
+                messages.error(request, "Email already registered.")
                 return render(request, 'church_finances/registration_form.html', {
                     'selected_package': request.session.get('selected_package'),
                     'package_price': request.session.get('package_price'),
@@ -488,10 +488,10 @@ def create_paypal_subscription(request):
             # Get form data
             first_name = request.POST.get('first_name', '')
             last_name = request.POST.get('last_name', '')
-            email = request.POST.get('email', '')
+            email = request.POST.get('email', '').strip().lower()
             phone_number = request.POST.get('phone_number', '')
             role = request.POST.get('role', '')
-            username = request.POST.get('username', '')
+            username = request.POST.get('username', '').strip()
             password = request.POST.get('password', '')
             password_confirm = request.POST.get('password_confirm', '')
             church_name = request.POST.get('church_name', '')
@@ -533,17 +533,17 @@ def create_paypal_subscription(request):
                     'package_price': request.session.get('package_price'),
                 })
             
-            # Check if username already exists
-            if User.objects.filter(username=username).exists():
-                messages.error(request, "Username already exists. Please choose a different username.")
+            # Check if username already exists (case-insensitive)
+            if User.objects.filter(username__iexact=username).exists():
+                messages.error(request, "Username already exists.")
                 return render(request, 'church_finances/paypal_subscription_form.html', {
                     'selected_package': request.session.get('selected_package'),
                     'package_price': request.session.get('package_price'),
                 })
             
-            # Check if email already exists
-            if User.objects.filter(email=email).exists():
-                messages.error(request, "An account with this email already exists.")
+            # Check if email already exists (case-insensitive)
+            if User.objects.filter(email__iexact=email).exists():
+                messages.error(request, "Email already registered.")
                 return render(request, 'church_finances/paypal_subscription_form.html', {
                     'selected_package': request.session.get('selected_package'),
                     'package_price': request.session.get('package_price'),
@@ -892,10 +892,10 @@ def create_stripe_checkout(request):
         payment_method = request.POST.get('payment_method', 'stripe')
         first_name    = request.POST.get('first_name', '')
         last_name     = request.POST.get('last_name', '')
-        email         = request.POST.get('email', '')
+        email         = request.POST.get('email', '').strip().lower()
         phone_number  = request.POST.get('phone_number', '')
         role          = request.POST.get('role', '')
-        username      = request.POST.get('username', '')
+        username      = request.POST.get('username', '').strip()
         password      = request.POST.get('password', '')
         password_confirm = request.POST.get('password_confirm', '')
         church_name   = request.POST.get('church_name', '')
@@ -918,12 +918,12 @@ def create_stripe_checkout(request):
             messages.error(request, "Passwords do not match.")
             return redirect('paypal_subscription_form')
 
-        if User.objects.filter(username=username).exists():
-            messages.error(request, "Username already exists. Please choose a different username.")
+        if User.objects.filter(username__iexact=username).exists():
+            messages.error(request, "Username already exists.")
             return redirect('paypal_subscription_form')
 
-        if User.objects.filter(email=email).exists():
-            messages.error(request, "An account with this email already exists.")
+        if User.objects.filter(email__iexact=email).exists():
+            messages.error(request, "Email already registered.")
             return redirect('paypal_subscription_form')
 
         selected_package = request.session.get('selected_package', 'standard')

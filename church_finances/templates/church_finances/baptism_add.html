@@ -54,7 +54,7 @@
                     {% for member in not_yet_baptised %}
                     <option value="{{ member.id }}"
                         {% if preselected_member_id == member.id|stringformat:"s" %}selected{% endif %}>
-                        {{ member.user.get_full_name|default:member.user.username }}
+                        {{ member.full_name }}
                         {% if member.role %} ({{ member.get_role_display }}){% endif %}
                     </option>
                     {% endfor %}

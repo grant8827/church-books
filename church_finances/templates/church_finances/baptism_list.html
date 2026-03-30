@@ -62,7 +62,7 @@
                         <td class="px-6 py-4 text-sm text-gray-500">{{ forloop.counter }}</td>
                         <td class="px-6 py-4">
                             <div class="font-medium text-gray-900">
-                                {{ member.user.get_full_name|default:member.user.username }}
+                                {{ member.full_name }}
                             </div>
                         </td>
                         <td class="px-6 py-4">
@@ -78,7 +78,7 @@
                             {{ member.membership_date|date:"M d, Y" }}
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-600">
-                            {{ member.user.email|default:"-" }}<br>
+                            {{ member.email|default:"-" }}<br>
                             <span class="text-gray-400">{{ member.phone_number|default:"" }}</span>
                         </td>
                         <td class="px-6 py-4 text-sm">
@@ -124,11 +124,11 @@
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-6 py-4 text-sm text-gray-400">{{ forloop.counter }}</td>
                         <td class="px-6 py-4 font-medium text-gray-700">
-                            {{ member.user.get_full_name|default:member.user.username }}
+                            {{ member.full_name }}
                         </td>
                         <td class="px-6 py-4">
                             <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600 font-medium capitalize">
-                                {{ member.get_role_display }}
+                                Congregation Member
                             </span>
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500">

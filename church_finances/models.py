@@ -129,6 +129,9 @@ class Church(models.Model):
             pass  # Don't fail the upload if base64 encoding fails
         self.save()
 
+    class Meta:
+        db_table = 'cb_churches'
+
     def save(self, *args, **kwargs):
         """Override save to set trial_end_date automatically"""
         # Set trial_end_date if not set and we have a trial_start_date
@@ -170,6 +173,9 @@ class PayPalSubscription(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        db_table = 'cb_paypal_subscriptions'
+
     def __str__(self):
         return f"{self.church.name} - {self.subscription_id}"
 
@@ -184,6 +190,9 @@ class PayPalWebhook(models.Model):
     data = models.JSONField()
     processed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'cb_paypal_webhooks'
 
     def __str__(self):
         return f"{self.event_type} - {self.event_id}"
@@ -231,6 +240,7 @@ class ChurchMember(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        db_table = 'cb_staff_accounts'
         unique_together = ['user', 'church']
 
     def __str__(self):
@@ -265,6 +275,72 @@ class ChurchMember(models.Model):
         return f"{self.user.first_name} {self.user.last_name}".strip()
 
 
+class Member(models.Model):
+    """
+    Dedicated congregation member model.
+    Stores personal details for church members without requiring a login account.
+    Staff accounts (admin, pastor, treasurer etc.) continue to use ChurchMember.
+    """
+    MARITAL_STATUS = (
+        ('single', 'Single'),
+        ('married', 'Married'),
+        ('widowed', 'Widowed'),
+        ('divorced', 'Divorced'),
+    )
+
+    church = models.ForeignKey(Church, on_delete=models.CASCADE, related_name='members')
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    email = models.EmailField(blank=True)
+    phone_number = models.CharField(max_length=20, blank=True)
+    street_address = models.CharField(max_length=255, blank=True, verbose_name='Street Address')
+    city = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=100, blank=True)
+    zip_code = models.CharField(max_length=20, blank=True, verbose_name='ZIP/Postal Code')
+    country = models.CharField(max_length=100, blank=True, default='United States')
+    date_of_birth = models.DateField(null=True, blank=True)
+    marital_status = models.CharField(max_length=20, choices=MARITAL_STATUS, blank=True)
+    baptism_date = models.DateField(null=True, blank=True)
+    membership_date = models.DateField(default=timezone.now)
+    emergency_contact_name = models.CharField(max_length=100, blank=True)
+    emergency_contact_phone = models.CharField(max_length=20, blank=True)
+    notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'cb_congregation_members'
+        ordering = ['last_name', 'first_name']
+        verbose_name = 'Member'
+        verbose_name_plural = 'Members'
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} — {self.church.name}"
+
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}".strip()
+
+    @property
+    def full_address(self):
+        parts = []
+        if self.street_address:
+            parts.append(self.street_address)
+        city_state_zip = []
+        if self.city:
+            city_state_zip.append(self.city)
+        if self.state:
+            city_state_zip.append(self.state)
+        if self.zip_code:
+            city_state_zip.append(self.zip_code)
+        if city_state_zip:
+            parts.append(', '.join(city_state_zip))
+        if self.country and self.country.lower() != 'united states':
+            parts.append(self.country)
+        return '\n'.join(parts)
+
+
 class Contribution(models.Model):
     """
     Model to represent member contributions (tithes and offerings)
@@ -286,7 +362,7 @@ class Contribution(models.Model):
         ('mobile_money', 'Mobile Money'),
     )
 
-    member = models.ForeignKey(ChurchMember, on_delete=models.CASCADE)
+    member = models.ForeignKey('Member', on_delete=models.CASCADE, null=True, blank=True)
     church = models.ForeignKey(Church, on_delete=models.CASCADE)
     date = models.DateField()
     contribution_type = models.CharField(max_length=20, choices=CONTRIBUTION_TYPES)
@@ -298,8 +374,12 @@ class Contribution(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        db_table = 'cb_contributions'
+
     def __str__(self):
-        return f"{self.member.user.username} - {self.contribution_type} - ${self.amount} ({self.date})"
+        member_name = self.member.full_name if self.member else 'Unknown'
+        return f"{member_name} - {self.contribution_type} - ${self.amount} ({self.date})"
 
 class Transaction(models.Model):
     """
@@ -351,6 +431,7 @@ class Transaction(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        db_table = 'cb_transactions'
         ordering = [
             "-date",
             "-created_at",
@@ -404,7 +485,7 @@ class Child(models.Model):
     
     # Church Relationship
     church = models.ForeignKey(Church, on_delete=models.CASCADE, related_name='children')
-    parents = models.ManyToManyField(ChurchMember, related_name='children', blank=True,
+    parents = models.ManyToManyField('Member', related_name='children', blank=True,
                                    help_text="Select the parent(s) or guardian(s) from church members")
     
     # Church Activities
@@ -441,6 +522,7 @@ class Child(models.Model):
     added_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
+        db_table = 'cb_children'
         ordering = ['last_name', 'first_name']
         verbose_name = 'Child'
         verbose_name_plural = 'Children'
@@ -474,7 +556,7 @@ class Child(models.Model):
     @property
     def parent_names(self):
         """Get a comma-separated list of parent names"""
-        return ", ".join([f"{parent.user.first_name} {parent.user.last_name}" for parent in self.parents.all()])
+        return ", ".join([parent.full_name for parent in self.parents.all()])
 
 
 class ChildAttendance(models.Model):
@@ -502,6 +584,7 @@ class ChildAttendance(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        db_table = 'cb_child_attendance'
         ordering = ['-date']
         unique_together = ['child', 'date', 'activity_type']
 
@@ -527,7 +610,7 @@ class BabyChristening(models.Model):
     # Parents Information
     father_name = models.CharField(max_length=200, blank=True, help_text="Father's full name")
     mother_name = models.CharField(max_length=200, blank=True, help_text="Mother's full name")
-    parent_members = models.ManyToManyField(ChurchMember, blank=True, related_name='christened_babies', help_text="Parents who are church members")
+    parent_members = models.ManyToManyField('Member', blank=True, related_name='christened_babies', help_text="Parents who are church members")
     
     # Godparents Information
     godfather_name = models.CharField(max_length=200, blank=True, help_text="Godfather's full name")
@@ -555,6 +638,7 @@ class BabyChristening(models.Model):
     last_modified = models.DateTimeField(auto_now=True)
     
     class Meta:
+        db_table = 'cb_christenings'
         ordering = ['-christening_date']
         unique_together = ['baby_first_name', 'baby_last_name', 'christening_date', 'church']
     

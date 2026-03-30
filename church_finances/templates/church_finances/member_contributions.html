@@ -10,7 +10,7 @@
             <div class="flex justify-between items-center">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900">My Contributions</h1>
-                    <p class="text-gray-600 mt-2">{{ member.user.first_name }} {{ member.user.last_name }} - {{ year }}</p>
+                    <p class="text-gray-600 mt-2">{{ member.user.get_full_name }} - {{ year }}</p>
                 </div>
                 <div class="flex space-x-3">
                     <!-- Year Selector -->

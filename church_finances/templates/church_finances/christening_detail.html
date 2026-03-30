@@ -246,7 +246,7 @@
                             <div class="col-sm-4"><strong>Church Members:</strong></div>
                             <div class="col-sm-8">
                                 {% for member in christening.parent_members.all %}
-                                    <span class="badge bg-primary me-1">{{ member.user.get_full_name }}</span>
+                                    <span class="badge bg-primary me-1">{{ member.full_name }}</span>
                                 {% endfor %}
                             </div>
                         </div>

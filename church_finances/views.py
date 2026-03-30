@@ -8,10 +8,10 @@ from django.http import HttpResponseNotAllowed, HttpResponse
 from django.utils import timezone
 from django.urls import reverse
 from functools import wraps
-from .models import Transaction, Church, ChurchMember, Contribution, Child, ChildAttendance, BabyChristening
+from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, BabyChristening
 from .forms import (
     CustomUserCreationForm, TransactionForm, ChurchRegistrationForm,
-    ChurchMemberForm, ContributionForm, DashboardUserRegistrationForm
+    ChurchMemberForm, MemberForm, ContributionForm, DashboardUserRegistrationForm
 )
 from django.contrib.auth.forms import AuthenticationForm
 from django.db import transaction
@@ -136,20 +136,6 @@ def register_view(request):
         church_form = ChurchRegistrationForm(request.POST, user=request.user if request.user.is_authenticated else None)
         
         if user_form.is_valid() and church_form.is_valid():
-            # Check if the username is already associated with a registered church
-            username = user_form.cleaned_data['username']
-            try:
-                existing_user = User.objects.get(username=username)
-                existing_church = Church.objects.filter(registered_by=existing_user).first()
-                if existing_church:
-                    error(request, f"This username is already associated with a registered church: {existing_church.name}. Each account can only register one church.")
-                    return render(request, "church_finances/register.html", {
-                        "user_form": user_form,
-                        "church_form": church_form
-                    })
-            except User.DoesNotExist:
-                pass  # Username is available, proceed with registration
-                
             try:
                 with transaction.atomic():
                     user = user_form.save()
@@ -193,10 +179,13 @@ def register_view(request):
         else:
             for field, errors_list in user_form.errors.items():
                 for err in errors_list:
-                    error(request, f"{field}: {err}")
+                    if field == '__all__':
+                        error(request, err)
+                    else:
+                        error(request, err)
             for field, errors_list in church_form.errors.items():
                 for err in errors_list:
-                    error(request, f"{field}: {err}")
+                    error(request, err)
     else:
         user_form = CustomUserCreationForm()
         church_form = ChurchRegistrationForm(user=request.user if request.user.is_authenticated else None)
@@ -210,11 +199,33 @@ def register_view(request):
 @admin_required
 def church_approval_list(request):
     """
-    List all churches pending approval
+    List all churches pending approval, with platform-wide stats.
     """
-    pending_churches = Church.objects.filter(is_approved=False)
+    pending_churches = Church.objects.filter(is_approved=False).order_by('created_at')
+    all_churches = Church.objects.all().select_related('registered_by').order_by('-created_at')
+
+    # Pending offline/bank-transfer payments that have a reference submitted but not yet verified
+    pending_payments = Church.objects.filter(
+        is_approved=False,
+        payment_method__in=('offline', 'bank_transfer'),
+        offline_payment_reference__isnull=False,
+        offline_verified_at__isnull=True,
+    ).exclude(offline_payment_reference='').order_by('created_at')
+
+    # Stats
+    total_accounts = Church.objects.count()
+    active_accounts = Church.objects.filter(is_approved=True, subscription_status='active').count()
+    total_members = Member.objects.filter(is_active=True).count()
+    pending_count = pending_churches.count()
+
     return render(request, 'church_finances/church_approval_list.html', {
-        'pending_churches': pending_churches
+        'pending_churches': pending_churches,
+        'pending_payments': pending_payments,
+        'all_churches': all_churches,
+        'total_accounts': total_accounts,
+        'active_accounts': active_accounts,
+        'total_members': total_members,
+        'pending_count': pending_count,
     })
 
 @admin_required
@@ -247,6 +258,7 @@ def approve_church(request, church_id):
         church.subscription_end_date = timezone.now() + timezone.timedelta(days=365)
     church.save()
 
+    church_members = ChurchMember.objects.filter(church=church)
     activated_users = []
     for member in church_members:
         if not member.user.is_active:
@@ -326,6 +338,35 @@ def verify_offline_payment(request, church_id):
     if activated_users:
         msg += f" Activated users: {', '.join(activated_users)}"
     success(request, msg)
+    return redirect('church_approval_list')
+
+
+@admin_required
+@require_POST
+def deny_payment(request, church_id):
+    """Deny / reject an offline payment submission — keeps the church record but marks
+    payment as denied and sets subscription_status back to pending."""
+    church = get_object_or_404(Church, id=church_id)
+    reason = request.POST.get('deny_reason', '').strip()
+    church.offline_payment_reference = None
+    church.offline_verified_at = None
+    church.offline_verified_by = None
+    church.offline_notes = reason if reason else 'Payment denied by admin.'
+    church.subscription_status = 'pending'
+    church.is_approved = False
+    church.save()
+    error(request, f"Payment for '{church.name}' has been denied. The church will need to resubmit.")
+    return redirect('church_approval_list')
+
+
+@admin_required
+@require_POST
+def admin_delete_church(request, church_id):
+    """Hard-delete a church record (for cleaning up test / old data)."""
+    church = get_object_or_404(Church, id=church_id)
+    name = church.name
+    church.delete()
+    success(request, f"Church '{name}' has been permanently deleted.")
     return redirect('church_approval_list')
 
 
@@ -426,7 +467,7 @@ def member_list_view(request):
         info(request, "Your church account is pending approval.")
         return render(request, "church_finances/pending_approval.html")
 
-    members = ChurchMember.objects.filter(church=church)
+    members = Member.objects.filter(church=church)
     return render(request, "church_finances/member_list.html", {
         "members": members,
         "church": church
@@ -448,47 +489,18 @@ def member_add_view(request):
         raise PermissionDenied("You don't have permission to add members.")
 
     if request.method == "POST":
-        form = ChurchMemberForm(request.POST)
+        form = MemberForm(request.POST)
         if form.is_valid():
             try:
-                with transaction.atomic():
-                    # Create a basic user account with the member's name
-                    first_name = form.cleaned_data['first_name']
-                    last_name = form.cleaned_data['last_name']
-                    # Create a unique username based on first and last name
-                    base_username = f"{first_name.lower()}.{last_name.lower()}"
-                    username = base_username
-                    counter = 1
-                    while User.objects.filter(username=username).exists():
-                        username = f"{base_username}{counter}"
-                        counter += 1
-                    
-                    # Create user with a random password (they can't login with this)
-                    import uuid
-                    random_password = str(uuid.uuid4())
-                    user = User.objects.create_user(
-                        username=username,
-                        password=random_password,
-                        first_name=first_name,
-                        last_name=last_name
-                    )
-                    
-                    # Create the ChurchMember
-                    member = form.save(commit=False)
-                    member.user = user
-                    member.church = church
-                    member.role = 'member'  # Default role for new members
-                    member.save()
-                    
-                    success(request, "Member added successfully!")
-                    return redirect("member_list")
+                member = form.save(commit=False)
+                member.church = church
+                member.save()
+                success(request, "Member added successfully!")
+                return redirect("member_list")
             except Exception as e:
                 error(request, f"Error creating member: {str(e)}")
-                # If there was an error, delete the user if it was created
-                if 'user' in locals():
-                    user.delete()
     else:
-        form = ChurchMemberForm()
+        form = MemberForm()
 
     return render(request, "church_finances/member_form.html", {"form": form})
 
@@ -502,7 +514,7 @@ def member_detail_view(request, pk):
         info(request, "Your church account is pending approval.")
         return render(request, "church_finances/pending_approval.html")
 
-    member = get_object_or_404(ChurchMember, pk=pk, church=church)
+    member = get_object_or_404(Member, pk=pk, church=church)
     
     # Get member's contribution history
     contributions = Contribution.objects.filter(member=member).order_by('-date')
@@ -529,10 +541,10 @@ def member_activate_view(request, pk):
     if user_member.role not in ['admin', 'treasurer', 'pastor']:
         raise PermissionDenied("You don't have permission to activate members.")
 
-    member = get_object_or_404(ChurchMember, pk=pk, church=church)
+    member = get_object_or_404(Member, pk=pk, church=church)
     member.is_active = True
     member.save()
-    success(request, f"Member {member.user.get_full_name()} has been activated.")
+    success(request, f"Member {member.full_name} has been activated.")
     return redirect('member_list')
 
 @login_required
@@ -550,10 +562,10 @@ def member_deactivate_view(request, pk):
     if user_member.role not in ['admin', 'treasurer', 'pastor']:
         raise PermissionDenied("You don't have permission to deactivate members.")
 
-    member = get_object_or_404(ChurchMember, pk=pk, church=church)
+    member = get_object_or_404(Member, pk=pk, church=church)
     member.is_active = False
     member.save()
-    success(request, f"Member {member.user.get_full_name()} has been deactivated.")
+    success(request, f"Member {member.full_name} has been deactivated.")
     return redirect('member_list')
 
 
@@ -567,16 +579,16 @@ def baptism_list_view(request):
         info(request, "Your church account is pending approval.")
         return render(request, "church_finances/pending_approval.html")
 
-    baptised = ChurchMember.objects.filter(
+    baptised = Member.objects.filter(
         church=church,
         baptism_date__isnull=False
-    ).select_related('user').order_by('-baptism_date')
+    ).order_by('-baptism_date')
 
-    not_yet_baptised = ChurchMember.objects.filter(
+    not_yet_baptised = Member.objects.filter(
         church=church,
         is_active=True,
         baptism_date__isnull=True
-    ).select_related('user').order_by('user__last_name', 'user__first_name')
+    ).order_by('last_name', 'first_name')
 
     return render(request, "church_finances/baptism_list.html", {
         "church": church,
@@ -606,10 +618,10 @@ def baptism_add_view(request):
         raise PermissionDenied("You don't have permission to record baptisms.")
 
     # Members not yet baptised (for the dropdown)
-    not_yet_baptised = ChurchMember.objects.filter(
+    not_yet_baptised = Member.objects.filter(
         church=church,
         baptism_date__isnull=True
-    ).select_related('user').order_by('user__last_name', 'user__first_name')
+    ).order_by('last_name', 'first_name')
 
     if request.method == "POST":
         member_id      = request.POST.get('member_id', '').strip()
@@ -620,12 +632,12 @@ def baptism_add_view(request):
         if not member_id or not baptism_date:
             error(request, "Please select a member and enter the baptism date.")
         else:
-            member = get_object_or_404(ChurchMember, pk=member_id, church=church)
+            member = get_object_or_404(Member, pk=member_id, church=church)
             member.baptism_date = baptism_date
             if notes:
                 member.notes = (member.notes + "\n" + f"Baptism notes: {notes}").strip()
             member.save()
-            success(request, f"{member.user.get_full_name() or member.user.username} has been recorded as baptised on {baptism_date}.")
+            success(request, f"{member.full_name} has been recorded as baptised on {baptism_date}.")
             return redirect('baptism_list')
 
     from datetime import date as _date
@@ -653,15 +665,15 @@ def member_edit_view(request, pk):
     if user_member.role not in ['admin', 'treasurer', 'pastor']:
         raise PermissionDenied("You don't have permission to edit members.")
 
-    member = get_object_or_404(ChurchMember, pk=pk, church=church)
+    member = get_object_or_404(Member, pk=pk, church=church)
     if request.method == "POST":
-        form = ChurchMemberForm(request.POST, instance=member)
+        form = MemberForm(request.POST, instance=member)
         if form.is_valid():
             form.save()
             success(request, "Member updated successfully!")
             return redirect("member_list")
     else:
-        form = ChurchMemberForm(instance=member)
+        form = MemberForm(instance=member)
 
     return render(request, "church_finances/member_form.html", {"form": form})
 
@@ -863,7 +875,7 @@ def dashboard_view(request):
         return render(request, "church_finances/pending_approval.html")
     
     # Get counts for dashboard cards
-    total_members = ChurchMember.objects.filter(church=church, is_active=True).count()
+    total_members = Member.objects.filter(church=church, is_active=True).count()
     total_transactions = Transaction.objects.filter(church=church).count()
     total_contributions = Contribution.objects.filter(church=church).count()
     total_children = Child.objects.filter(church=church, is_active=True).count()
@@ -1095,7 +1107,7 @@ def contribution_member_annual_summary(request):
     contributions = Contribution.objects.filter(
         church=church,
         date__year=year
-    ).select_related('member__user').order_by('member__user__last_name', 'member__user__first_name')
+    ).select_related('member').order_by('member__last_name', 'member__first_name')
 
     # Build per-member totals
     member_totals = {}
@@ -1105,7 +1117,7 @@ def contribution_member_annual_summary(request):
         if member_id not in member_totals:
             member_totals[member_id] = {
                 'id': member_id,
-                'name': member.user.get_full_name() or member.user.username,
+                'name': member.full_name,
                 'tithe': 0,
                 'offering': 0,
                 'total': 0,
@@ -1145,7 +1157,7 @@ def contribution_member_detail(request, member_id):
 
     year = int(request.GET.get('year', timezone.now().year))
 
-    member = get_object_or_404(ChurchMember, id=member_id, church=church)
+    member = get_object_or_404(Member, id=member_id, church=church)
 
     contributions = Contribution.objects.filter(
         church=church,
@@ -1604,7 +1616,7 @@ def contribution_statement_pdf(request, year=None):
         
         if not pdf.err:
             response = HttpResponse(result.getvalue(), content_type='application/pdf')
-            response['Content-Disposition'] = f'inline; filename="contribution_statement_{year}_{member.user.username}.pdf"'
+            response['Content-Disposition'] = f'inline; filename="contribution_statement_{year}_{member.full_name.replace(" ", "_")}.pdf"'
             return response
         else:
             error(request, "Error generating PDF. Please try again or contact support.")
@@ -1760,7 +1772,7 @@ def tithes_offerings_dashboard(request):
     monthly_trend.reverse()  # Show oldest to newest
 
     # Calculate additional values for template
-    total_members_count = ChurchMember.objects.filter(church=church, is_active=True).count() if context_type == 'admin' else 0
+    total_members_count = Member.objects.filter(church=church, is_active=True).count() if context_type == 'admin' else 0
     
     # Calculate percentages and averages
     if totals['total'] > 0:
@@ -1885,7 +1897,7 @@ def bulk_contribution_entry(request):
         return redirect('contribution_list')
 
     # Get all church members for the dropdown
-    church_members = ChurchMember.objects.filter(church=church, is_active=True).order_by('user__first_name', 'user__last_name')
+    church_members = Member.objects.filter(church=church, is_active=True).order_by('last_name', 'first_name')
     
     # Prepare members data for JavaScript
     import json
@@ -1895,7 +1907,7 @@ def bulk_contribution_entry(request):
     for cm in church_members:
         members_data.append({
             'id': cm.id,
-            'name': f"{cm.user.first_name} {cm.user.last_name}".strip() or cm.user.username
+            'name': cm.full_name
         })
     
     from datetime import date
@@ -2015,7 +2027,7 @@ def child_add_view(request):
             
             # Add parents if selected
             if parent_ids:
-                parents = ChurchMember.objects.filter(id__in=parent_ids, church=church)
+                parents = Member.objects.filter(id__in=parent_ids, church=church)
                 child.parents.set(parents)
             
             success(request, f"Successfully added {child.full_name} to the children's directory.")
@@ -2025,7 +2037,7 @@ def child_add_view(request):
             error(request, f"Error adding child: {str(e)}")
     
     # Get church members as potential parents
-    church_members = ChurchMember.objects.filter(church=church, is_active=True).order_by('user__first_name', 'user__last_name')
+    church_members = Member.objects.filter(church=church, is_active=True).order_by('first_name', 'last_name')
     
     context = {
         'church': church,
@@ -2078,7 +2090,7 @@ def child_edit_view(request, child_id):
             # Update parents
             parent_ids = request.POST.getlist('parents')
             if parent_ids:
-                parents = ChurchMember.objects.filter(id__in=parent_ids, church=church)
+                parents = Member.objects.filter(id__in=parent_ids, church=church)
                 child.parents.set(parents)
             else:
                 child.parents.clear()
@@ -2090,7 +2102,7 @@ def child_edit_view(request, child_id):
             error(request, f"Error updating child: {str(e)}")
     
     # Get church members as potential parents
-    church_members = ChurchMember.objects.filter(church=church, is_active=True).order_by('user__first_name', 'user__last_name')
+    church_members = Member.objects.filter(church=church, is_active=True).order_by('first_name', 'last_name')
     
     context = {
         'child': child,
@@ -2259,7 +2271,7 @@ def christening_add_view(request):
             
             # Add parent members if selected
             if parent_member_ids:
-                parent_members = ChurchMember.objects.filter(id__in=parent_member_ids, church=church)
+                parent_members = Member.objects.filter(id__in=parent_member_ids, church=church)
                 christening.parent_members.set(parent_members)
             
             success(request, f"Successfully added christening record for {christening.baby_full_name}.")
@@ -2269,7 +2281,7 @@ def christening_add_view(request):
             error(request, f"Error adding christening: {str(e)}")
     
     # Get church members as potential parents
-    church_members = ChurchMember.objects.filter(church=church, is_active=True).order_by('user__first_name', 'user__last_name')
+    church_members = Member.objects.filter(church=church, is_active=True).order_by('first_name', 'last_name')
     
     context = {
         'church': church,
@@ -2326,7 +2338,7 @@ def christening_edit_view(request, christening_id):
             # Update parent members
             parent_member_ids = request.POST.getlist('parent_members')
             if parent_member_ids:
-                parent_members = ChurchMember.objects.filter(id__in=parent_member_ids, church=church)
+                parent_members = Member.objects.filter(id__in=parent_member_ids, church=church)
                 christening.parent_members.set(parent_members)
             else:
                 christening.parent_members.clear()
@@ -2338,7 +2350,7 @@ def christening_edit_view(request, christening_id):
             error(request, f"Error updating christening: {str(e)}")
     
     # Get church members as potential parents
-    church_members = ChurchMember.objects.filter(church=church, is_active=True).order_by('user__first_name', 'user__last_name')
+    church_members = Member.objects.filter(church=church, is_active=True).order_by('first_name', 'last_name')
     
     context = {
         'christening': christening,

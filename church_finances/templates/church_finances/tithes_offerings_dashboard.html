@@ -14,7 +14,7 @@
                         {% if context_type == 'admin' %}
                             {{ church.name }} - Admin View ({{ current_year }})
                         {% else %}
-                            {{ member.user.first_name }} {{ member.user.last_name }} - Personal View ({{ current_year }})
+                            {{ member.user.get_full_name }} - Personal View ({{ current_year }})
                         {% endif %}
                     </p>
                 </div>
@@ -139,7 +139,7 @@
                                 <div>
                                     <div class="text-sm font-medium text-gray-900">
                                         {% if context_type == 'admin' %}
-                                            {{ contribution.member.user.first_name }} {{ contribution.member.user.last_name }}
+                                            {{ contribution.member.full_name }}
                                         {% endif %}
                                         <span class="{% if context_type == 'admin' %}text-xs {% else %}text-sm {% endif %}text-gray-600">
                                             {{ contribution.get_contribution_type_display }}

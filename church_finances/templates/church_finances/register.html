@@ -393,6 +393,32 @@ function validateStep(step) {
     }
   });
   if (!ok) { const first = document.querySelector('#step' + step + ' .error'); if (first) first.focus(); return false; }
+
+  // Step 1 — validate email format
+  if (step === 1) {
+    const emailField = document.getElementById('{{ user_form.email.id_for_label }}');
+    const emailVal = emailField ? emailField.value.trim() : '';
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
+    if (!emailOk) {
+      emailField.classList.add('error');
+      emailField.focus();
+      let msg = document.getElementById('emailFormatMsg');
+      if (!msg) {
+        msg = document.createElement('p');
+        msg.id = 'emailFormatMsg';
+        msg.className = 'text-xs text-red-500 mt-1';
+        msg.textContent = 'Please enter a valid email address (e.g. you@example.com).';
+        emailField.closest('.field-wrap').insertAdjacentElement('afterend', msg);
+      }
+      emailField.addEventListener('input', () => {
+        emailField.classList.remove('error');
+        const m = document.getElementById('emailFormatMsg');
+        if (m) m.remove();
+      }, { once: true });
+      return false;
+    }
+  }
+
   if (step === 2) {
     const pw = document.getElementById('{{ user_form.password1.id_for_label }}').value;
     const pc = document.getElementById('{{ user_form.password2.id_for_label }}').value;
