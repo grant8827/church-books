@@ -77,6 +77,18 @@ def choose_plan_view(request):
 
     return render(request, 'choose_plan.html')
 
+def privacy_policy_view(request):
+    """
+    Display the Privacy Policy page
+    """
+    return render(request, 'privacy_policy.html')
+
+def terms_of_service_view(request):
+    """
+    Display the Terms of Service page
+    """
+    return render(request, 'terms_of_service.html')
+
 def is_superadmin(user):
     return user.is_superuser
 

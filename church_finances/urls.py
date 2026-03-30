@@ -10,6 +10,8 @@ urlpatterns = [
     path('about/', views.about_view, name='about'),
     path('contact/', views.contact_view, name='contact'),
     path('pricing/', views.pricing_view, name='pricing'),
+    path('privacy-policy/', views.privacy_policy_view, name='privacy_policy'),
+    path('terms-of-service/', views.terms_of_service_view, name='terms_of_service'),
     path('choose-plan/', views.choose_plan_view, name='choose_plan'),
     
     # Subscription URLs

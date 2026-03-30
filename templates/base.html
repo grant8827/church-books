@@ -406,10 +406,63 @@
             </div>
         </main>
 
-        <footer class="bg-gray-800 text-white p-4 text-center mt-auto">
-            <div class="container mx-auto">
-                {% now "Y" as current_year %}
-                Copyright &copy; {{ current_year }} Church Books. All rights reserved.
+        <footer class="mt-auto" style="background-color: #0F172A;">
+            <div class="container mx-auto px-4 sm:px-6 py-10">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 text-slate-300">
+                    <div>
+                        <h3 class="text-white text-lg font-semibold mb-3">
+                            {% if user.is_authenticated and user.churchmember_set.first and user.churchmember_set.first.church %}
+                                {{ user.churchmember_set.first.church.name }}
+                            {% else %}
+                                Church Books
+                            {% endif %}
+                        </h3>
+                        <p class="text-sm leading-6">
+                            Empowering churches with comprehensive financial management solutions for transparency and stewardship.
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-white text-lg font-semibold mb-3">Quick Links</h3>
+                        <ul class="space-y-2 text-sm">
+                            <li><a href="{% url 'home' %}" class="hover:text-white transition-colors">Home</a></li>
+                            <li><a href="{% url 'about' %}" class="hover:text-white transition-colors">About</a></li>
+                            <li><a href="{% url 'contact' %}" class="hover:text-white transition-colors">Contact</a></li>
+                            <li><a href="{% url 'choose_plan' %}" class="hover:text-white transition-colors">Pricing</a></li>
+                            {% if user.is_authenticated %}
+                            <li><a href="{% url 'dashboard' %}" class="hover:text-white transition-colors">Dashboard</a></li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-white text-lg font-semibold mb-3">Contact</h3>
+                        <ul class="space-y-2 text-sm">
+                            <li>Email: <a href="mailto:info@churchbooks.com" class="hover:text-white transition-colors">info@churchbooks.com</a></li>
+                            <li>Response time: Within 24 hours</li>
+                            <li>Technical support and general inquiries</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-white text-lg font-semibold mb-3">Legal</h3>
+                        <ul class="space-y-2 text-sm">
+                            <li><a href="{% url 'privacy_policy' %}" class="hover:text-white transition-colors">Privacy Policy</a></li>
+                            <li><a href="{% url 'terms_of_service' %}" class="hover:text-white transition-colors">Terms of Service</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-700 mt-8 pt-5 text-center text-slate-400 text-sm">
+                    {% now "Y" as current_year %}
+                    Copyright &copy; {{ current_year }}
+                    {% if user.is_authenticated and user.churchmember_set.first and user.churchmember_set.first.church %}
+                        {{ user.churchmember_set.first.church.name }}
+                    {% else %}
+                        Church Books
+                    {% endif %}
+                    . All rights reserved.
+                </div>
             </div>
         </footer>
     </div>
