@@ -1,0 +1,595 @@
+{% extends "base.html" %}
+{% block title %}{% if template %}Edit{% else %}New{% endif %} Certificate Template{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-8 max-w-6xl">
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+            <i class="fas fa-certificate text-yellow-600 mr-3"></i>
+            {% if template %}Edit Template{% else %}New Certificate Template{% endif %}
+        </h1>
+        <a href="{% url 'certificate_templates_list' %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+            <i class="fas fa-arrow-left mr-2"></i>Back to Templates
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Form -->
+        <div>
+            <form method="post" id="templateForm">
+                {% csrf_token %}
+
+                <!-- Basic Info -->
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-tag mr-2 text-blue-500"></i>Basic Info</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Template Name *</label>
+                            <input type="text" name="name" required value="{{ template.name|default:'' }}"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="e.g. Blue Christening Certificate">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Certificate Type *</label>
+                            <select name="certificate_type" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                {% for val, label in type_choices %}
+                                <option value="{{ val }}" {% if template.certificate_type == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-6">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="is_active" class="rounded"
+                                    {% if template.is_active or not template %}checked{% endif %}>
+                                <span class="text-sm font-medium text-gray-700">Set as active template for this type</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="show_logo" class="rounded"
+                                    {% if template.show_logo or not template %}checked{% endif %}>
+                                <span class="text-sm font-medium text-gray-700">Show church logo</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Certificate Text -->
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-font mr-2 text-purple-500"></i>Certificate Text</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                            <input type="text" name="title_text" id="id_title_text"
+                                value="{{ template.title_text|default:'Certificate of Christening' }}"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                oninput="updatePreview()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Subtitle <span class="text-gray-400">(optional)</span></label>
+                            <input type="text" name="subtitle_text" id="id_subtitle_text"
+                                value="{{ template.subtitle_text|default:'' }}"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="e.g. This is to certify that..."
+                                oninput="updatePreview()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Footer Text <span class="text-gray-400">(Bible verse, motto, signature line)</span></label>
+                            <textarea name="footer_text" id="id_footer_text" rows="3"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="e.g. 'Let the little children come to me...' — Matthew 19:14"
+                                oninput="updatePreview()">{{ template.footer_text|default:'' }}</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Baptism Declaration
+                                <span class="text-gray-400">(Adult Baptism certificate only)</span>
+                            </label>
+                            <textarea name="baptism_declaration" id="id_baptism_declaration" rows="2"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="was baptised in the name of the Father, the Son, and the Holy Spirit">{{ template.baptism_declaration|default:'was baptised in the name of the Father, the Son, and the Holy Spirit' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Colours -->
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-palette mr-2 text-pink-500"></i>Colours</h2>
+
+                    <!-- Preset Schemes -->
+                    <p class="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Quick Presets</p>
+                    <div class="flex flex-wrap gap-2 mb-4" id="presetRow"></div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Primary Colour</label>
+                            <div class="flex items-center gap-2">
+                                <input type="color" name="primary_color" id="id_primary_color"
+                                    value="{{ template.primary_color|default:'#1e3a5f' }}"
+                                    class="w-10 h-10 rounded cursor-pointer border border-gray-300"
+                                    oninput="updatePreview()">
+                                <input type="text" id="id_primary_color_text"
+                                    value="{{ template.primary_color|default:'#1e3a5f' }}"
+                                    class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                                    oninput="syncColor('primary_color')">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Accent Colour</label>
+                            <div class="flex items-center gap-2">
+                                <input type="color" name="accent_color" id="id_accent_color"
+                                    value="{{ template.accent_color|default:'#c9a84c' }}"
+                                    class="w-10 h-10 rounded cursor-pointer border border-gray-300"
+                                    oninput="updatePreview()">
+                                <input type="text" id="id_accent_color_text"
+                                    value="{{ template.accent_color|default:'#c9a84c' }}"
+                                    class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                                    oninput="syncColor('accent_color')">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Border Colour</label>
+                            <div class="flex items-center gap-2">
+                                <input type="color" name="border_color" id="id_border_color"
+                                    value="{{ template.border_color|default:'#1e3a5f' }}"
+                                    class="w-10 h-10 rounded cursor-pointer border border-gray-300"
+                                    oninput="updatePreview()">
+                                <input type="text" id="id_border_color_text"
+                                    value="{{ template.border_color|default:'#1e3a5f' }}"
+                                    class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                                    oninput="syncColor('border_color')">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Background Colour</label>
+                            <div class="flex items-center gap-2">
+                                <input type="color" name="background_color" id="id_background_color"
+                                    value="{{ template.background_color|default:'#fdfaf4' }}"
+                                    class="w-10 h-10 rounded cursor-pointer border border-gray-300"
+                                    oninput="updatePreview()">
+                                <input type="text" id="id_background_color_text"
+                                    value="{{ template.background_color|default:'#fdfaf4' }}"
+                                    class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                                    oninput="syncColor('background_color')">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Background Style (Gradient) -->
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
+                        <i class="fas fa-fill-drip mr-2 text-indigo-500"></i>Background Style
+                    </h2>
+
+                    <!-- Solid / Gradient toggle -->
+                    <div class="flex gap-3 mb-4">
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="background_style" value="solid" id="bg_solid"
+                                class="sr-only"
+                                {% if not template or template.background_style == 'solid' %}checked{% endif %}
+                                onchange="updatePreview()">
+                            <div class="bg-style-btn border-2 rounded-lg p-3 text-center text-sm font-medium transition-all
+                                        {% if not template or template.background_style == 'solid' %}border-blue-500 bg-blue-50 text-blue-700{% else %}border-gray-200 text-gray-600{% endif %}"
+                                 id="bg_solid_btn">
+                                <i class="fas fa-square-full mr-1"></i> Solid
+                            </div>
+                        </label>
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="background_style" value="gradient" id="bg_gradient"
+                                class="sr-only"
+                                {% if template and template.background_style == 'gradient' %}checked{% endif %}
+                                onchange="updatePreview()">
+                            <div class="bg-style-btn border-2 rounded-lg p-3 text-center text-sm font-medium transition-all
+                                        {% if template and template.background_style == 'gradient' %}border-blue-500 bg-blue-50 text-blue-700{% else %}border-gray-200 text-gray-600{% endif %}"
+                                 id="bg_gradient_btn">
+                                <i class="fas fa-swatchbook mr-1"></i> Gradient
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Gradient-only options -->
+                    <div id="gradient_options" class="{% if not template or template.background_style != 'gradient' %}hidden{% endif %} space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Second Gradient Colour</label>
+                            <div class="flex items-center gap-2">
+                                <input type="color" name="background_color2" id="id_background_color2"
+                                    value="{{ template.background_color2|default:'#ffffff' }}"
+                                    class="w-10 h-10 rounded cursor-pointer border border-gray-300"
+                                    oninput="updatePreview()">
+                                <input type="text" id="id_background_color2_text"
+                                    value="{{ template.background_color2|default:'#ffffff' }}"
+                                    class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                                    oninput="syncColor('background_color2')">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Gradient Direction</label>
+                            <div class="grid grid-cols-5 gap-2" id="gradDirRow"></div>
+                            <input type="hidden" name="gradient_direction" id="id_gradient_direction"
+                                value="{{ template.gradient_direction|default:'to bottom right' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Corner Style -->
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
+                        <i class="fas fa-vector-square mr-2 text-orange-500"></i>Corner Accents
+                    </h2>
+                    <div class="flex gap-4 items-start">
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Style</label>
+                            <select name="corner_style" id="id_corner_style"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                onchange="updatePreview()">
+                                {% for val, label in corner_style_choices %}
+                                <option value="{{ val }}"
+                                    {% if template and template.corner_style == val %}selected
+                                    {% elif not template and val == 'none' %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <!-- Mini preview thumbnail -->
+                        <div class="flex-shrink-0">
+                            <p class="text-xs text-gray-500 mb-1 text-center">Preview</p>
+                            <div id="cornerThumbWrap" class="border border-gray-200 rounded overflow-hidden" style="width:120px;height:84px;background:#fdfaf4;">
+                                <svg id="cornerThumbSVG" width="120" height="84" viewBox="0 0 100 70" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Border -->
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-border-style mr-2 text-green-500"></i>Border</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Border Style</label>
+                            <select name="border_style" id="id_border_style"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                onchange="updatePreview()">
+                                {% for val, label in border_choices %}
+                                <option value="{{ val }}" {% if template.border_style == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Border Width (px)</label>
+                            <input type="number" name="border_width" id="id_border_width"
+                                value="{{ template.border_width|default:6 }}" min="1" max="30"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                oninput="updatePreview()">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2">
+                    <i class="fas fa-save"></i>
+                    {% if template %}Save Changes{% else %}Create Template{% endif %}
+                </button>
+            </form>
+        </div>
+
+        <!-- Live Preview -->
+        <div class="lg:sticky lg:top-8 self-start">
+            <div class="bg-white rounded-lg shadow-md p-4 mb-2">
+                <p class="text-sm text-gray-500 text-center mb-3"><i class="fas fa-eye mr-1"></i>Live Preview — updates as you type</p>
+                <div id="certPreview" class="relative p-8 text-center overflow-hidden"
+                    style="background:#fdfaf4; font-family: Georgia, serif; min-height: 420px;">
+
+                    <!-- Gradient overlay (hidden by default) -->
+                    <div id="gradientOverlay" class="absolute inset-0 pointer-events-none" style="display:none;"></div>
+
+                    <!-- Corner accents -->
+                    <div id="corner-tl" class="absolute top-0 left-0 pointer-events-none" style="display:none;"></div>
+                    <div id="corner-tr" class="absolute top-0 right-0 pointer-events-none" style="display:none;"></div>
+                    <div id="corner-bl" class="absolute bottom-0 left-0 pointer-events-none" style="display:none;"></div>
+                    <div id="corner-br" class="absolute bottom-0 right-0 pointer-events-none" style="display:none;"></div>
+
+                    <!-- Full-certificate frame overlay for diag2/diag4/wave styles -->
+                    <div id="frame-overlay" class="absolute inset-0 pointer-events-none" style="display:none;"></div>
+
+                    <!-- Ornate text corners -->
+                    <div id="orn-tl" class="absolute top-2 left-2 text-2xl" style="display:none;">❧</div>
+                    <div id="orn-tr" class="absolute top-2 right-2 text-2xl" style="display:none;">❧</div>
+                    <div id="orn-bl" class="absolute bottom-2 left-2 text-2xl" style="display:none;">❧</div>
+                    <div id="orn-br" class="absolute bottom-2 right-2 text-2xl" style="display:none;">❧</div>
+
+                    <div class="relative z-10 pt-4">
+                        <p id="prev_church_name" class="text-sm font-semibold tracking-widest uppercase mb-1" style="color:#1e3a5f">Your Church Name</p>
+                        <div id="prev_divider_top" class="my-2 mx-auto w-24 h-px" style="background:#c9a84c"></div>
+                        <h1 id="prev_title" class="text-2xl font-bold my-3" style="color:#1e3a5f">Certificate of Christening</h1>
+                        <p id="prev_subtitle" class="text-sm italic mb-4" style="color:#666"></p>
+                        <p class="text-base my-4" style="color:#555">
+                            <span class="text-xl font-bold" style="color:#1e3a5f">Baby Name</span><br>
+                            <span class="text-sm">was christened on <strong>Date</strong></span>
+                        </p>
+                        <div id="prev_divider_bot" class="my-3 mx-auto w-24 h-px" style="background:#c9a84c"></div>
+                        <p id="prev_footer" class="text-xs italic mt-4" style="color:#555"></p>
+                    </div>
+                </div>
+            </div>
+            <p class="text-xs text-gray-400 text-center">Actual certificate will include real data.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Helpers ────────────────────────────────────────────────
+function v(id) { return document.getElementById(id); }
+function val(id) { return v(id) ? v(id).value : ''; }
+
+function syncColor(field) {
+    const txt = v('id_' + field + '_text').value;
+    if (/^#[0-9a-fA-F]{6}$/.test(txt)) {
+        v('id_' + field).value = txt;
+        updatePreview();
+    }
+}
+
+// ── Presets ────────────────────────────────────────────────
+const PRESETS = [
+    { name:'Navy & Gold',    primary:'#1e3a5f', accent:'#c9a84c', border:'#1e3a5f', bg:'#fdfaf4', bg2:'#e8e0cc', dir:'to bottom right', corner:'none' },
+    { name:'Royal Purple',   primary:'#4a1d96', accent:'#e9d5ff', border:'#4a1d96', bg:'#f5f3ff', bg2:'#ddd6fe', dir:'to bottom',       corner:'filled' },
+    { name:'Forest Green',   primary:'#14532d', accent:'#86efac', border:'#14532d', bg:'#f0fdf4', bg2:'#dcfce7', dir:'to right',        corner:'slash'  },
+    { name:'Burgundy',       primary:'#7f1d1d', accent:'#fca5a5', border:'#7f1d1d', bg:'#fff1f2', bg2:'#ffe4e6', dir:'135deg',          corner:'filled' },
+    { name:'Slate & Silver', primary:'#1e293b', accent:'#94a3b8', border:'#334155', bg:'#f8fafc', bg2:'#e2e8f0', dir:'to bottom',       corner:'none'   },
+    { name:'Sky Blue',       primary:'#1e40af', accent:'#60a5fa', border:'#1d4ed8', bg:'#eff6ff', bg2:'#dbeafe', dir:'to bottom right', corner:'slash'  },
+];
+
+function buildPresets() {
+    const row = v('presetRow');
+    PRESETS.forEach(p => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.title = p.name;
+        btn.style.cssText = `background:linear-gradient(to right, ${p.primary}, ${p.accent}); width:32px; height:32px; border-radius:50%; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.3); cursor:pointer; transition:transform .15s;`;
+        btn.onmouseenter = () => btn.style.transform = 'scale(1.2)';
+        btn.onmouseleave = () => btn.style.transform = 'scale(1)';
+        btn.onclick = () => applyPreset(p);
+        const tip = document.createElement('span');
+        tip.className = 'text-xs text-gray-500 ml-1 hidden sm:inline';
+        tip.textContent = p.name;
+        const wrap = document.createElement('div');
+        wrap.className = 'flex items-center gap-1';
+        wrap.appendChild(btn);
+        row.appendChild(wrap);
+    });
+}
+
+function applyPreset(p) {
+    setColor('primary_color',    p.primary);
+    setColor('accent_color',     p.accent);
+    setColor('border_color',     p.border);
+    setColor('background_color', p.bg);
+    setColor('background_color2',p.bg2);
+    // gradient direction
+    v('id_gradient_direction').value = p.dir;
+    setActiveGradDir(p.dir);
+    // corner style
+    const cs = v('id_corner_style');
+    if (cs) cs.value = p.corner;
+    // always switch to gradient for presets that have 2 colours
+    const isSolid = (p.bg === p.bg2);
+    v('bg_solid').checked    =  isSolid;
+    v('bg_gradient').checked = !isSolid;
+    v('gradient_options').classList.toggle('hidden', isSolid);
+    updateBgToggleStyle();
+    updatePreview();
+}
+
+function setColor(field, hex) {
+    const picker = v('id_' + field);
+    const txt    = v('id_' + field + '_text');
+    if (picker) picker.value = hex;
+    if (txt)    txt.value    = hex;
+}
+
+// ── Gradient direction buttons ─────────────────────────────
+const GRAD_DIRS = [
+    { val:'to bottom right', label:'↘', title:'Diagonal ↘' },
+    { val:'to right',        label:'→', title:'Horizontal →' },
+    { val:'to bottom',       label:'↓', title:'Vertical ↓' },
+    { val:'to top right',    label:'↗', title:'Diagonal ↗' },
+    { val:'135deg',          label:'↙', title:'135°' },
+];
+
+function buildGradDirButtons() {
+    const row      = v('gradDirRow');
+    const curVal   = val('id_gradient_direction') || 'to bottom right';
+    GRAD_DIRS.forEach(d => {
+        const btn = document.createElement('button');
+        btn.type  = 'button';
+        btn.title = d.title;
+        btn.dataset.dir = d.val;
+        btn.textContent = d.label;
+        btn.className = 'grad-dir-btn py-2 text-lg rounded border-2 font-bold transition-all ' +
+            (d.val === curVal ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-blue-300');
+        btn.onclick = () => {
+            v('id_gradient_direction').value = d.val;
+            setActiveGradDir(d.val);
+            updatePreview();
+        };
+        row.appendChild(btn);
+    });
+}
+
+function setActiveGradDir(activeVal) {
+    document.querySelectorAll('.grad-dir-btn').forEach(b => {
+        const on = b.dataset.dir === activeVal;
+        b.className = 'grad-dir-btn py-2 text-lg rounded border-2 font-bold transition-all ' +
+            (on ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-blue-300');
+    });
+}
+
+// ── Toggle style helpers ───────────────────────────────────
+function updateBgToggleStyle() {
+    const isGrad = v('bg_gradient').checked;
+    v('bg_solid_btn').className    = 'bg-style-btn border-2 rounded-lg p-3 text-center text-sm font-medium transition-all ' + (!isGrad ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600');
+    v('bg_gradient_btn').className = 'bg-style-btn border-2 rounded-lg p-3 text-center text-sm font-medium transition-all ' + ( isGrad ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600');
+    v('gradient_options').classList.toggle('hidden', !isGrad);
+}
+
+// Sync toggle clicks
+document.addEventListener('change', e => {
+    if (e.target.name === 'background_style') { updateBgToggleStyle(); updatePreview(); }
+});
+
+// ── Main preview update ────────────────────────────────────
+function updatePreview() {
+    // Sync text → picker
+    ['primary_color','accent_color','border_color','background_color','background_color2'].forEach(f => {
+        const picker = v('id_' + f);
+        const text   = v('id_' + f + '_text');
+        if (picker && text) text.value = picker.value;
+    });
+
+    const primary   = val('id_primary_color');
+    const accent    = val('id_accent_color');
+    const bg        = val('id_background_color');
+    const bg2       = val('id_background_color2') || '#ffffff';
+    const bcolor    = val('id_border_color');
+    const bw        = val('id_border_width') || 6;
+    const bstyle    = val('id_border_style') || 'double';
+    const title     = val('id_title_text') || 'Certificate';
+    const sub       = val('id_subtitle_text');
+    const footer    = val('id_footer_text');
+    const isGrad    = v('bg_gradient') && v('bg_gradient').checked;
+    const gradDir   = val('id_gradient_direction') || 'to bottom right';
+    const cornerR   = document.querySelector('#id_corner_style');
+    const corner    = cornerR ? cornerR.value : 'none';
+
+    const cert = v('certPreview');
+
+    // Background
+    if (isGrad) {
+        cert.style.background = `linear-gradient(${gradDir}, ${bg}, ${bg2})`;
+    } else {
+        cert.style.background = bg;
+    }
+
+    // Border
+    const cssBorder = bstyle === 'ornate' ? 'solid' : bstyle === 'double' ? 'double' : bstyle;
+    cert.style.border = `${bw}px ${cssBorder} ${bcolor}`;
+
+    // Text colours
+    [v('prev_title'), v('prev_church_name')].forEach(el => { if(el) el.style.color = primary; });
+    [v('prev_divider_top'), v('prev_divider_bot')].forEach(el => { if(el) el.style.background = accent; });
+
+    // Ornate corners
+    ['orn-tl','orn-tr','orn-bl','orn-br'].forEach(id => {
+        const el = v(id);
+        if (el) {
+            el.style.color   = accent;
+            el.style.display = bstyle === 'ornate' ? 'block' : 'none';
+        }
+    });
+
+    // Corner / Frame accents — unified SVG overlay
+    ['corner-tl','corner-tr','corner-bl','corner-br'].forEach(id => {
+        const el = v(id); if (el) { el.innerHTML=''; el.style.display='none'; }
+    });
+    const frameEl = v('frame-overlay');
+    if (frameEl) {
+        frameEl.innerHTML = '';
+        frameEl.style.display = 'none';
+        if (corner !== 'none') {
+            frameEl.style.display = 'block';
+            frameEl.innerHTML = buildFrameSVG(corner, primary, accent);
+        }
+    }
+    // Update mini thumbnail
+    const thumb = v('cornerThumbSVG');
+    if (thumb) thumb.innerHTML = buildFrameSVGInner(corner, primary, accent);
+
+    // Text
+    if (v('prev_title'))    v('prev_title').textContent    = title;
+    if (v('prev_subtitle')) v('prev_subtitle').textContent = sub || '';
+    if (v('prev_footer'))   v('prev_footer').textContent   = footer || '';
+}
+
+// ── Frame SVG builder ─────────────────────────────────────
+// buildFrameSVGInner: returns inner SVG shapes for a 100×70 viewBox
+function buildFrameSVGInner(style, primary, accent, W=100, H=70) {
+    if (style === 'none') return '';
+    const m = W/2, q = H/2;
+    switch(style) {
+        case 'filled':
+            return `<polygon points="0,0 18,0 0,13" fill="${accent}"/>
+                    <polygon points="${W},0 ${W-18},0 ${W},13" fill="${accent}"/>
+                    <polygon points="0,${H} 18,${H} 0,${H-13}" fill="${accent}"/>
+                    <polygon points="${W},${H} ${W-18},${H} ${W},${H-13}" fill="${accent}"/>`;
+        case 'slash':
+            return `<polygon points="0,0 22,0 0,16" fill="${accent}" opacity="0.85"/>
+                    <polygon points="${W},0 ${W-22},0 ${W},16" fill="${accent}" opacity="0.85"/>
+                    <polygon points="0,${H} 22,${H} 0,${H-16}" fill="${accent}" opacity="0.85"/>
+                    <polygon points="${W},${H} ${W-22},${H} ${W},${H-16}" fill="${accent}" opacity="0.85"/>`;
+        case 'diag2':
+            return `<polygon points="0,0 24,0 17,${H} 0,${H}" fill="${primary}"/>
+                    <polygon points="24,0 27,0 20,${H} 17,${H}" fill="${accent}"/>
+                    <polygon points="${W},0 ${W-24},0 ${W-17},${H} ${W},${H}" fill="${primary}"/>
+                    <polygon points="${W-24},0 ${W-27},0 ${W-20},${H} ${W-17},${H}" fill="${accent}"/>`;
+        case 'diag4':
+            return `<polygon points="0,0 26,0 0,18" fill="${primary}"/>
+                    <polygon points="26,0 29,0 0,21 0,18" fill="${accent}"/>
+                    <polygon points="${W},0 ${W-26},0 ${W},18" fill="${primary}"/>
+                    <polygon points="${W-26},0 ${W-29},0 ${W},21 ${W},18" fill="${accent}"/>
+                    <polygon points="0,${H} 26,${H} 0,${H-18}" fill="${primary}"/>
+                    <polygon points="26,${H} 29,${H} 0,${H-21} 0,${H-18}" fill="${accent}"/>
+                    <polygon points="${W},${H} ${W-26},${H} ${W},${H-18}" fill="${primary}"/>
+                    <polygon points="${W-26},${H} ${W-29},${H} ${W},${H-21} ${W},${H-18}" fill="${accent}"/>
+                    <rect x="5" y="3.5" width="${W-10}" height="${H-7}" fill="none" stroke="${accent}" stroke-width="1.2"/>`;
+        case 'wave':
+            return `<path d="M ${W},0 L ${m},0 C ${m+10},2 ${m+17},6 ${m+13},14 C ${m+9},22 ${m+18},27 ${W},22 Z" fill="${primary}"/>
+                    <path d="M ${m},0 L ${m-3},0 C ${m+7},2 ${m+14},6 ${m+10},14 C ${m+6},22 ${m+15},27 ${W},23.5 L ${W},22 C ${m+18},27 ${m+9},22 ${m+13},14 C ${m+17},6 ${m+10},2 ${m},0 Z" fill="${accent}"/>
+                    <path d="M 0,${H} L ${m},${H} C ${m-10},${H-2} ${m-17},${H-6} ${m-13},${H-14} C ${m-9},${H-22} ${m-18},${H-27} 0,${H-22} Z" fill="${primary}"/>
+                    <path d="M ${m},${H} L ${m+3},${H} C ${m-7},${H-2} ${m-14},${H-6} ${m-10},${H-14} C ${m-6},${H-22} ${m-15},${H-27} 0,${H-23.5} L 0,${H-22} C ${m-18},${H-27} ${m-9},${H-22} ${m-13},${H-14} C ${m-17},${H-6} ${m-10},${H-2} ${m},${H} Z" fill="${accent}"/>`;
+        case 'tl_only':
+            return `<polygon points="0,0 35,0 0,25" fill="${primary}"/>
+                    <polygon points="35,0 39,0 0,28 0,25" fill="${accent}"/>`;
+        case 'bracket':
+            return `<polyline points="12,4 4,4 4,14" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+                    <polyline points="${W-12},4 ${W-4},4 ${W-4},14" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+                    <polyline points="12,${H-4} 4,${H-4} 4,${H-14}" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+                    <polyline points="${W-12},${H-4} ${W-4},${H-4} ${W-4},${H-14}" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
+                    <rect x="2.5" y="2.5" width="${W-5}" height="${H-5}" fill="none" stroke="${primary}" stroke-width="1" opacity="0.4"/>`;
+        case 'band_tb':
+            return `<polygon points="0,0 ${W},0 ${W},12 0,10" fill="${primary}"/>
+                    <polygon points="0,9 ${W},11 ${W},13 0,11" fill="${accent}"/>
+                    <polygon points="0,${H} ${W},${H} ${W},${H-12} 0,${H-10}" fill="${primary}"/>
+                    <polygon points="0,${H-9} ${W},${H-11} ${W},${H-13} 0,${H-11}" fill="${accent}"/>`;
+        case 'double_tri':
+            return `<polygon points="0,0 22,0 0,16" fill="${primary}"/>
+                    <polygon points="0,0 12,0 0,9" fill="${accent}"/>
+                    <polygon points="${W},0 ${W-22},0 ${W},16" fill="${primary}"/>
+                    <polygon points="${W},0 ${W-12},0 ${W},9" fill="${accent}"/>
+                    <polygon points="0,${H} 22,${H} 0,${H-16}" fill="${primary}"/>
+                    <polygon points="0,${H} 12,${H} 0,${H-9}" fill="${accent}"/>
+                    <polygon points="${W},${H} ${W-22},${H} ${W},${H-16}" fill="${primary}"/>
+                    <polygon points="${W},${H} ${W-12},${H} ${W},${H-9}" fill="${accent}"/>`;
+        case 'ribbon_side':
+            return `<polygon points="0,0 22,0 15,${H} 0,${H}" fill="${primary}"/>
+                    <polygon points="22,0 25,0 18,${H} 15,${H}" fill="${accent}"/>
+                    <polygon points="25,0 28,0 21,${H} 18,${H}" fill="${primary}" opacity="0.5"/>`;
+        default:
+            return '';
+    }
+}
+
+// Wrap in full SVG element for the overlay div
+function buildFrameSVG(style, primary, accent, W=100, H=70) {
+    const inner = buildFrameSVGInner(style, primary, accent, W, H);
+    if (!inner) return '';
+    return `<svg width="100%" height="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+}
+
+// ── Init ──────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    buildPresets();
+    buildGradDirButtons();
+    updateBgToggleStyle();
+    updatePreview();
+});
+</script>
+{% endblock %}

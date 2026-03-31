@@ -45,8 +45,7 @@
                             <option value="">Select a Member</option>
                             {% for choice in form.member.field.queryset %}
                                 <option value="{{ choice.id }}" {% if choice.id == form.member.value %}selected{% endif %}>
-                                    {{ choice.user.get_full_name }} 
-                                    {% if choice.role %}({{ choice.get_role_display }}){% endif %}
+                                    {{ choice.first_name }} {{ choice.last_name }}
                                 </option>
                             {% endfor %}
                         </select>

@@ -8,7 +8,7 @@ from django.http import HttpResponseNotAllowed, HttpResponse
 from django.utils import timezone
 from django.urls import reverse
 from functools import wraps
-from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, BabyChristening
+from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, BabyChristening, CertificateTemplate
 from .forms import (
     CustomUserCreationForm, TransactionForm, ChurchRegistrationForm,
     ChurchMemberForm, MemberForm, ContributionForm, DashboardUserRegistrationForm
@@ -492,15 +492,15 @@ def member_add_view(request):
         form = MemberForm(request.POST)
         if form.is_valid():
             try:
-                member = form.save(commit=False)
-                member.church = church
-                member.save()
-                success(request, "Member added successfully!")
+                new_member = form.save(commit=False)
+                new_member.church = church
+                new_member.save()
+                success(request, f"Member '{new_member.full_name}' added successfully!")
                 return redirect("member_list")
             except Exception as e:
                 error(request, f"Error creating member: {str(e)}")
     else:
-        form = MemberForm()
+        form = MemberForm(initial={'membership_date': date.today()})
 
     return render(request, "church_finances/member_form.html", {"form": form})
 
@@ -1071,7 +1071,7 @@ def contribution_print_monthly(request):
         church=church,
         date__gte=start_date,
         date__lte=end_date
-    ).order_by('date', 'member__user__last_name')
+    ).order_by('date', 'member__last_name')
 
     # Calculate totals
     totals = {
@@ -1721,7 +1721,7 @@ def tithes_offerings_dashboard(request):
             top_contributors = Contribution.objects.filter(
                 church=church,
                 date__range=[start_date, end_date]
-            ).values('member__user__first_name', 'member__user__last_name').annotate(
+            ).values('member__first_name', 'member__last_name').annotate(
                 total=Sum('amount')
             ).order_by('-total')[:10]
         else:
@@ -1982,27 +1982,22 @@ def child_add_view(request):
 
     if request.method == 'POST':
         # Get form data
-        first_name = request.POST.get('first_name')
-        last_name = request.POST.get('last_name')
+        first_name = request.POST.get('first_name', '')
+        last_name = request.POST.get('last_name', '')
         date_of_birth = request.POST.get('date_of_birth')
-        grade_level = request.POST.get('grade_level')
-        sunday_school_class = request.POST.get('sunday_school_class')
+        grade_level = request.POST.get('grade_level', '')
+        sunday_school_class = request.POST.get('sunday_school_class', '')
         parent_ids = request.POST.getlist('parents')
         
         # Emergency contact info
-        emergency_contact_name = request.POST.get('emergency_contact_name')
-        emergency_contact_phone = request.POST.get('emergency_contact_phone')
-        emergency_contact_relationship = request.POST.get('emergency_contact_relationship')
-        
-        # Medical info
-        allergies = request.POST.get('allergies')
-        medications = request.POST.get('medications')
-        medical_notes = request.POST.get('medical_notes')
+        emergency_contact_name = request.POST.get('emergency_contact_name', '')
+        emergency_contact_phone = request.POST.get('emergency_contact_phone', '')
+        emergency_contact_relationship = request.POST.get('emergency_contact_relationship', '')
         
         # Additional info
-        address = request.POST.get('address')
-        phone_number = request.POST.get('phone_number')
-        notes = request.POST.get('notes')
+        address = request.POST.get('address', '')
+        phone_number = request.POST.get('phone_number', '')
+        notes = request.POST.get('notes', '')
         
         try:
             # Create the child
@@ -2016,9 +2011,6 @@ def child_add_view(request):
                 emergency_contact_name=emergency_contact_name,
                 emergency_contact_phone=emergency_contact_phone,
                 emergency_contact_relationship=emergency_contact_relationship,
-                allergies=allergies,
-                medications=medications,
-                medical_notes=medical_notes,
                 address=address,
                 phone_number=phone_number,
                 notes=notes,
@@ -2243,9 +2235,8 @@ def christening_add_view(request):
             other_godparents = request.POST.get('other_godparents')
             
             # Get contact information
-            contact_address = request.POST.get('contact_address')
-            contact_phone = request.POST.get('contact_phone')
-            contact_email = request.POST.get('contact_email')
+            contact_phone = request.POST.get('contact_phone', '')
+            contact_email = request.POST.get('contact_email', '')
             
             # Create the christening record
             christening = BabyChristening.objects.create(
@@ -2254,15 +2245,14 @@ def christening_add_view(request):
                 baby_date_of_birth=baby_date_of_birth,
                 christening_date=christening_date,
                 christening_time=christening_time,
-                pastor=pastor,
-                ceremony_notes=ceremony_notes,
-                certificate_number=certificate_number,
-                father_name=father_name,
-                mother_name=mother_name,
-                godfather_name=godfather_name,
-                godmother_name=godmother_name,
-                other_godparents=other_godparents,
-                contact_address=contact_address,
+                pastor=pastor or '',
+                ceremony_notes=ceremony_notes or '',
+                certificate_number=certificate_number or '',
+                father_name=father_name or '',
+                mother_name=mother_name or '',
+                godfather_name=godfather_name or '',
+                godmother_name=godmother_name or '',
+                other_godparents=other_godparents or '',
                 contact_phone=contact_phone,
                 contact_email=contact_email,
                 church=church,
@@ -2360,4 +2350,190 @@ def christening_edit_view(request, christening_id):
     return render(request, "church_finances/christening_edit.html", context)
 
 
+# ---------------------------------------------------------------------------
+# Certificate Templates
+# ---------------------------------------------------------------------------
 
+@login_required
+def certificate_templates_list(request):
+    """List all certificate templates for this church."""
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    member = ChurchMember.objects.get(user=request.user, church=church)
+    if member.role not in ['admin', 'pastor']:
+        raise PermissionDenied("You don't have permission to manage certificate templates.")
+
+    templates = CertificateTemplate.objects.filter(church=church)
+    context = {
+        'church': church,
+        'templates': templates,
+        'type_choices': CertificateTemplate.TYPE_CHOICES,
+    }
+    return render(request, "church_finances/certificate_templates_list.html", context)
+
+
+@login_required
+def certificate_template_create(request):
+    """Create a new certificate template."""
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    member = ChurchMember.objects.get(user=request.user, church=church)
+    if member.role not in ['admin', 'pastor']:
+        raise PermissionDenied
+
+    if request.method == 'POST':
+        try:
+            tmpl = CertificateTemplate.objects.create(
+                church=church,
+                name=request.POST.get('name', ''),
+                certificate_type=request.POST.get('certificate_type', 'christening'),
+                title_text=request.POST.get('title_text', 'Certificate of Christening'),
+                subtitle_text=request.POST.get('subtitle_text', ''),
+                footer_text=request.POST.get('footer_text', ''),
+                border_color=request.POST.get('border_color', '#1e3a5f'),
+                primary_color=request.POST.get('primary_color', '#1e3a5f'),
+                accent_color=request.POST.get('accent_color', '#c9a84c'),
+                background_color=request.POST.get('background_color', '#fdfaf4'),
+                background_style=request.POST.get('background_style', 'solid'),
+                background_color2=request.POST.get('background_color2', '#ffffff'),
+                gradient_direction=request.POST.get('gradient_direction', 'to bottom right'),
+                corner_style=request.POST.get('corner_style', 'none'),
+                border_style=request.POST.get('border_style', 'double'),
+                border_width=int(request.POST.get('border_width', 6)),
+                show_logo='show_logo' in request.POST,
+                is_active='is_active' in request.POST,
+                baptism_declaration=request.POST.get(
+                    'baptism_declaration',
+                    'was baptised in the name of the Father, the Son, and the Holy Spirit'
+                ),
+            )
+            success(request, f"Template '{tmpl.name}' created successfully.")
+            return redirect('certificate_templates_list')
+        except Exception as e:
+            error(request, f"Error creating template: {str(e)}")
+
+    context = {
+        'church': church,
+        'type_choices': CertificateTemplate.TYPE_CHOICES,
+        'border_choices': CertificateTemplate.BORDER_CHOICES,
+        'corner_style_choices': CertificateTemplate.CORNER_STYLE_CHOICES,
+        'template': None,
+    }
+    return render(request, "church_finances/certificate_template_form.html", context)
+
+
+@login_required
+def certificate_template_edit(request, template_id):
+    """Edit an existing certificate template."""
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    member = ChurchMember.objects.get(user=request.user, church=church)
+    if member.role not in ['admin', 'pastor']:
+        raise PermissionDenied
+
+    tmpl = get_object_or_404(CertificateTemplate, pk=template_id, church=church)
+
+    if request.method == 'POST':
+        try:
+            tmpl.name               = request.POST.get('name', tmpl.name)
+            tmpl.certificate_type   = request.POST.get('certificate_type', tmpl.certificate_type)
+            tmpl.title_text         = request.POST.get('title_text', tmpl.title_text)
+            tmpl.subtitle_text      = request.POST.get('subtitle_text', '')
+            tmpl.footer_text        = request.POST.get('footer_text', '')
+            tmpl.border_color       = request.POST.get('border_color', tmpl.border_color)
+            tmpl.primary_color      = request.POST.get('primary_color', tmpl.primary_color)
+            tmpl.accent_color       = request.POST.get('accent_color', tmpl.accent_color)
+            tmpl.background_color   = request.POST.get('background_color', tmpl.background_color)
+            tmpl.background_style   = request.POST.get('background_style', tmpl.background_style)
+            tmpl.background_color2  = request.POST.get('background_color2', tmpl.background_color2)
+            tmpl.gradient_direction = request.POST.get('gradient_direction', tmpl.gradient_direction)
+            tmpl.corner_style          = request.POST.get('corner_style', tmpl.corner_style)
+            tmpl.border_style          = request.POST.get('border_style', tmpl.border_style)
+            tmpl.border_width          = int(request.POST.get('border_width', tmpl.border_width))
+            tmpl.show_logo             = 'show_logo' in request.POST
+            tmpl.is_active             = 'is_active' in request.POST
+            tmpl.baptism_declaration   = request.POST.get('baptism_declaration', tmpl.baptism_declaration)
+            tmpl.save()
+            success(request, f"Template '{tmpl.name}' updated.")
+            return redirect('certificate_templates_list')
+        except Exception as e:
+            error(request, f"Error updating template: {str(e)}")
+
+    context = {
+        'church': church,
+        'template': tmpl,
+        'type_choices': CertificateTemplate.TYPE_CHOICES,
+        'border_choices': CertificateTemplate.BORDER_CHOICES,
+        'corner_style_choices': CertificateTemplate.CORNER_STYLE_CHOICES,
+    }
+    return render(request, "church_finances/certificate_template_form.html", context)
+
+
+@login_required
+def certificate_template_delete(request, template_id):
+    """Delete a certificate template (POST only)."""
+    church = get_user_church(request.user)
+    if not church:
+        return redirect('christenings_list')
+    member = ChurchMember.objects.get(user=request.user, church=church)
+    if member.role not in ['admin', 'pastor']:
+        raise PermissionDenied
+    tmpl = get_object_or_404(CertificateTemplate, pk=template_id, church=church)
+    if request.method == 'POST':
+        tmpl.delete()
+        success(request, "Template deleted.")
+    return redirect('certificate_templates_list')
+
+
+@login_required
+def christening_certificate_view(request, christening_id):
+    """Render a printable christening certificate using the church's active template."""
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    christening = get_object_or_404(BabyChristening, pk=christening_id, church=church)
+
+    # Find the active christening template; fall back to a default if none exists
+    tmpl = CertificateTemplate.objects.filter(
+        church=church, certificate_type='christening', is_active=True
+    ).first()
+
+    context = {
+        'christening': christening,
+        'church': church,
+        'tmpl': tmpl,
+    }
+    return render(request, "church_finances/christening_certificate.html", context)
+
+
+@login_required
+def baptism_certificate_view(request, member_id):
+    """Render a printable baptism certificate for a member using the church's active baptism template."""
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    member = get_object_or_404(Member, pk=member_id, church=church)
+
+    tmpl = CertificateTemplate.objects.filter(
+        church=church, certificate_type='baptism', is_active=True
+    ).first()
+
+    context = {
+        'member': member,
+        'church': church,
+        'tmpl': tmpl,
+    }
+    return render(request, "church_finances/baptism_certificate.html", context)

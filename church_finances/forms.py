@@ -169,6 +169,12 @@ class MemberForm(forms.ModelForm):
     Form for adding and editing congregation members (dedicated Member table,
     no login account required).
     """
+    membership_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-input rounded-md shadow-sm'}),
+        help_text='Leave blank to use today\'s date.',
+    )
+
     class Meta:
         model = Member
         fields = [
@@ -214,9 +220,6 @@ class MemberForm(forms.ModelForm):
             'baptism_date': forms.DateInput(
                 attrs={'type': 'date', 'class': 'form-input rounded-md shadow-sm'}
             ),
-            'membership_date': forms.DateInput(
-                attrs={'type': 'date', 'class': 'form-input rounded-md shadow-sm'}
-            ),
             'emergency_contact_name': forms.TextInput(
                 attrs={'class': 'form-input rounded-md shadow-sm'}
             ),
@@ -227,6 +230,11 @@ class MemberForm(forms.ModelForm):
                 attrs={'rows': 3, 'class': 'form-textarea rounded-md shadow-sm'}
             ),
         }
+
+    def clean_membership_date(self):
+        from datetime import date as date_type
+        value = self.cleaned_data.get('membership_date')
+        return value if value else date_type.today()
 
 
 class ContributionForm(forms.ModelForm):

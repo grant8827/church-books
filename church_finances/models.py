@@ -43,7 +43,17 @@ class Church(models.Model):
         ('offline', 'Offline'),
         ('bank_transfer', 'Bank Transfer'),
     )
+    PAYMENT_STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('paid',    'Paid'),
+    )
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default='offline')
+    payment_status = models.CharField(
+        max_length=20,
+        choices=PAYMENT_STATUS_CHOICES,
+        default='pending',
+        help_text='Manual payment status set by admin',
+    )
     offline_payment_reference = models.CharField(max_length=255, blank=True, null=True, help_text="Reference # / receipt / memo for offline payment")
     offline_verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='offline_verifications', help_text='Admin user who verified offline payment')
     offline_verified_at = models.DateTimeField(blank=True, null=True)
@@ -115,6 +125,28 @@ class Church(models.Model):
         # If not in trial, check payment status
         return self.is_payment_verified and self.subscription_status == 'active'
     
+    def check_and_expire(self):
+        """
+        Called on each authenticated request via middleware.
+        If the subscription_end_date has passed, flip the church to expired/pending
+        so access is blocked until the admin renews manually.
+        """
+        from django.utils import timezone
+        if (
+            self.subscription_status == 'active'
+            and self.subscription_end_date
+            and timezone.now() > self.subscription_end_date
+        ):
+            Church.objects.filter(pk=self.pk).update(
+                subscription_status='expired',
+                payment_status='pending',
+                is_approved=False,
+            )
+            # Refresh local instance so callers see updated values
+            self.subscription_status = 'expired'
+            self.payment_status = 'pending'
+            self.is_approved = False
+
     def save_logo(self, logo_file):
         """Save a logo file to both the ImageField and as base64 in the database.
         The base64 copy is used on print reports and survives server restarts."""
@@ -699,3 +731,108 @@ class BabyChristening(models.Model):
     
     def __str__(self):
         return f"{self.baby_full_name} - Christened {self.christening_date}"
+
+
+class CertificateTemplate(models.Model):
+    """
+    Reusable, per-church certificate template.
+    One template per certificate type can be marked active.
+    """
+    TYPE_CHOICES = [
+        ('christening', 'Christening / Baptism'),
+        ('membership',  'Church Membership'),
+        ('baptism',     'Adult Baptism'),
+        ('graduation',  'Graduation'),
+        ('marriage',    'Marriage Blessing'),
+        ('other',       'Other'),
+    ]
+
+    BORDER_CHOICES = [
+        ('solid',   'Solid'),
+        ('double',  'Double'),
+        ('dashed',  'Dashed'),
+        ('ornate',  'Ornate (decorative corners)'),
+    ]
+
+    BACKGROUND_STYLE_CHOICES = [
+        ('solid',    'Solid Colour'),
+        ('gradient', 'Gradient'),
+    ]
+
+    GRADIENT_DIR_CHOICES = [
+        ('to bottom right', 'Diagonal ↘'),
+        ('to right',        'Horizontal →'),
+        ('to bottom',       'Vertical ↓'),
+        ('to top right',    'Diagonal ↗'),
+        ('135deg',          'Diagonal 135°'),
+    ]
+
+    CORNER_STYLE_CHOICES = [
+        ('none',        'None'),
+        ('filled',      'Filled Triangles — All 4 Corners'),
+        ('slash',       'Slash Stripe — All 4 Corners'),
+        ('diag2',       'Diagonal Panels — Left & Right Sides'),
+        ('diag4',       'Diagonal Panels — All 4 Corners'),
+        ('wave',        'Wave Ribbon — Top-Right & Bottom-Left'),
+        ('tl_only',     'Accent — Top-Left Corner Only'),
+        ('bracket',     'Bracket Lines — Corner Borders'),
+        ('band_tb',     'Full Band — Top & Bottom'),
+        ('double_tri',  'Double Triangle — All 4 Corners'),
+        ('ribbon_side', 'Ribbon Strip — Left Side Only'),
+    ]
+
+    church             = models.ForeignKey(Church, on_delete=models.CASCADE, related_name='certificate_templates')
+    name               = models.CharField(max_length=100, help_text="Internal label, e.g. 'Blue Christening'")
+    certificate_type   = models.CharField(max_length=30, choices=TYPE_CHOICES, default='christening')
+    title_text         = models.CharField(max_length=200, default='Certificate of Christening',
+                                          help_text="Large heading on the certificate")
+    subtitle_text      = models.CharField(max_length=200, blank=True,
+                                          help_text="Smaller subtitle below the title")
+    footer_text        = models.TextField(blank=True,
+                                          help_text="Bible verse, motto, or signature line at the bottom")
+    border_color       = models.CharField(max_length=7,  default='#1e3a5f',
+                                          help_text="Hex colour, e.g. #1e3a5f")
+    primary_color      = models.CharField(max_length=7,  default='#1e3a5f',
+                                          help_text="Headings & accent colour")
+    accent_color       = models.CharField(max_length=7,  default='#c9a84c',
+                                          help_text="Secondary accent (lines, dividers)")
+    background_color   = models.CharField(max_length=7,  default='#fdfaf4',
+                                          help_text="Certificate background colour")
+    background_style   = models.CharField(max_length=20, choices=BACKGROUND_STYLE_CHOICES, default='solid')
+    background_color2  = models.CharField(max_length=7,  default='#ffffff', blank=True,
+                                          help_text="Second colour for gradient background")
+    gradient_direction = models.CharField(max_length=30, choices=GRADIENT_DIR_CHOICES, default='to bottom right')
+    corner_style       = models.CharField(max_length=20, choices=CORNER_STYLE_CHOICES, default='none',
+                                          help_text="Decorative corner accent style")
+    border_style       = models.CharField(max_length=20, choices=BORDER_CHOICES, default='double')
+    border_width       = models.PositiveSmallIntegerField(default=6,
+                                                          help_text="Border thickness in pixels")
+    show_logo          = models.BooleanField(default=True, help_text="Show church logo on certificate")
+    is_active          = models.BooleanField(default=True,
+                                             help_text="Use this template when printing this certificate type")
+    baptism_declaration = models.TextField(
+        blank=True,
+        default='was baptised in the name of the Father, the Son, and the Holy Spirit',
+        help_text="The declaration sentence shown on the baptism certificate",
+    )
+    created_at         = models.DateTimeField(auto_now_add=True)
+    updated_at         = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'cb_certificate_templates'
+        ordering = ['certificate_type', 'name']
+        verbose_name = 'Certificate Template'
+        verbose_name_plural = 'Certificate Templates'
+
+    def __str__(self):
+        return f"{self.name} ({self.get_certificate_type_display()}) — {self.church.name}"
+
+    def save(self, *args, **kwargs):
+        """If marked active, deactivate other templates of the same type for this church."""
+        if self.is_active:
+            CertificateTemplate.objects.filter(
+                church=self.church,
+                certificate_type=self.certificate_type,
+                is_active=True
+            ).exclude(pk=self.pk).update(is_active=False)
+        super().save(*args, **kwargs)

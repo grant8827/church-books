@@ -79,6 +79,7 @@ urlpatterns = [
     path("members/<int:pk>/edit/", views.member_edit_view, name="member_edit"),
     path("members/<int:pk>/activate/", views.member_activate_view, name="member_activate"),
     path("members/<int:pk>/deactivate/", views.member_deactivate_view, name="member_deactivate"),
+    path("members/<int:member_id>/baptism-certificate/", views.baptism_certificate_view, name="baptism_certificate"),
     # Baptism URLs
     path("members/baptisms/", views.baptism_list_view, name="baptism_list"),
     path("members/baptisms/add/", views.baptism_add_view, name="baptism_add"),
@@ -146,4 +147,11 @@ urlpatterns = [
     path("christenings/add/", views.christening_add_view, name="christening_add"),
     path("christenings/<int:christening_id>/", views.christening_detail_view, name="christening_detail"),
     path("christenings/<int:christening_id>/edit/", views.christening_edit_view, name="christening_edit"),
+    path("christenings/<int:christening_id>/certificate/", views.christening_certificate_view, name="christening_certificate"),
+
+    # Certificate Template URLs
+    path("certificates/", views.certificate_templates_list, name="certificate_templates_list"),
+    path("certificates/new/", views.certificate_template_create, name="certificate_template_create"),
+    path("certificates/<int:template_id>/edit/", views.certificate_template_edit, name="certificate_template_edit"),
+    path("certificates/<int:template_id>/delete/", views.certificate_template_delete, name="certificate_template_delete"),
 ]

@@ -106,18 +106,7 @@
                                 <label for="mother_name" class="block text-sm font-medium text-gray-700">Mother's Full Name</label>
                                 <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="mother_name" name="mother_name">
                             </div>
-                            <div class="space-y-1">
-                                <label for="parent_members" class="block text-sm font-medium text-gray-700">Church Member Parents</label>
-                                <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="parent_members" name="parent_members" multiple size="4">
-                                    {% for member in church_members %}
-                                        <option value="{{ member.id }}">
-                                            {{ member.full_name }}
-                                            {% if member.role %}({{ member.get_role_display }}){% endif %}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                                <p class="text-xs text-gray-500 mt-1">Hold Ctrl (or Cmd) to select multiple church member parents</p>
-                            </div>
+
                         </div>
                     </div>
 

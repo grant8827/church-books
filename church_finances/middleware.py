@@ -122,7 +122,10 @@ class TrialExpirationMiddleware:
             
             if member and member.church:
                 church = member.church
-                
+
+                # Auto-expire subscription if end date has passed
+                church.check_and_expire()
+
                 # If trial is expired AND subscription is not active, block access
                 if church.is_trial_expired and church.subscription_status != 'active':
                     logger.info(f"Blocking access for expired trial user: {request.user.username} at {path}")

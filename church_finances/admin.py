@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.utils import timezone
+from datetime import timedelta
 from .models import Church, Member, Contribution, Transaction, Child, BabyChristening, ChurchMember
 from .admin_site import church_admin_site
 
@@ -61,12 +62,13 @@ class ChurchMemberAdmin(admin.ModelAdmin):
 class ChurchAdmin(admin.ModelAdmin):
     list_display = [
         'name', 'email', 'phone', 'payment_method',
-        'subscription_status', 'is_approved', 'payment_status_badge', 'created_at',
+        'subscription_status', 'is_approved',
+        'payment_status_display', 'subscription_end_date', 'created_at',
     ]
-    list_filter = ['subscription_status', 'is_approved', 'payment_method']
+    list_filter = ['subscription_status', 'is_approved', 'payment_method', 'payment_status']
     search_fields = ['name', 'email', 'phone']
     readonly_fields = ['created_at', 'updated_at', 'offline_verified_at', 'offline_verified_by']
-    actions = ['activate_churches', 'suspend_churches']
+    actions = ['activate_churches', 'suspend_churches', 'mark_as_paid', 'mark_as_pending', 'renew_one_year']
 
     fieldsets = (
         ('Church Information', {
@@ -77,7 +79,8 @@ class ChurchAdmin(admin.ModelAdmin):
                        'subscription_start_date', 'subscription_end_date')
         }),
         ('Payment', {
-            'fields': ('payment_method', 'offline_payment_reference',
+            'fields': ('payment_method', 'payment_status',
+                       'offline_payment_reference',
                        'offline_verified_by', 'offline_verified_at', 'offline_notes')
         }),
         ('Timestamps', {
@@ -102,21 +105,67 @@ class ChurchAdmin(admin.ModelAdmin):
         )
     payment_status_badge.short_description = 'Payment Status'
 
+    def payment_status_display(self, obj):
+        from django.utils.html import format_html
+        colour = 'green' if obj.payment_status == 'paid' else 'orange'
+        label  = obj.get_payment_status_display()
+        return format_html('<span style="color:{}; font-weight:bold;">{}</span>', colour, label)
+    payment_status_display.short_description = 'Payment'
+
     # ---- Actions ----
 
     def activate_churches(self, request, queryset):
-        updated = queryset.update(
-            is_approved=True,
-            subscription_status='active',
-            is_trial_active=False,   # subscription is live — remove the free trial
-        )
-        self.message_user(request, f"{updated} church(es) activated successfully.")
-    activate_churches.short_description = "Activate selected churches"
+        now = timezone.now()
+        end = now + timedelta(days=365)
+        count = 0
+        for church in queryset:
+            church.is_approved            = True
+            church.subscription_status    = 'active'
+            church.is_trial_active        = False
+            church.payment_status         = 'paid'
+            church.subscription_start_date = now
+            church.subscription_end_date   = end
+            church.save(update_fields=[
+                'is_approved', 'subscription_status', 'is_trial_active',
+                'payment_status', 'subscription_start_date', 'subscription_end_date',
+            ])
+            count += 1
+        self.message_user(request, f"{count} church(es) activated, marked as Paid, subscription expires {end.strftime('%d %b %Y')}.")
+    activate_churches.short_description = "Activate selected churches (Paid — 1 year)"
 
     def suspend_churches(self, request, queryset):
         updated = queryset.update(is_approved=False, subscription_status='suspended')
         self.message_user(request, f"{updated} church(es) suspended.")
     suspend_churches.short_description = "Suspend selected churches"
+
+    def mark_as_paid(self, request, queryset):
+        updated = queryset.update(payment_status='paid')
+        self.message_user(request, f"{updated} church(es) marked as Paid.")
+    mark_as_paid.short_description = "Mark selected churches as Paid"
+
+    def mark_as_pending(self, request, queryset):
+        updated = queryset.update(payment_status='pending')
+        self.message_user(request, f"{updated} church(es) marked as Pending.")
+    mark_as_pending.short_description = "Mark selected churches as Pending payment"
+
+    def renew_one_year(self, request, queryset):
+        now = timezone.now()
+        count = 0
+        for church in queryset:
+            # Extend from today if expired, or from existing end date if still active
+            base = church.subscription_end_date if (
+                church.subscription_end_date and church.subscription_end_date > now
+            ) else now
+            church.subscription_end_date  = base + timedelta(days=365)
+            church.subscription_status    = 'active'
+            church.payment_status         = 'paid'
+            church.is_approved            = True
+            church.save(update_fields=[
+                'subscription_end_date', 'subscription_status', 'payment_status', 'is_approved',
+            ])
+            count += 1
+        self.message_user(request, f"{count} church(es) renewed for 1 year.")
+    renew_one_year.short_description = "Renew subscription by 1 year"
 
     def save_model(self, request, obj, form, change):
         """When a new logo is uploaded via admin, also store it as base64 for print reports."""

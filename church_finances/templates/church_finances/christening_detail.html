@@ -139,6 +139,9 @@
             <p class="text-muted">Christening Record Details</p>
         </div>
         <div class="btn-group-modern">
+            <a href="{% url 'christening_certificate' christening.id %}" class="modern-btn" style="background:#16a34a;" target="_blank">
+                <i class="fas fa-certificate"></i> Print Certificate
+            </a>
             <a href="{% url 'christening_edit' christening.id %}" class="modern-btn modern-btn-warning">
                 <i class="fas fa-edit"></i> Edit Record
             </a>

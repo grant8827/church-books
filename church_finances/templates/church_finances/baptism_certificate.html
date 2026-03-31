@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baptism Certificate — {{ member.full_name }}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Georgia, 'Times New Roman', serif;
+            background: #e8e8e8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        /* Toolbar — hidden on print */
+        .toolbar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .toolbar button, .toolbar a {
+            padding: 0.6rem 1.4rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: Arial, sans-serif;
+        }
+        .btn-print { background: #16a34a; color: #fff; }
+        .btn-back  { background: #6b7280; color: #fff; }
+        .btn-tmpl  { background: #2563eb; color: #fff; }
+
+        /* Certificate page — landscape A4 */
+        .cert-page {
+            width: 297mm;
+            min-height: 210mm;
+            {% if tmpl and tmpl.background_style == 'gradient' %}
+            background: linear-gradient({{ tmpl.gradient_direction|default:'to bottom right' }}, {{ tmpl.background_color|default:'#fdfaf4' }}, {{ tmpl.background_color2|default:'#ffffff' }});
+            {% else %}
+            background: {{ tmpl.background_color|default:'#fdfaf4' }};
+            {% endif %}
+            position: relative;
+            padding: 18mm 18mm 14mm 18mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+
+            border: {{ tmpl.border_width|default:6 }}px
+                    {% if tmpl %}
+                        {% if tmpl.border_style == 'double' %}double
+                        {% elif tmpl.border_style == 'dashed' %}dashed
+                        {% else %}solid{% endif %}
+                    {% else %}double{% endif %}
+                    {{ tmpl.border_color|default:'#1e3a5f' }};
+        }
+
+        {% if tmpl and tmpl.border_style == 'double' %}
+        .cert-page::before {
+            content: '';
+            position: absolute;
+            inset: 5px;
+            border: 2px solid {{ tmpl.accent_color|default:'#c9a84c' }};
+            pointer-events: none;
+        }
+        {% endif %}
+
+        .corner {
+            position: absolute;
+            font-size: 2.2rem;
+            line-height: 1;
+            color: {{ tmpl.accent_color|default:'#c9a84c' }};
+            {% if tmpl and tmpl.border_style != 'ornate' %}display:none;{% endif %}
+        }
+        .corner-tl { top: 10px; left: 12px; }
+        .corner-tr { top: 10px; right: 12px; transform: scaleX(-1); }
+        .corner-bl { bottom: 10px; left: 12px; transform: scaleY(-1); }
+        .corner-br { bottom: 10px; right: 12px; transform: scale(-1,-1); }
+
+        /* Header */
+        .cert-header { text-align: center; width: 100%; position: relative; z-index: 1; }
+
+        .church-logo {
+            max-height: 70px;
+            max-width: 140px;
+            margin-bottom: 0.6rem;
+            object-fit: contain;
+        }
+
+        .church-name {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: {{ tmpl.primary_color|default:'#1e3a5f' }};
+            margin-bottom: 0.3rem;
+        }
+
+        .divider {
+            width: 80px;
+            height: 2px;
+            background: {{ tmpl.accent_color|default:'#c9a84c' }};
+            margin: 0.5rem auto;
+        }
+
+        .cert-title {
+            font-size: 2rem;
+            font-weight: bold;
+            color: {{ tmpl.primary_color|default:'#1e3a5f' }};
+            margin: 0.4rem 0 0.2rem;
+            letter-spacing: 0.03em;
+        }
+
+        .cert-subtitle {
+            font-size: 0.9rem;
+            font-style: italic;
+            color: #555;
+        }
+
+        /* Body */
+        .cert-body {
+            text-align: center;
+            width: 100%;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 1rem 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .intro-text { font-size: 0.95rem; color: #444; font-style: italic; }
+
+        .member-name {
+            font-size: 2.4rem;
+            font-weight: bold;
+            color: {{ tmpl.primary_color|default:'#1e3a5f' }};
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid {{ tmpl.accent_color|default:'#c9a84c' }};
+            padding-bottom: 0.3rem;
+            margin: 0.4rem 0;
+        }
+
+        .cert-details {
+            font-size: 0.95rem;
+            color: #333;
+            line-height: 2;
+        }
+
+        .cert-details strong { color: {{ tmpl.primary_color|default:'#1e3a5f' }}; }
+
+        /* Footer */
+        .cert-footer { width: 100%; text-align: center; position: relative; z-index: 1; }
+
+        .signature-row {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .sig-block { text-align: center; width: 160px; }
+
+        .sig-line {
+            border-bottom: 1px solid {{ tmpl.accent_color|default:'#c9a84c' }};
+            margin-bottom: 0.3rem;
+            height: 30px;
+        }
+
+        .sig-label {
+            font-size: 0.7rem;
+            color: #777;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .footer-text {
+            font-size: 0.78rem;
+            font-style: italic;
+            color: #666;
+            margin-top: 0.6rem;
+        }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .toolbar { display: none !important; }
+            .cert-page {
+                width: 100%;
+                min-height: 100vh;
+                box-shadow: none;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+<!-- Toolbar -->
+<div class="toolbar">
+    <button class="btn-print" onclick="window.print()">
+        <i class="fas fa-print"></i> Print Certificate
+    </button>
+    <a href="{% url 'member_detail' member.id %}" class="btn-back">
+        <i class="fas fa-arrow-left"></i> Back to Member
+    </a>
+    {% if user.is_authenticated %}
+    <a href="{% url 'certificate_templates_list' %}" class="btn-tmpl">
+        <i class="fas fa-palette"></i> Edit Templates
+    </a>
+    {% endif %}
+</div>
+
+<!-- Certificate -->
+<div class="cert-page">
+    <span class="corner corner-tl">&#10087;</span>
+    <span class="corner corner-tr">&#10087;</span>
+    <span class="corner corner-bl">&#10087;</span>
+    <span class="corner corner-br">&#10087;</span>
+
+    <!-- Corner / Frame accents -->
+    {% if tmpl and tmpl.corner_style != 'none' %}
+    <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 297 210" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        {% with p=tmpl.primary_color a=tmpl.accent_color|default:'#c9a84c' %}
+        {% if tmpl.corner_style == 'filled' %}
+            <polygon points="0,0 53,0 0,38" fill="{{ a }}"/>
+            <polygon points="297,0 244,0 297,38" fill="{{ a }}"/>
+            <polygon points="0,210 53,210 0,172" fill="{{ a }}"/>
+            <polygon points="297,210 244,210 297,172" fill="{{ a }}"/>
+        {% elif tmpl.corner_style == 'slash' %}
+            <polygon points="0,0 65,0 0,47" fill="{{ a }}" opacity="0.85"/>
+            <polygon points="297,0 232,0 297,47" fill="{{ a }}" opacity="0.85"/>
+            <polygon points="0,210 65,210 0,163" fill="{{ a }}" opacity="0.85"/>
+            <polygon points="297,210 232,210 297,163" fill="{{ a }}" opacity="0.85"/>
+        {% elif tmpl.corner_style == 'diag2' %}
+            <polygon points="0,0 71,0 50,210 0,210" fill="{{ p }}"/>
+            <polygon points="71,0 79,0 58,210 50,210" fill="{{ a }}"/>
+            <polygon points="297,0 226,0 247,210 297,210" fill="{{ p }}"/>
+            <polygon points="226,0 218,0 239,210 247,210" fill="{{ a }}"/>
+        {% elif tmpl.corner_style == 'diag4' %}
+            <polygon points="0,0 80,0 0,57" fill="{{ p }}"/>
+            <polygon points="80,0 89,0 0,66 0,57" fill="{{ a }}"/>
+            <polygon points="297,0 217,0 297,57" fill="{{ p }}"/>
+            <polygon points="217,0 208,0 297,66 297,57" fill="{{ a }}"/>
+            <polygon points="0,210 80,210 0,153" fill="{{ p }}"/>
+            <polygon points="80,210 89,210 0,144 0,153" fill="{{ a }}"/>
+            <polygon points="297,210 217,210 297,153" fill="{{ p }}"/>
+            <polygon points="217,210 208,210 297,144 297,153" fill="{{ a }}"/>
+            <rect x="15" y="10" width="267" height="190" fill="none" stroke="{{ a }}" stroke-width="3"/>
+        {% elif tmpl.corner_style == 'wave' %}
+            <path d="M 297,0 L 148,0 C 178,6 198,18 186,42 C 174,66 196,80 297,65 Z" fill="{{ p }}"/>
+            <path d="M 148,0 L 139,0 C 169,6 189,18 177,42 C 165,66 187,80 297,68 L 297,65 C 196,80 174,66 186,42 C 198,18 178,6 148,0 Z" fill="{{ a }}"/>
+            <path d="M 0,210 L 149,210 C 119,204 99,192 111,168 C 123,144 101,130 0,145 Z" fill="{{ p }}"/>
+            <path d="M 149,210 L 158,210 C 128,204 108,192 120,168 C 132,144 110,130 0,142 L 0,145 C 101,130 123,144 111,168 C 99,192 119,204 149,210 Z" fill="{{ a }}"/>
+        {% elif tmpl.corner_style == 'tl_only' %}
+            <polygon points="0,0 105,0 0,75" fill="{{ p }}"/>
+            <polygon points="105,0 117,0 0,84 0,75" fill="{{ a }}"/>
+        {% elif tmpl.corner_style == 'bracket' %}
+            <polyline points="36,12 12,12 12,42" fill="none" stroke="{{ a }}" stroke-width="6" stroke-linecap="round"/>
+            <polyline points="261,12 285,12 285,42" fill="none" stroke="{{ a }}" stroke-width="6" stroke-linecap="round"/>
+            <polyline points="36,198 12,198 12,168" fill="none" stroke="{{ a }}" stroke-width="6" stroke-linecap="round"/>
+            <polyline points="261,198 285,198 285,168" fill="none" stroke="{{ a }}" stroke-width="6" stroke-linecap="round"/>
+            <rect x="8" y="8" width="281" height="194" fill="none" stroke="{{ p }}" stroke-width="2" opacity="0.4"/>
+        {% elif tmpl.corner_style == 'band_tb' %}
+            <polygon points="0,0 297,0 297,36 0,30" fill="{{ p }}"/>
+            <polygon points="0,27 297,33 297,39 0,33" fill="{{ a }}"/>
+            <polygon points="0,210 297,210 297,174 0,180" fill="{{ p }}"/>
+            <polygon points="0,183 297,177 297,171 0,177" fill="{{ a }}"/>
+        {% elif tmpl.corner_style == 'double_tri' %}
+            <polygon points="0,0 65,0 0,47" fill="{{ p }}"/>
+            <polygon points="0,0 36,0 0,26" fill="{{ a }}"/>
+            <polygon points="297,0 232,0 297,47" fill="{{ p }}"/>
+            <polygon points="297,0 261,0 297,26" fill="{{ a }}"/>
+            <polygon points="0,210 65,210 0,163" fill="{{ p }}"/>
+            <polygon points="0,210 36,210 0,184" fill="{{ a }}"/>
+            <polygon points="297,210 232,210 297,163" fill="{{ p }}"/>
+            <polygon points="297,210 261,210 297,184" fill="{{ a }}"/>
+        {% elif tmpl.corner_style == 'ribbon_side' %}
+            <polygon points="0,0 66,0 45,210 0,210" fill="{{ p }}"/>
+            <polygon points="66,0 75,0 54,210 45,210" fill="{{ a }}"/>
+            <polygon points="75,0 84,0 63,210 54,210" fill="{{ p }}" opacity="0.5"/>
+        {% endif %}
+        {% endwith %}
+    </svg>
+    {% endif %}
+
+    <!-- Header -->
+    <div class="cert-header">
+        {% if tmpl and tmpl.show_logo or not tmpl %}
+            {% if church.logo_base64 %}
+                <img src="{{ church.logo_base64 }}" alt="{{ church.name }}" class="church-logo">
+            {% elif church.logo %}
+                <img src="{{ church.logo.url }}" alt="{{ church.name }}" class="church-logo">
+            {% endif %}
+        {% endif %}
+        <p class="church-name">{{ church.name }}</p>
+        <div class="divider"></div>
+        <h1 class="cert-title">{{ tmpl.title_text|default:"Certificate of Baptism" }}</h1>
+        {% if tmpl and tmpl.subtitle_text %}
+            <p class="cert-subtitle">{{ tmpl.subtitle_text }}</p>
+        {% endif %}
+    </div>
+
+    <!-- Body -->
+    <div class="cert-body">
+        <p class="intro-text">This is to certify that</p>
+
+        <p class="member-name">{{ member.full_name }}</p>
+
+        <div class="cert-details">
+            {% if tmpl and tmpl.baptism_declaration %}{{ tmpl.baptism_declaration }}{% else %}was baptised in the name of the Father, the Son, and the Holy Spirit{% endif %}<br>
+            on <strong>{{ member.baptism_date|date:"F j, Y" }}</strong>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="cert-footer">
+        <div class="signature-row">
+            <div class="sig-block">
+                <div class="sig-line"></div>
+                <p class="sig-label">Pastor / Officiant</p>
+            </div>
+            <div class="sig-block">
+                <div class="sig-line"></div>
+                <p class="sig-label">Date</p>
+            </div>
+            <div class="sig-block">
+                <div class="sig-line"></div>
+                <p class="sig-label">Church Administrator</p>
+            </div>
+        </div>
+
+        {% if tmpl and tmpl.footer_text %}
+        <p class="footer-text">{{ tmpl.footer_text }}</p>
+        {% endif %}
+    </div>
+</div>
+
+</body>
+</html>

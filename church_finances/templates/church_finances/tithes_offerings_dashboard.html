@@ -165,7 +165,7 @@
                         {% for contributor in top_contributors|slice:":5" %}
                             <div class="flex justify-between items-center py-2">
                                 <div class="text-sm font-medium text-gray-900">
-                                    {{ contributor.member__user__first_name }} {{ contributor.member__user__last_name }}
+                                    {{ contributor.member__first_name }} {{ contributor.member__last_name }}
                                 </div>
                                 <div class="text-sm font-semibold text-gray-900">
                                     ${{ contributor.total|floatformat:2 }}
