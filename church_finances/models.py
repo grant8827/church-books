@@ -117,13 +117,16 @@ class Church(models.Model):
         # If trial is active and not expired, allow access
         if self.is_trial_active and not self.is_trial_expired:
             return True
-        
-        # If trial has expired, only allow if payment is verified
-        if self.is_trial_expired:
-            return self.is_payment_verified and self.subscription_status == 'active'
-        
-        # If not in trial, check payment status
-        return self.is_payment_verified and self.subscription_status == 'active'
+
+        # Admin-activated: payment_status marked paid + subscription active + approved
+        if self.payment_status == 'paid' and self.subscription_status == 'active' and self.is_approved:
+            return True
+
+        # Legacy offline-verification path
+        if self.is_payment_verified and self.subscription_status == 'active':
+            return True
+
+        return False
     
     def check_and_expire(self):
         """
