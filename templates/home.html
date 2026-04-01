@@ -1,127 +1,571 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Church Books - Complete Church Management Solution{% endblock %}
+{% block title %}Church Books — Complete Church Management Software{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+/* ---- Animated gradient hero text ---- */
+@keyframes gradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.gradient-text {
+  background: linear-gradient(270deg, #D97706, #F59E0B, #FBBF24, #D97706);
+  background-size: 400% 400%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 6s ease infinite;
+}
+
+/* ---- Floating hero illustration dots ---- */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-12px); }
+}
+.float-slow  { animation: float 5s ease-in-out infinite; }
+.float-med   { animation: float 3.5s ease-in-out infinite; }
+.float-fast  { animation: float 2.5s ease-in-out infinite; }
+
+/* ---- Feature card hover ---- */
+.feature-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.feature-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 40px -8px rgba(15,23,42,0.15);
+}
+
+/* ---- Step connector line ---- */
+.step-line::before {
+  content: '';
+  position: absolute;
+  top: 22px;
+  left: calc(50% + 2.5rem);
+  width: calc(100% - 5rem);
+  height: 2px;
+  background: linear-gradient(90deg, #D97706, #FCD34D);
+}
+
+/* ---- Testimonial star ---- */
+.star-filled { color: #F59E0B; }
+
+/* ---- Smooth scroll ---- */
+html { scroll-behavior: smooth; }
+
+/* ---- CTA glow button ---- */
+.btn-glow {
+  box-shadow: 0 0 0 0 rgba(217,119,6,0.5);
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+.btn-glow:hover {
+  box-shadow: 0 0 0 8px rgba(217,119,6,0);
+  transform: scale(1.04);
+}
+
+/* ---- Stats counter card ---- */
+.stat-card {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(10px);
+}
+
+/* ---- FAQ accordion ---- */
+.faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+.faq-answer.open { max-height: 400px; }
+.faq-chevron { transition: transform 0.3s ease; }
+.faq-chevron.rotated { transform: rotate(180deg); }
+</style>
+{% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
-<div class="bg-gradient-to-b from-[#0F172A] to-slate-800 text-white">
-    <div class="container mx-auto px-4 py-16 md:py-24">
-        <div class="text-center max-w-4xl mx-auto">
-            <h1 class="text-4xl md:text-6xl font-bold mb-6" style="color: #D97706;">Simplify Your Church Management</h1>
-            <p class="text-xl md:text-2xl mb-8 text-slate-300">All-in-one solution for managing your church's finances, members, and operations</p>
-            {% if not user.is_authenticated %}
-                <div class="space-x-4">
-                    <a href="{% url 'choose_plan' %}" class="inline-block bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-8 rounded-full transition duration-300">
-                        Get Started For Free
-                    </a>
-                    <a href="{% url 'login' %}" class="inline-block bg-transparent border-2 border-slate-400 text-white font-bold py-3 px-8 rounded-full hover:bg-white hover:text-[#0F172A] transition duration-300">
-                        Sign In
-                    </a>
-                </div>
-            {% else %}
-                <a href="{% url 'dashboard' %}" class="inline-block bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-8 rounded-full transition duration-300">
-                    Go to Dashboard
-                </a>
-            {% endif %}
-        </div>
-    </div>
-</div>
 
-<!-- Features Section -->
-<div class="py-16 bg-slate-50">
-    <div class="container mx-auto px-4">
-        <h2 class="text-3xl md:text-4xl font-bold text-slate-900 text-center mb-12">Everything Your Church Needs</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <!-- Financial Management -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition duration-300">
-                <div class="inline-flex items-center justify-center w-12 h-12 bg-amber-50 rounded-full mb-4">
-                    <span class="text-amber-600 text-2xl">💰</span>
-                </div>
-                <h3 class="text-xl font-bold text-slate-900 mb-3">Financial Management</h3>
-                <p class="text-slate-500">Track donations, manage expenses, and generate financial reports with ease.</p>
-            </div>
-            <!-- Member Management -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition duration-300">
-                <div class="inline-flex items-center justify-center w-12 h-12 bg-amber-50 rounded-full mb-4">
-                    <span class="text-amber-600 text-2xl">👥</span>
-                </div>
-                <h3 class="text-xl font-bold text-slate-900 mb-3">Member Management</h3>
-                <p class="text-slate-500">Maintain detailed member records, track attendance, and manage church roles.</p>
-            </div>
-            <!-- Reporting -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition duration-300">
-                <div class="inline-flex items-center justify-center w-12 h-12 bg-amber-50 rounded-full mb-4">
-                    <span class="text-amber-600 text-2xl">📊</span>
-                </div>
-                <h3 class="text-xl font-bold text-slate-900 mb-3">Advanced Reporting</h3>
-                <p class="text-slate-500">Generate comprehensive reports for better decision-making and transparency.</p>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- ═══════════════════════════════════════════════
+     HERO
+════════════════════════════════════════════════ -->
+<section class="relative overflow-hidden" style="background: linear-gradient(135deg, #0F172A 0%, #1e293b 60%, #0F172A 100%);">
 
-<!-- Benefits Section -->
-<div class="py-16 bg-white">
-    <div class="container mx-auto px-4">
-        <h2 class="text-3xl md:text-4xl font-bold text-slate-900 text-center mb-12">Why Choose Church Books?</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div class="text-center">
-                <div class="text-4xl mb-4">🔒</div>
-                <h3 class="text-lg font-bold text-slate-900 mb-2">Secure & Private</h3>
-                <p class="text-slate-500">Your data is protected with enterprise-grade security</p>
-            </div>
-            <div class="text-center">
-                <div class="text-4xl mb-4">⚡</div>
-                <h3 class="text-lg font-bold text-slate-900 mb-2">Easy to Use</h3>
-                <p class="text-slate-500">Intuitive interface designed for everyone</p>
-            </div>
-            <div class="text-center">
-                <div class="text-4xl mb-4">💼</div>
-                <h3 class="text-lg font-bold text-slate-900 mb-2">Professional</h3>
-                <p class="text-slate-500">Built specifically for church management</p>
-            </div>
-            <div class="text-center">
-                <div class="text-4xl mb-4">📱</div>
-                <h3 class="text-lg font-bold text-slate-900 mb-2">Always Available</h3>
-                <p class="text-slate-500">Access from any device, anywhere</p>
-            </div>
-        </div>
-    </div>
-</div>
+  <!-- Background decoration -->
+  <div class="absolute inset-0 pointer-events-none select-none">
+    <div class="absolute top-10 left-10 w-72 h-72 rounded-full opacity-10 float-slow" style="background:radial-gradient(circle,#D97706,transparent 70%)"></div>
+    <div class="absolute bottom-10 right-10 w-96 h-96 rounded-full opacity-10 float-med" style="background:radial-gradient(circle,#3b82f6,transparent 70%)"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5" style="background:radial-gradient(circle,#D97706,transparent)"></div>
+  </div>
 
-<!-- Call to Action -->
-<div class="bg-[#0F172A] text-white py-16">
-    <div class="container mx-auto px-4 text-center">
-        <h2 class="text-3xl md:text-4xl font-bold mb-6" style="color: #D97706;">Ready to Transform Your Church Management?</h2>
-        <p class="text-xl mb-8 text-slate-300">Join thousands of churches already using Church Books</p>
-        {% if not user.is_authenticated %}
-            <div class="space-x-4">
-                <a href="{% url 'choose_plan' %}" class="inline-block bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-8 rounded-full transition duration-300">
-                    Get Started For Free
-                </a>
-            </div>
-        {% else %}
-            <a href="{% url 'dashboard' %}" class="inline-block bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-8 rounded-full transition duration-300">
-                Go to Dashboard
-            </a>
-        {% endif %}
-    </div>
-</div>
+  <div class="relative max-w-6xl mx-auto px-6 py-24 md:py-32">
+    <div class="text-center">
 
-<!-- Testimonial Section -->
-<div class="py-16 bg-slate-50">
-    <div class="container mx-auto px-4">
-        <div class="max-w-3xl mx-auto text-center">
-            <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-12">Trusted by Churches Worldwide</h2>
-            <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-100">
-                <p class="text-xl text-slate-500 italic mb-6">"Church Books has revolutionized how we manage our church operations. The financial tracking and member management features are invaluable."</p>
-                <p class="font-bold text-slate-900">Pastor James Wilson</p>
-                <p class="text-slate-500">Grace Community Church</p>
-            </div>
-        </div>
+      <!-- Badge -->
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold mb-6 uppercase tracking-widest"
+           style="background:rgba(217,119,6,0.15); border:1px solid rgba(217,119,6,0.3); color:#FCD34D;">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+        30-Day Free Trial &mdash; No Credit Card Required
+      </div>
+
+      <h1 class="text-4xl sm:text-5xl md:text-7xl font-extrabold text-white leading-tight mb-6">
+        The Smart Way to<br>
+        <span class="gradient-text">Manage Your Church</span>
+      </h1>
+      <p class="text-lg md:text-xl text-slate-300 max-w-2xl mx-auto mb-10">
+        Church Books brings your finances, members, children's ministry, and records together in one beautifully simple platform built for ministry leaders.
+      </p>
+
+      <!-- CTA buttons -->
+      {% if not user.is_authenticated %}
+      <div class="flex flex-wrap items-center justify-center gap-4">
+        <a href="{% url 'choose_plan' %}"
+           class="btn-glow inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white font-bold py-3.5 px-9 rounded-full text-base transition-colors duration-200">
+          <i class="fas fa-gift"></i> Start Free Trial
+        </a>
+        <a href="{% url 'login' %}"
+           class="inline-flex items-center gap-2 border border-slate-500 text-slate-200 hover:border-amber-400 hover:text-amber-300 font-semibold py-3.5 px-9 rounded-full text-base transition-colors duration-200">
+          <i class="fas fa-sign-in-alt"></i> Sign In
+        </a>
+      </div>
+      {% else %}
+      <a href="{% url 'dashboard' %}"
+         class="btn-glow inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white font-bold py-3.5 px-9 rounded-full text-base transition-colors duration-200">
+        <i class="fas fa-tachometer-alt"></i> Go to Dashboard
+      </a>
+      {% endif %}
+
+      <!-- Social proof -->
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-slate-400">
+        <span class="flex items-center gap-1.5"><i class="fas fa-shield-alt text-green-400"></i> Secure &amp; Encrypted</span>
+        <span class="flex items-center gap-1.5"><i class="fas fa-clock text-amber-400"></i> Setup in Minutes</span>
+        <span class="flex items-center gap-1.5"><i class="fas fa-mobile-alt text-blue-400"></i> Works on Any Device</span>
+      </div>
     </div>
-</div>
+
+    <!-- Stats bar -->
+    <div class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="stat-card rounded-2xl p-5 text-center">
+        <p class="text-3xl font-extrabold text-amber-400">30</p>
+        <p class="text-slate-400 text-sm mt-1">Day Free Trial</p>
+      </div>
+      <div class="stat-card rounded-2xl p-5 text-center">
+        <p class="text-3xl font-extrabold text-amber-400">10+</p>
+        <p class="text-slate-400 text-sm mt-1">Core Modules</p>
+      </div>
+      <div class="stat-card rounded-2xl p-5 text-center">
+        <p class="text-3xl font-extrabold text-amber-400">100%</p>
+        <p class="text-slate-400 text-sm mt-1">Cloud-Based</p>
+      </div>
+      <div class="stat-card rounded-2xl p-5 text-center">
+        <p class="text-3xl font-extrabold text-amber-400">$0</p>
+        <p class="text-slate-400 text-sm mt-1">To Get Started</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     FEATURES — MAIN MODULES
+════════════════════════════════════════════════ -->
+<section class="py-24 bg-slate-50" id="features">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-16">
+      <p class="text-amber-600 font-semibold uppercase tracking-widest text-sm mb-2">Everything You Need</p>
+      <h2 class="text-3xl md:text-5xl font-extrabold text-slate-900">Built for the Whole Church</h2>
+      <p class="text-slate-500 mt-4 max-w-xl mx-auto">Every module works together seamlessly so you spend less time on admin and more time on ministry.</p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      <!-- Card: Finance -->
+      <div class="feature-card bg-white rounded-2xl p-7 border border-slate-100">
+        <div class="w-13 h-13 rounded-xl flex items-center justify-center mb-5 text-amber-600" style="background:#FEF3C7; width:52px; height:52px;">
+          <i class="fas fa-chart-line text-xl"></i>
+        </div>
+        <h3 class="text-lg font-bold text-slate-900 mb-2">Financial Management</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Record income &amp; expenses, track donations, manage budgets, and generate PDF financial reports, all in one place.</p>
+        <ul class="mt-4 space-y-1.5 text-sm text-slate-500">
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Income &amp; expense tracking</li>
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Monthly &amp; yearly reports</li>
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Printable PDF exports</li>
+        </ul>
+      </div>
+
+      <!-- Card: Members -->
+      <div class="feature-card bg-white rounded-2xl p-7 border border-slate-100">
+        <div class="rounded-xl flex items-center justify-center mb-5 text-blue-600" style="background:#EFF6FF; width:52px; height:52px;">
+          <i class="fas fa-users text-xl"></i>
+        </div>
+        <h3 class="text-lg font-bold text-slate-900 mb-2">Member Management</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Maintain complete profiles for every member including contact info, baptism records, membership dates, and roles.</p>
+        <ul class="mt-4 space-y-1.5 text-sm text-slate-500">
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Full member profiles</li>
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Roles &amp; permissions</li>
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Baptism &amp; membership records</li>
+        </ul>
+      </div>
+
+      <!-- Card: Tithes -->
+      <div class="feature-card bg-white rounded-2xl p-7 border border-slate-100">
+        <div class="rounded-xl flex items-center justify-center mb-5 text-emerald-600" style="background:#ECFDF5; width:52px; height:52px;">
+          <i class="fas fa-hand-holding-heart text-xl"></i>
+        </div>
+        <h3 class="text-lg font-bold text-slate-900 mb-2">Tithes &amp; Offerings</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Record individual contributions, print annual giving statements, and get a full picture of your congregation's generosity.</p>
+        <ul class="mt-4 space-y-1.5 text-sm text-slate-500">
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Per-member giving history</li>
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Bulk entry support</li>
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Annual giving statements</li>
+        </ul>
+      </div>
+
+      <!-- Card: Children -->
+      <div class="feature-card bg-white rounded-2xl p-7 border border-slate-100">
+        <div class="rounded-xl flex items-center justify-center mb-5 text-purple-600" style="background:#F5F3FF; width:52px; height:52px;">
+          <i class="fas fa-child text-xl"></i>
+        </div>
+        <h3 class="text-lg font-bold text-slate-900 mb-2">Children's Ministry</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Manage Sunday school classes, track attendance, store emergency contacts, and link children to their parent members.</p>
+        <ul class="mt-4 space-y-1.5 text-sm text-slate-500">
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Class &amp; attendance tracking</li>
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Parent linkage</li>
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Emergency contacts</li>
+        </ul>
+      </div>
+
+      <!-- Card: Christenings -->
+      <div class="feature-card bg-white rounded-2xl p-7 border border-slate-100">
+        <div class="rounded-xl flex items-center justify-center mb-5 text-sky-600" style="background:#F0F9FF; width:52px; height:52px;">
+          <i class="fas fa-baby text-xl"></i>
+        </div>
+        <h3 class="text-lg font-bold text-slate-900 mb-2">Baby Christenings</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Record christening ceremonies with full details — godparents, pastor, date, and auto-generate beautiful printable certificates.</p>
+        <ul class="mt-4 space-y-1.5 text-sm text-slate-500">
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Complete ceremony records</li>
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Godparent details</li>
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Printable certificates</li>
+        </ul>
+      </div>
+
+      <!-- Card: Certificates -->
+      <div class="feature-card bg-white rounded-2xl p-7 border border-slate-100">
+        <div class="rounded-xl flex items-center justify-center mb-5 text-rose-600" style="background:#FFF1F2; width:52px; height:52px;">
+          <i class="fas fa-certificate text-xl"></i>
+        </div>
+        <h3 class="text-lg font-bold text-slate-900 mb-2">Custom Certificates</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Design and print professional certificates for baptism, membership, graduation, and more using your church's own branding.</p>
+        <ul class="mt-4 space-y-1.5 text-sm text-slate-500">
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Multiple certificate types</li>
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Custom colours &amp; logo</li>
+          <li class="flex items-center gap-2"><i class="fas fa-check text-green-500 text-xs"></i> Instant PDF printing</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     HOW IT WORKS
+════════════════════════════════════════════════ -->
+<section class="py-24 bg-white">
+  <div class="max-w-5xl mx-auto px-6">
+    <div class="text-center mb-16">
+      <p class="text-amber-600 font-semibold uppercase tracking-widest text-sm mb-2">Quick to Launch</p>
+      <h2 class="text-3xl md:text-5xl font-extrabold text-slate-900">Up and Running in 3 Steps</h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-10 relative">
+
+      <!-- Connector lines (desktop) -->
+      <style>.how-step:not(:last-child)::after { content:''; position:absolute; top:26px; left:calc(100% - 0px); width:100%; height:2px; background:linear-gradient(90deg,#D97706,#FCD34D); display:none; } @media(min-width:768px){ .how-step:not(:last-child)::after { display:block; } }</style>
+
+      <div class="relative how-step text-center px-4">
+        <div class="w-14 h-14 rounded-full bg-amber-600 text-white flex items-center justify-center text-xl font-bold mx-auto mb-5 shadow-lg shadow-amber-200">1</div>
+        <h3 class="text-lg font-bold text-slate-900 mb-2">Create Your Account</h3>
+        <p class="text-slate-500 text-sm">Sign up in under 2 minutes. Enter your name, email, and church details — no credit card needed.</p>
+      </div>
+
+      <div class="relative how-step text-center px-4">
+        <div class="w-14 h-14 rounded-full bg-amber-600 text-white flex items-center justify-center text-xl font-bold mx-auto mb-5 shadow-lg shadow-amber-200">2</div>
+        <h3 class="text-lg font-bold text-slate-900 mb-2">Set Up Your Church</h3>
+        <p class="text-slate-500 text-sm">Add your church name, logo, and invite your team. Everything is organized under your church from day one.</p>
+      </div>
+
+      <div class="relative how-step text-center px-4">
+        <div class="w-14 h-14 rounded-full bg-amber-600 text-white flex items-center justify-center text-xl font-bold mx-auto mb-5 shadow-lg shadow-amber-200">3</div>
+        <h3 class="text-lg font-bold text-slate-900 mb-2">Start Managing</h3>
+        <p class="text-slate-500 text-sm">Add members, record transactions, and explore all the tools — your 30-day trial starts immediately.</p>
+      </div>
+
+    </div>
+
+    <div class="mt-12 text-center">
+      {% if not user.is_authenticated %}
+      <a href="{% url 'choose_plan' %}"
+         class="btn-glow inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white font-bold py-3.5 px-10 rounded-full transition-colors duration-200">
+        <i class="fas fa-rocket"></i> Get Started — It's Free
+      </a>
+      {% else %}
+      <a href="{% url 'dashboard' %}"
+         class="btn-glow inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white font-bold py-3.5 px-10 rounded-full transition-colors duration-200">
+        <i class="fas fa-tachometer-alt"></i> Open Dashboard
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     BENEFITS / WHY CHOOSE
+════════════════════════════════════════════════ -->
+<section class="py-24" style="background: linear-gradient(135deg, #0F172A 0%, #1e293b 100%)">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-16">
+      <p class="text-amber-400 font-semibold uppercase tracking-widest text-sm mb-2">Why Church Books?</p>
+      <h2 class="text-3xl md:text-5xl font-extrabold text-white">Designed for Ministry,<br>Not Just Business</h2>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+      <div class="bg-white/5 border border-white/10 rounded-2xl p-6 text-center hover:bg-white/10 transition-colors duration-200">
+        <div class="w-14 h-14 rounded-full bg-amber-600/20 text-amber-400 flex items-center justify-center text-2xl mx-auto mb-4">
+          <i class="fas fa-lock"></i>
+        </div>
+        <h3 class="text-white font-bold mb-2">Secure &amp; Private</h3>
+        <p class="text-slate-400 text-sm">Your church data is encrypted and never shared. You own your data, period.</p>
+      </div>
+
+      <div class="bg-white/5 border border-white/10 rounded-2xl p-6 text-center hover:bg-white/10 transition-colors duration-200">
+        <div class="w-14 h-14 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center text-2xl mx-auto mb-4">
+          <i class="fas fa-bolt"></i>
+        </div>
+        <h3 class="text-white font-bold mb-2">Easy to Use</h3>
+        <p class="text-slate-400 text-sm">No training needed. An intuitive interface means anyone on your team can jump right in.</p>
+      </div>
+
+      <div class="bg-white/5 border border-white/10 rounded-2xl p-6 text-center hover:bg-white/10 transition-colors duration-200">
+        <div class="w-14 h-14 rounded-full bg-emerald-600/20 text-emerald-400 flex items-center justify-center text-2xl mx-auto mb-4">
+          <i class="fas fa-cloud"></i>
+        </div>
+        <h3 class="text-white font-bold mb-2">Always Available</h3>
+        <p class="text-slate-400 text-sm">100% cloud-based. Access your church's dashboard from any phone, tablet, or computer.</p>
+      </div>
+
+      <div class="bg-white/5 border border-white/10 rounded-2xl p-6 text-center hover:bg-white/10 transition-colors duration-200">
+        <div class="w-14 h-14 rounded-full bg-purple-600/20 text-purple-400 flex items-center justify-center text-2xl mx-auto mb-4">
+          <i class="fas fa-church"></i>
+        </div>
+        <h3 class="text-white font-bold mb-2">Church-Specific</h3>
+        <p class="text-slate-400 text-sm">Every feature was built with churches in mind — not adapted from generic business software.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     TESTIMONIALS
+════════════════════════════════════════════════ -->
+<section class="py-24 bg-slate-50">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-16">
+      <p class="text-amber-600 font-semibold uppercase tracking-widest text-sm mb-2">Trusted by Churches</p>
+      <h2 class="text-3xl md:text-5xl font-extrabold text-slate-900">Hear From Our Community</h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+      <!-- T1 -->
+      <div class="bg-white rounded-2xl p-7 border border-slate-100 shadow-sm flex flex-col">
+        <div class="flex mb-4">
+          <i class="fas fa-star star-filled text-sm"></i><i class="fas fa-star star-filled text-sm ml-0.5"></i>
+          <i class="fas fa-star star-filled text-sm ml-0.5"></i><i class="fas fa-star star-filled text-sm ml-0.5"></i>
+          <i class="fas fa-star star-filled text-sm ml-0.5"></i>
+        </div>
+        <p class="text-slate-600 text-sm leading-relaxed flex-1">"Church Books has completely transformed how we manage our congregation. The financial reports alone saved us hours every month."</p>
+        <div class="mt-6 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-sm">JW</div>
+          <div>
+            <p class="font-semibold text-slate-900 text-sm">Pastor James Wilson</p>
+            <p class="text-slate-400 text-xs">Grace Community Church</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- T2 -->
+      <div class="bg-white rounded-2xl p-7 border border-slate-100 shadow-sm flex flex-col">
+        <div class="flex mb-4">
+          <i class="fas fa-star star-filled text-sm"></i><i class="fas fa-star star-filled text-sm ml-0.5"></i>
+          <i class="fas fa-star star-filled text-sm ml-0.5"></i><i class="fas fa-star star-filled text-sm ml-0.5"></i>
+          <i class="fas fa-star star-filled text-sm ml-0.5"></i>
+        </div>
+        <p class="text-slate-600 text-sm leading-relaxed flex-1">"The member management module is incredible. We can track baptisms, attendance, and giving all from the same screen. Our team loves it."</p>
+        <div class="mt-6 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">SM</div>
+          <div>
+            <p class="font-semibold text-slate-900 text-sm">Sister Mary Okonkwo</p>
+            <p class="text-slate-400 text-xs">Harvest Bible Church</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- T3 -->
+      <div class="bg-white rounded-2xl p-7 border border-slate-100 shadow-sm flex flex-col">
+        <div class="flex mb-4">
+          <i class="fas fa-star star-filled text-sm"></i><i class="fas fa-star star-filled text-sm ml-0.5"></i>
+          <i class="fas fa-star star-filled text-sm ml-0.5"></i><i class="fas fa-star star-filled text-sm ml-0.5"></i>
+          <i class="fas fa-star star-filled text-sm ml-0.5"></i>
+        </div>
+        <p class="text-slate-600 text-sm leading-relaxed flex-1">"Setting up was so quick. Within 30 minutes we had our church profile, first members entered, and a transaction recorded. Absolutely brilliant."</p>
+        <div class="mt-6 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">RT</div>
+          <div>
+            <p class="font-semibold text-slate-900 text-sm">Rev. Robert Thompson</p>
+            <p class="text-slate-400 text-xs">Cornerstone Fellowship</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     FAQ
+════════════════════════════════════════════════ -->
+<section class="py-24 bg-slate-50">
+  <div class="max-w-3xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <p class="text-amber-600 font-semibold uppercase tracking-widest text-sm mb-2">Got Questions?</p>
+      <h2 class="text-3xl md:text-5xl font-extrabold text-slate-900">Frequently Asked Questions</h2>
+    </div>
+    <div class="space-y-3" id="faqAccordion">
+
+      {% for qa in faq_items %}
+      <div class="bg-white rounded-xl border border-slate-100 overflow-hidden">
+        <button class="faq-toggle w-full text-left px-6 py-4 flex items-center justify-between font-semibold text-slate-800 hover:text-amber-600 transition-colors duration-200">
+          {{ qa.q }}
+          <i class="fas fa-chevron-down faq-chevron text-slate-400 ml-4 shrink-0"></i>
+        </button>
+        <div class="faq-answer px-6 text-slate-500 text-sm leading-relaxed">
+          <div class="pb-4">{{ qa.a }}</div>
+        </div>
+      </div>
+      {% empty %}
+
+      <div class="bg-white rounded-xl border border-slate-100 overflow-hidden">
+        <button class="faq-toggle w-full text-left px-6 py-4 flex items-center justify-between font-semibold text-slate-800 hover:text-amber-600 transition-colors">
+          Do I need a credit card to start my free trial?
+          <i class="fas fa-chevron-down faq-chevron text-slate-400 ml-4 shrink-0"></i>
+        </button>
+        <div class="faq-answer px-6 text-slate-500 text-sm leading-relaxed">
+          <div class="pb-4">No credit card required. Sign up, verify your email, and your 30-day free trial starts immediately with full access to every feature.</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-100 overflow-hidden">
+        <button class="faq-toggle w-full text-left px-6 py-4 flex items-center justify-between font-semibold text-slate-800 hover:text-amber-600 transition-colors">
+          How many users can I add to my church account?
+          <i class="fas fa-chevron-down faq-chevron text-slate-400 ml-4 shrink-0"></i>
+        </button>
+        <div class="faq-answer px-6 text-slate-500 text-sm leading-relaxed">
+          <div class="pb-4">There is no hard limit. You can add as many staff accounts as needed — pastors, treasurers, deacons, and admins — each with their own login.</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-100 overflow-hidden">
+        <button class="faq-toggle w-full text-left px-6 py-4 flex items-center justify-between font-semibold text-slate-800 hover:text-amber-600 transition-colors">
+          Can I export or print my data?
+          <i class="fas fa-chevron-down faq-chevron text-slate-400 ml-4 shrink-0"></i>
+        </button>
+        <div class="faq-answer px-6 text-slate-500 text-sm leading-relaxed">
+          <div class="pb-4">Yes. Church Books supports PDF export for financial reports, member contribution statements, certificates, and more. Your data is always printable and accessible.</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-100 overflow-hidden">
+        <button class="faq-toggle w-full text-left px-6 py-4 flex items-center justify-between font-semibold text-slate-800 hover:text-amber-600 transition-colors">
+          Is my church's data safe?
+          <i class="fas fa-chevron-down faq-chevron text-slate-400 ml-4 shrink-0"></i>
+        </button>
+        <div class="faq-answer px-6 text-slate-500 text-sm leading-relaxed">
+          <div class="pb-4">Absolutely. All data is encrypted in transit and at rest. We use industry-standard security practices and your church's information is never sold or shared with third parties.</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-100 overflow-hidden">
+        <button class="faq-toggle w-full text-left px-6 py-4 flex items-center justify-between font-semibold text-slate-800 hover:text-amber-600 transition-colors">
+          What happens after my trial ends?
+          <i class="fas fa-chevron-down faq-chevron text-slate-400 ml-4 shrink-0"></i>
+        </button>
+        <div class="faq-answer px-6 text-slate-500 text-sm leading-relaxed">
+          <div class="pb-4">After 30 days you'll be prompted to subscribe for $120/year to keep access. If you don't subscribe, your data is preserved but dashboard access is paused until payment is made.</div>
+        </div>
+      </div>
+
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     FINAL CTA
+════════════════════════════════════════════════ -->
+<section style="background: linear-gradient(135deg, #0F172A 0%, #1e293b 100%)" class="py-24 text-center relative overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute -top-20 -right-20 w-80 h-80 rounded-full opacity-10 float-slow" style="background:radial-gradient(circle,#D97706,transparent 70%)"></div>
+    <div class="absolute -bottom-20 -left-20 w-80 h-80 rounded-full opacity-10 float-med" style="background:radial-gradient(circle,#3b82f6,transparent 70%)"></div>
+  </div>
+  <div class="relative max-w-3xl mx-auto px-6">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold mb-6 uppercase tracking-widest"
+         style="background:rgba(217,119,6,0.15); border:1px solid rgba(217,119,6,0.3); color:#FCD34D;">
+      <i class="fas fa-church text-amber-400"></i> Built for Churches Like Yours
+    </div>
+    <h2 class="text-3xl md:text-5xl font-extrabold text-white mb-6">
+      Ready to Simplify<br>
+      <span class="gradient-text">Your Church Admin?</span>
+    </h2>
+    <p class="text-slate-300 text-lg mb-10">Join churches already using Church Books to save time, reduce errors, and focus on what matters most — ministry.</p>
+    {% if not user.is_authenticated %}
+    <div class="flex flex-wrap items-center justify-center gap-4">
+      <a href="{% url 'choose_plan' %}"
+         class="btn-glow inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white font-bold py-4 px-10 rounded-full text-base transition-colors duration-200">
+        <i class="fas fa-gift"></i> Start Your Free 30-Day Trial
+      </a>
+      <a href="{% url 'about' %}"
+         class="inline-flex items-center gap-2 border border-slate-500 text-slate-300 hover:border-amber-400 hover:text-amber-300 font-semibold py-4 px-10 rounded-full text-base transition-colors duration-200">
+        Learn More <i class="fas fa-arrow-right"></i>
+      </a>
+    </div>
+    <p class="text-slate-500 text-sm mt-4">No credit card required &bull; Cancel anytime &bull; All features included</p>
+    {% else %}
+    <a href="{% url 'dashboard' %}"
+       class="btn-glow inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white font-bold py-4 px-10 rounded-full text-base transition-colors duration-200">
+      <i class="fas fa-tachometer-alt"></i> Open Your Dashboard
+    </a>
+    {% endif %}
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     FAQ ACCORDION JS
+════════════════════════════════════════════════ -->
+<script>
+document.querySelectorAll('.faq-toggle').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const answer  = btn.nextElementSibling;
+    const chevron = btn.querySelector('.faq-chevron');
+    const isOpen  = answer.classList.contains('open');
+
+    // Close all
+    document.querySelectorAll('.faq-answer').forEach(a => a.classList.remove('open'));
+    document.querySelectorAll('.faq-chevron').forEach(c => c.classList.remove('rotated'));
+
+    if (!isOpen) {
+      answer.classList.add('open');
+      chevron.classList.add('rotated');
+    }
+  });
+});
+</script>
+
 {% endblock %}
 
 

@@ -4,11 +4,15 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.models import User, Group
 from django.contrib.messages import success, error, info
 from django.db.models import Sum, Q
-from django.http import HttpResponseNotAllowed, HttpResponse
+from django.http import HttpResponseNotAllowed, HttpResponse, JsonResponse
 from django.utils import timezone
 from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
 from functools import wraps
-from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, BabyChristening, CertificateTemplate
+import random
+import string
+from datetime import timedelta
+from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, BabyChristening, CertificateTemplate, EmailOTP
 from .forms import (
     CustomUserCreationForm, TransactionForm, ChurchRegistrationForm,
     ChurchMemberForm, MemberForm, ContributionForm, DashboardUserRegistrationForm
@@ -116,6 +120,104 @@ def get_user_church(user):
         return None
 
 
+def send_otp_view(request):
+    """
+    AJAX endpoint: validates personal-info / credentials fields, generates a
+    6-digit OTP, e-mails it to the supplied address and stores the result in
+    the session so the subsequent verify step can confirm it.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Invalid request method.'})
+
+    email = request.POST.get('email', '').strip().lower()
+    if not email:
+        return JsonResponse({'ok': False, 'error': 'Email address is required.'})
+
+    # Reject already-registered email addresses immediately
+    if User.objects.filter(email__iexact=email).exists():
+        return JsonResponse({'ok': False, 'error': 'This email address is already registered. Please use a different email or sign in.'})
+
+    # Generate a fresh 6-digit code
+    code = ''.join(random.choices(string.digits, k=6))
+
+    # Replace any existing OTPs for this address
+    EmailOTP.objects.filter(email=email).delete()
+    EmailOTP.objects.create(
+        email=email,
+        code=code,
+        expires_at=timezone.now() + timedelta(minutes=10),
+    )
+
+    # Send the verification e-mail (mirrors the password-reset email setup)
+    try:
+        import logging
+        from django.core.mail import send_mail
+        from django.conf import settings as django_settings
+        logger = logging.getLogger(__name__)
+
+        send_mail(
+            subject='Church Books — Your Email Verification Code',
+            message=(
+                f'Your Church Books verification code is: {code}\n\n'
+                f'This code will expire in 10 minutes.\n\n'
+                f'If you did not request this code, please ignore this email.'
+            ),
+            from_email=django_settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+        logger.info(f'OTP email sent to {email}')
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).error(f'OTP email failed for {email}: {exc}', exc_info=True)
+        return JsonResponse({'ok': False, 'error': 'Failed to send verification email. Please try again or contact support.'})
+
+    # Remember the verified email in session
+    request.session['otp_email'] = email
+    request.session['otp_verified'] = False
+
+    return JsonResponse({'ok': True})
+
+
+def verify_otp_view(request):
+    """
+    AJAX endpoint: checks the code entered by the user against the stored OTP.
+    Sets session['otp_verified'] = True on success.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Invalid request method.'})
+
+    code = request.POST.get('code', '').strip()
+    email = request.session.get('otp_email', '')
+
+    if not email:
+        return JsonResponse({'ok': False, 'error': 'Session expired. Please go back and start again.'})
+
+    try:
+        otp = EmailOTP.objects.filter(email=email, is_verified=False).latest('created_at')
+    except EmailOTP.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'No verification code found. Please request a new one.'})
+
+    if otp.is_expired:
+        return JsonResponse({'ok': False, 'error': 'Code has expired. Please click "Resend Code" to get a new one.'})
+
+    otp.attempts += 1
+    otp.save(update_fields=['attempts'])
+
+    if otp.attempts > 5:
+        return JsonResponse({'ok': False, 'error': 'Too many incorrect attempts. Please request a new code.'})
+
+    if otp.code != code:
+        remaining = max(0, 5 - otp.attempts)
+        return JsonResponse({'ok': False, 'error': f'Incorrect code. {remaining} attempt(s) remaining.'})
+
+    otp.is_verified = True
+    otp.save(update_fields=['is_verified'])
+
+    request.session['otp_verified'] = True
+    return JsonResponse({'ok': True})
+
+
 def register_view(request):
     """
     Handles new church registration with user creation.
@@ -134,6 +236,20 @@ def register_view(request):
     if request.method == "POST":
         user_form = CustomUserCreationForm(request.POST)
         church_form = ChurchRegistrationForm(request.POST, user=request.user if request.user.is_authenticated else None)
+
+        # Block submission if OTP has not been verified in this session
+        if not request.session.get('otp_verified'):
+            error(request, 'Please verify your email address before completing registration.')
+            context = {"user_form": user_form, "church_form": church_form}
+            return render(request, "church_finances/register.html", context)
+
+        # Ensure submitted email matches the one that was OTP-verified
+        submitted_email = (request.POST.get('email') or '').strip().lower()
+        verified_email = request.session.get('otp_email', '')
+        if submitted_email != verified_email:
+            error(request, 'The email address does not match the verified email. Please go back and verify again.')
+            context = {"user_form": user_form, "church_form": church_form}
+            return render(request, "church_finances/register.html", context)
         
         if user_form.is_valid() and church_form.is_valid():
             try:
@@ -160,6 +276,9 @@ def register_view(request):
                     # Clear the subscription session data
                     request.session.pop('selected_package', None)
                     request.session.pop('package_price', None)
+                    # Clear OTP session data after successful registration
+                    request.session.pop('otp_verified', None)
+                    request.session.pop('otp_email', None)
                     success(request, f"Welcome to Church Books! Your 30-day free trial has started. You have {church.trial_days_remaining} days to explore all features.")
                     login(request, user)
                     
@@ -168,9 +287,9 @@ def register_view(request):
                     if next_url:
                         del request.session['next_url']  # Clear it from session
                         return redirect(next_url)
-                    
+
                     return redirect("dashboard")
-                    
+
             except Exception as e:
                 error(request, "An error occurred during registration. Please try again.")
                 # Delete the user if church association failed

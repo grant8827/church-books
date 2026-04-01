@@ -839,3 +839,27 @@ class CertificateTemplate(models.Model):
                 is_active=True
             ).exclude(pk=self.pk).update(is_active=False)
         super().save(*args, **kwargs)
+
+
+class EmailOTP(models.Model):
+    """
+    Stores a one-time password sent to an email address during registration.
+    Each OTP is valid for 10 minutes and allows up to 5 verification attempts.
+    """
+    email = models.EmailField(db_index=True)
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_verified = models.BooleanField(default=False)
+    attempts = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = 'cb_email_otps'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"OTP for {self.email} ({'verified' if self.is_verified else 'pending'})"
+
+    @property
+    def is_expired(self):
+        return timezone.now() > self.expires_at
