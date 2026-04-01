@@ -140,13 +140,24 @@ def send_otp_view(request):
     # Generate a fresh 6-digit code
     code = ''.join(random.choices(string.digits, k=6))
 
-    # Replace any existing OTPs for this address
-    EmailOTP.objects.filter(email=email).delete()
-    EmailOTP.objects.create(
-        email=email,
-        code=code,
-        expires_at=timezone.now() + timedelta(minutes=10),
-    )
+    # Reuse an existing valid (non-expired, non-verified) OTP so that going
+    # Back → Next doesn't silently regenerate the code while the user already
+    # has the first one open in their inbox.
+    existing = EmailOTP.objects.filter(
+        email=email, is_verified=False
+    ).order_by('-created_at').first()
+
+    if existing and not existing.is_expired:
+        # Reuse the existing code — don't regenerate.
+        code = existing.code  # use the code already in the DB
+    else:
+        # Delete any stale OTPs and create a fresh one.
+        EmailOTP.objects.filter(email=email).delete()
+        existing = EmailOTP.objects.create(
+            email=email,
+            code=code,
+            expires_at=timezone.now() + timedelta(minutes=10),
+        )
 
     # Send the verification e-mail (mirrors the password-reset email setup)
     try:
@@ -197,10 +208,21 @@ def verify_otp_view(request):
     raw_code = request.POST.get('code', '')
     code = re.sub(r'\D', '', raw_code).zfill(6)
 
-    email = request.session.get('otp_email', '')
+    # Use session email; fall back to the email passed from the JS form if
+    # the session was lost (e.g. load-balancer routing to a different dyno).
+    email = request.session.get('otp_email', '').strip().lower()
+    if not email:
+        email = request.POST.get('email', '').strip().lower()
 
     if not email:
         return JsonResponse({'ok': False, 'error': 'Session expired. Please go back and start again.'})
+
+    # Ensure session is populated (handles the fallback case)
+    if not request.session.get('otp_email'):
+        request.session['otp_email'] = email
+        request.session['otp_verified'] = False
+
+    logger.info(f'OTP verify attempt for email={email}, code_len={len(code)}')
 
     try:
         otp = EmailOTP.objects.filter(email=email, is_verified=False).latest('created_at')
@@ -217,7 +239,11 @@ def verify_otp_view(request):
         otp.attempts += 1
         otp.save(update_fields=['attempts'])
         remaining = max(0, 5 - otp.attempts)
-        logger.warning(f'OTP mismatch for {email}: expected len={len(otp.code)}, got len={len(code)}')
+        logger.warning(
+            f'OTP mismatch for {email}: stored_len={len(otp.code)}, '
+            f'submitted_len={len(code)}, stored_last2={otp.code[-2:]}, '
+            f'submitted_last2={code[-2:]}'
+        )
         return JsonResponse({'ok': False, 'error': f'Incorrect code. {remaining} attempt(s) remaining.'})
 
     otp.is_verified = True

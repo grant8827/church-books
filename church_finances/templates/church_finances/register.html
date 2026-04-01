@@ -575,7 +575,10 @@ function verifyOTP() {
   fetch('{% url "verify_otp" %}', {
     method: 'POST',
     headers: { 'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ code })
+    body: new URLSearchParams({
+      code,
+      email: document.getElementById('{{ user_form.email.id_for_label }}').value.trim().toLowerCase()
+    })
   })
   .then(r => r.json())
   .then(data => {
