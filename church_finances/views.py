@@ -187,7 +187,16 @@ def verify_otp_view(request):
     if request.method != 'POST':
         return JsonResponse({'ok': False, 'error': 'Invalid request method.'})
 
-    code = request.POST.get('code', '').strip()
+    import re
+    import logging
+    logger = logging.getLogger(__name__)
+
+    # Normalise: strip everything except digits, then zero-pad to 6 chars.
+    # This handles iOS autocomplete stripping leading zeros and keyboards
+    # that insert spaces between digit groups (e.g. "123 456" → "123456").
+    raw_code = request.POST.get('code', '')
+    code = re.sub(r'\D', '', raw_code).zfill(6)
+
     email = request.session.get('otp_email', '')
 
     if not email:
@@ -201,14 +210,14 @@ def verify_otp_view(request):
     if otp.is_expired:
         return JsonResponse({'ok': False, 'error': 'Code has expired. Please click "Resend Code" to get a new one.'})
 
-    otp.attempts += 1
-    otp.save(update_fields=['attempts'])
-
-    if otp.attempts > 5:
+    if otp.attempts >= 5:
         return JsonResponse({'ok': False, 'error': 'Too many incorrect attempts. Please request a new code.'})
 
     if otp.code != code:
+        otp.attempts += 1
+        otp.save(update_fields=['attempts'])
         remaining = max(0, 5 - otp.attempts)
+        logger.warning(f'OTP mismatch for {email}: expected len={len(otp.code)}, got len={len(code)}')
         return JsonResponse({'ok': False, 'error': f'Incorrect code. {remaining} attempt(s) remaining.'})
 
     otp.is_verified = True

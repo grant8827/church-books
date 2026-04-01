@@ -559,7 +559,9 @@ function sendOTPAndNext() {
 }
 
 function verifyOTP() {
-  const code = document.getElementById('otpInput').value.trim();
+  // Strip all non-digit characters (handles spaces from mobile keyboard
+  // formatting and iOS autocomplete that may alter the code).
+  const code = document.getElementById('otpInput').value.replace(/\D/g, '');
   if (!code) {
     document.getElementById('otpInput').classList.add('error');
     document.getElementById('otpInput').focus();
