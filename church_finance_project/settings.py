@@ -33,8 +33,10 @@ SECRET_KEY = os.environ.get('SECRET_KEY', _secret_key_default)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-# Raise a hard error if SECRET_KEY has not been set in production
-if not DEBUG and SECRET_KEY == _secret_key_default:
+# Raise a hard error if SECRET_KEY has not been set in production.
+# Skip during Docker build (collectstatic has no env vars available).
+_is_build = os.getenv('DJANGO_COLLECTSTATIC_BUILD') == '1'
+if not DEBUG and not _is_build and SECRET_KEY == _secret_key_default:
     raise RuntimeError(
         "SECURITY ERROR: The SECRET_KEY environment variable is not set. "
         "Set a strong random SECRET_KEY in your Railway environment variables "
