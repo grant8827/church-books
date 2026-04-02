@@ -822,18 +822,40 @@ def paypal_cancel(request):
 @require_http_methods(["POST"])
 def paypal_webhook(request):
     """
-    Handle PayPal webhook events
+    Handle PayPal webhook events.
+    The webhook URL registered in the PayPal dashboard MUST include a secret
+    token query parameter, e.g.:
+      https://yoursite.com/finances/paypal/webhook/?token=<PAYPAL_WEBHOOK_TOKEN>
+    Set PAYPAL_WEBHOOK_TOKEN in Railway environment variables.
     """
+    import logging
+    webhook_logger = logging.getLogger(__name__)
+
+    # --- Token verification ---
+    expected_token = getattr(settings, 'PAYPAL_WEBHOOK_TOKEN', '')
+    if expected_token:
+        received_token = request.GET.get('token', '')
+        if not received_token or received_token != expected_token:
+            webhook_logger.warning(
+                f'PayPal webhook rejected: invalid token from {request.META.get("REMOTE_ADDR")}'
+            )
+            return HttpResponse('Forbidden', status=403)
+    else:
+        webhook_logger.warning(
+            'PAYPAL_WEBHOOK_TOKEN is not set. Webhook received without token verification. '
+            'Set PAYPAL_WEBHOOK_TOKEN in Railway env vars and update your PayPal webhook URL.'
+        )
+
     try:
         webhook_data = json.loads(request.body)
         paypal_service = get_paypal_service()
         result = paypal_service.process_webhook(webhook_data)
-        
+
         if result['success']:
             return HttpResponse("OK", status=200)
         else:
             return HttpResponse("Error processing webhook", status=400)
-            
+
     except Exception as e:
         return HttpResponse(f"Error: {str(e)}", status=500)
 

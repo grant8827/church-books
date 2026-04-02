@@ -2,7 +2,6 @@ from django.urls import path, reverse_lazy
 from django.contrib.auth import views as auth_views
 from . import views
 from . import views_subscription
-from .debug_password_reset import debug_password_reset
 from .custom_password_reset_views import custom_password_reset_confirm
 
 urlpatterns = [
@@ -68,10 +67,6 @@ urlpatterns = [
     path('reset/done/', auth_views.PasswordResetCompleteView.as_view(
         template_name='church_finances/password_reset/password_reset_complete.html'
     ), name='password_reset_complete'),
-    # Debug URL for testing password reset
-    path('debug-reset/<uidb64>/<token>/', debug_password_reset, name='debug_password_reset'),
-    # Custom password reset view (for troubleshooting)
-    path('custom-reset/<uidb64>/<token>/', custom_password_reset_confirm, name='custom_password_reset_confirm'),
     # Member management URLs
     path("members/", views.member_list_view, name="member_list"),
     path("members/add/", views.member_add_view, name="member_add"),

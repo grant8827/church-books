@@ -120,6 +120,27 @@ def get_user_church(user):
         return None
 
 
+def _is_rate_limited(cache_key, max_attempts, window_seconds):
+    """
+    Simple cache-based rate limiter.
+    Returns True if the caller has exceeded max_attempts within the rolling window.
+    """
+    from django.core.cache import cache
+    count = cache.get(cache_key, 0)
+    if count >= max_attempts:
+        return True
+    cache.set(cache_key, count + 1, timeout=window_seconds)
+    return False
+
+
+def _client_ip(request):
+    """Return the real client IP, honouring Railway's forwarded header."""
+    forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '0.0.0.0')
+
+
 def send_otp_view(request):
     """
     AJAX endpoint: validates personal-info / credentials fields, generates a
@@ -129,9 +150,18 @@ def send_otp_view(request):
     if request.method != 'POST':
         return JsonResponse({'ok': False, 'error': 'Invalid request method.'})
 
+    # Rate-limit: max 5 OTP requests per IP per 10 minutes
+    ip = _client_ip(request)
+    if _is_rate_limited(f'otp_send_ip_{ip}', max_attempts=5, window_seconds=600):
+        return JsonResponse({'ok': False, 'error': 'Too many requests. Please wait a few minutes before trying again.'})
+
     email = request.POST.get('email', '').strip().lower()
     if not email:
         return JsonResponse({'ok': False, 'error': 'Email address is required.'})
+
+    # Rate-limit: max 3 OTP requests per email per 10 minutes
+    if _is_rate_limited(f'otp_send_email_{email}', max_attempts=3, window_seconds=600):
+        return JsonResponse({'ok': False, 'error': 'Too many verification requests for this email. Please wait 10 minutes before requesting a new code.'})
 
     # Reject already-registered email addresses immediately
     if User.objects.filter(email__iexact=email).exists():
@@ -297,9 +327,17 @@ def register_view(request):
                     church.registered_by = user  # Set the registering user
                     # Trial system will be set automatically by the model's save method
                     church.save()
-                    # Save logo if uploaded
+                    # Validate and save logo if uploaded
                     logo_file = request.FILES.get('church_logo')
                     if logo_file:
+                        # Enforce allowed content types and size (max 5 MB)
+                        allowed_types = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
+                        if logo_file.content_type not in allowed_types:
+                            error(request, 'Logo must be a JPEG, PNG, GIF, or WebP image.')
+                            return render(request, 'church_finances/register.html', context)
+                        if logo_file.size > 5 * 1024 * 1024:  # 5 MB
+                            error(request, 'Logo file is too large. Maximum size is 5 MB.')
+                            return render(request, 'church_finances/register.html', context)
                         church.save_logo(logo_file)
                     # Create an active church member for immediate trial access
                     ChurchMember.objects.create(
@@ -530,13 +568,17 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-logger = logging.getLogger(__name__)
-
 def user_login_view(request):
     """
     Handles user login.
     """
     if request.method == "POST":
+        # Rate-limit: max 10 login attempts per IP per 5 minutes
+        ip = _client_ip(request)
+        if _is_rate_limited(f'login_attempt_{ip}', max_attempts=10, window_seconds=300):
+            error(request, 'Too many login attempts. Please wait 5 minutes before trying again.')
+            return render(request, 'church_finances/login.html', {'form': AuthenticationForm()})
+
         username = request.POST.get('username', '')
         password = request.POST.get('password', '')
         
@@ -936,25 +978,17 @@ def dashboard_user_register_view(request):
     Register new church staff members from the dashboard.
     These users are automatically approved since they are being added by an admin/pastor.
     """
-    # Debug: Print user info
-    print(f"DEBUG: User {request.user.username} attempting to access staff registration")
-    
     church = get_user_church(request.user)
     if not church or not church.is_approved:
-        print(f"DEBUG: Church issue - Church: {church}, Approved: {church.is_approved if church else None}")
         info(request, "Your church account is pending approval.")
         return render(request, "church_finances/pending_approval.html")
 
     # Check if user has permission to register staff
     try:
         member = ChurchMember.objects.get(user=request.user, church=church)
-        print(f"DEBUG: Found member - Role: {member.role}, Church: {member.church.name}")
-        
         if member.role not in ['admin', 'pastor', 'bishop', 'treasurer']:
-            print(f"DEBUG: Permission denied - Role '{member.role}' not in ['admin', 'pastor', 'bishop', 'treasurer']")
             raise PermissionDenied(f"You don't have permission to register staff members. Your role is '{member.role}' but 'admin', 'pastor', 'bishop', or 'treasurer' is required.")
     except ChurchMember.DoesNotExist:
-        print(f"DEBUG: ChurchMember not found for user {request.user.username} in church {church.name}")
         raise PermissionDenied("You are not a member of this church.")
 
     if request.method == "POST":

@@ -27,10 +27,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', "django-insecure-zdk_gm_9vek_n8$o-68f*yyyn#22%1l$8g*1j_)$gf50de3)u%")
+_secret_key_default = "django-insecure-zdk_gm_9vek_n8$o-68f*yyyn#22%1l$8g*1j_)$gf50de3)u%"
+SECRET_KEY = os.environ.get('SECRET_KEY', _secret_key_default)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+
+# Raise a hard error if SECRET_KEY has not been set in production
+if not DEBUG and SECRET_KEY == _secret_key_default:
+    raise RuntimeError(
+        "SECURITY ERROR: The SECRET_KEY environment variable is not set. "
+        "Set a strong random SECRET_KEY in your Railway environment variables "
+        "before running in production."
+    )
 
 # ALLOWED_HOSTS configuration
 ALLOWED_HOSTS = [
@@ -118,7 +127,7 @@ if not DEBUG:
     
     # CSRF security
     CSRF_COOKIE_SECURE = True
-    CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access for debugging
+    CSRF_COOKIE_HTTPONLY = True  # Prevent JavaScript from reading CSRF cookie
     CSRF_COOKIE_SAMESITE = 'Lax'  # Changed from 'Strict' to 'Lax' for better compatibility
     CSRF_COOKIE_AGE = 31449600  # 1 year
     CSRF_USE_SESSIONS = False  # Use cookies instead of sessions for CSRF tokens
@@ -425,6 +434,10 @@ PAYPAL_BASE_URL = os.getenv('PAYPAL_BASE_URL', 'https://churchbooksmanagement.co
 PAYPAL_STANDARD_PLAN_ID = os.getenv('PAYPAL_STANDARD_PLAN_ID', 'P-XXXXXXXXXXXXXXXXXXXX')
 PAYPAL_PREMIUM_PLAN_ID = os.getenv('PAYPAL_PREMIUM_PLAN_ID', 'P-XXXXXXXXXXXXXXXXXXXX')
 USE_MOCK_PAYPAL = os.getenv('USE_MOCK_PAYPAL', 'False').lower() in ('true', '1', 'yes')
+# Secret token to validate incoming PayPal webhook requests.
+# Add this as a query param when registering the webhook URL in PayPal:
+#   https://yoursite.com/finances/paypal/webhook/?token=<PAYPAL_WEBHOOK_TOKEN>
+PAYPAL_WEBHOOK_TOKEN = os.getenv('PAYPAL_WEBHOOK_TOKEN', '')
 
 # Stripe Configuration
 # Set these in Railway environment variables:
