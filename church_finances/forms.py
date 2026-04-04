@@ -619,3 +619,47 @@ class BabyChristeningForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if church:
             self.fields['parent_members'].queryset = Member.objects.filter(church=church, is_active=True)
+
+
+# ── Profile Forms ─────────────────────────────────────────────────────────────
+
+_TW = 'mt-1 block w-full rounded-md border border-gray-300 shadow-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm'
+
+
+class PersonalProfileForm(forms.ModelForm):
+    """Edit the logged-in user's personal details."""
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email']
+        widgets = {
+            'first_name': forms.TextInput(attrs={'class': _TW}),
+            'last_name':  forms.TextInput(attrs={'class': _TW}),
+            'email':      forms.EmailInput(attrs={'class': _TW}),
+        }
+
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip().lower()
+        qs = User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError('That email address is already in use.')
+        return email
+
+
+class ChurchDetailForm(forms.ModelForm):
+    """Edit church details – visible only to admin/owner users."""
+
+    class Meta:
+        model = Church
+        fields = ['name', 'address', 'phone', 'email', 'website', 'logo']
+        widgets = {
+            'name':    forms.TextInput(attrs={'class': _TW}),
+            'address': forms.Textarea(attrs={'class': _TW, 'rows': 3}),
+            'phone':   forms.TextInput(attrs={'class': _TW}),
+            'email':   forms.EmailInput(attrs={'class': _TW}),
+            'website': forms.URLInput(attrs={'class': _TW}),
+            'logo':    forms.ClearableFileInput(attrs={'class': 'mt-1 block w-full text-sm text-gray-700'}),
+        }
+        labels = {
+            'logo': 'Church Logo (PNG or JPG)',
+        }

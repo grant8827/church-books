@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Profile – Church Books{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">My Profile</h2>
+
+    {% if messages %}
+        <ul class="messages mb-4">
+            {% for message in messages %}
+                <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <!-- ── Personal Details ──────────────────────────────── -->
+    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+        <div class="flex items-center gap-3 mb-5">
+            <!-- Avatar initials -->
+            <div class="flex-shrink-0 w-14 h-14 rounded-full bg-amber-600 flex items-center justify-center text-white text-xl font-bold select-none">
+                {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800">Personal Details</h3>
+                <p class="text-sm text-gray-500">@{{ request.user.username }}</p>
+            </div>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="personal">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                    {{ personal_form.first_name }}
+                    {% if personal_form.first_name.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ personal_form.first_name.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                    {{ personal_form.last_name }}
+                    {% if personal_form.last_name.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ personal_form.last_name.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                {{ personal_form.email }}
+                {% if personal_form.email.errors %}
+                    <p class="text-red-600 text-xs mt-1">{{ personal_form.email.errors|join:", " }}</p>
+                {% endif %}
+            </div>
+
+            <div class="flex items-center justify-between">
+                <a href="{% url 'password_reset' %}"
+                   class="text-sm text-amber-600 hover:text-amber-700 font-medium">
+                    Change Password
+                </a>
+                <button type="submit"
+                        class="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-6 rounded-lg shadow-sm transition">
+                    Save Personal Details
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ── Church Details (admin only) ──────────────────── -->
+    {% if church_form %}
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <div class="flex items-center gap-3 mb-5">
+            <!-- Church logo preview -->
+            {% if church.logo_base64 %}
+                <img src="{{ church.logo_base64 }}" class="w-14 h-14 rounded-full object-cover border border-gray-200" alt="Church Logo">
+            {% elif church.logo %}
+                <img src="{{ church.logo.url }}" class="w-14 h-14 rounded-full object-cover border border-gray-200" alt="Church Logo">
+            {% else %}
+                <div class="w-14 h-14 rounded-full bg-slate-200 flex items-center justify-center">
+                    <svg class="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                              d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                              d="M9 22V12h6v10"/>
+                    </svg>
+                </div>
+            {% endif %}
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800">Church Details</h3>
+                <p class="text-sm text-gray-500">{{ church.name }}</p>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="church">
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Church Name</label>
+                {{ church_form.name }}
+                {% if church_form.name.errors %}
+                    <p class="text-red-600 text-xs mt-1">{{ church_form.name.errors|join:", " }}</p>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                {{ church_form.address }}
+                {% if church_form.address.errors %}
+                    <p class="text-red-600 text-xs mt-1">{{ church_form.address.errors|join:", " }}</p>
+                {% endif %}
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    {{ church_form.phone }}
+                    {% if church_form.phone.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ church_form.phone.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    {{ church_form.email }}
+                    {% if church_form.email.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ church_form.email.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Website</label>
+                {{ church_form.website }}
+                {% if church_form.website.errors %}
+                    <p class="text-red-600 text-xs mt-1">{{ church_form.website.errors|join:", " }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Logo upload -->
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Church Logo</label>
+                {% if church.logo_base64 %}
+                    <img src="{{ church.logo_base64 }}" class="h-20 w-auto rounded mb-2 border border-gray-200" alt="Current Logo">
+                {% elif church.logo %}
+                    <img src="{{ church.logo.url }}" class="h-20 w-auto rounded mb-2 border border-gray-200" alt="Current Logo">
+                {% else %}
+                    <p class="text-xs text-gray-400 mb-2">No logo uploaded yet.</p>
+                {% endif %}
+                {{ church_form.logo }}
+                <p class="text-xs text-gray-400 mt-1">Recommended: PNG or JPG, transparent background, square crop.</p>
+                {% if church_form.logo.errors %}
+                    <p class="text-red-600 text-xs mt-1">{{ church_form.logo.errors|join:", " }}</p>
+                {% endif %}
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit"
+                        class="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-6 rounded-lg shadow-sm transition">
+                    Save Church Details
+                </button>
+            </div>
+        </form>
+    </div>
+    {% elif church %}
+    <div class="bg-white rounded-xl shadow-md p-6 text-sm text-gray-500">
+        <p>Church details can only be edited by the church admin.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

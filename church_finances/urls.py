@@ -105,6 +105,7 @@ urlpatterns = [
     path("dashboard/register-staff/", views.dashboard_user_register_view, name="dashboard_user_register"),
     path("login/", views.user_login_view, name="login"),
     path("logout/", views.user_logout_view, name="logout"),
+    path("profile/", views.profile_view, name="profile"),
     path("dashboard/", views.dashboard_view, name="dashboard"),
     path("transactions/", views.transaction_list_view, name="transaction_list"),
     path("transactions/add/", views.transaction_create_view, name="transaction_create"),

@@ -219,10 +219,51 @@
                     {% endif %}
                 </a>
             </div>
-            <!-- Right: Hello + Logout -->
-            <div class="flex items-center gap-3">
-                <span class="text-slate-300 text-sm hidden sm:inline">Hello, {{ user.username }}!</span>
-                <a href="{% url 'logout' %}" class="bg-amber-600 border border-amber-500 hover:bg-amber-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 text-sm whitespace-nowrap">Logout</a>
+            <!-- Right: Profile avatar dropdown -->
+            <div class="relative flex items-center">
+                <button id="profile-menu-btn"
+                        class="flex items-center gap-2 focus:outline-none group"
+                        aria-haspopup="true" aria-expanded="false">
+                    <!-- Avatar circle with initials -->
+                    <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-amber-600 text-white font-bold text-sm select-none ring-2 ring-amber-400 group-hover:ring-white transition">
+                        {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                    </span>
+                    <span class="text-slate-300 text-sm hidden sm:inline max-w-[140px] truncate">{{ user.get_full_name|default:user.username }}</span>
+                    <!-- Chevron -->
+                    <svg id="profile-chevron" class="w-4 h-4 text-slate-400 transition-transform hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+
+                <!-- Dropdown menu -->
+                <div id="profile-dropdown"
+                     class="hidden absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-[200]">
+                    <!-- User info header -->
+                    <div class="px-4 py-2 border-b border-gray-100">
+                        <p class="text-xs font-semibold text-gray-800 truncate">{{ user.get_full_name|default:user.username }}</p>
+                        <p class="text-xs text-gray-400 truncate">{{ user.email }}</p>
+                    </div>
+                    <!-- Profile link -->
+                    <a href="{% url 'profile' %}"
+                       class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        Profile
+                    </a>
+                    <!-- Divider -->
+                    <div class="border-t border-gray-100 my-1"></div>
+                    <!-- Logout -->
+                    <a href="{% url 'logout' %}"
+                       class="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                        Logout
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -389,6 +430,30 @@
             <!-- Divider + Hello username on mobile -->
             <div class="mt-4 pt-4 border-t border-blue-700 lg:hidden">
                 <p class="text-blue-300 text-sm px-3 py-1">Hello, {{ user.username }}!</p>
+            </div>
+
+            <!-- Profile & Logout (bottom of sidebar) -->
+            <div class="mt-4 pt-4 border-t border-blue-700 space-y-1">
+                <div class="sidebar-item">
+                    <a href="{% url 'profile' %}" class="sidebar-item-link flex items-center gap-3 text-white rounded-lg px-3 py-2.5 transition-colors group {% if request.resolver_match.url_name == 'profile' %}bg-blue-700{% else %}hover:bg-blue-700{% endif %}">
+                        <svg class="h-5 w-5 flex-shrink-0 text-blue-300 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        <span class="sidebar-label text-sm font-medium">Profile</span>
+                    </a>
+                    <span class="sidebar-tooltip">Profile</span>
+                </div>
+                <div class="sidebar-item">
+                    <a href="{% url 'logout' %}" class="sidebar-item-link flex items-center gap-3 text-white rounded-lg px-3 py-2.5 transition-colors group hover:bg-red-700">
+                        <svg class="h-5 w-5 flex-shrink-0 text-blue-300 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                        <span class="sidebar-label text-sm font-medium">Logout</span>
+                    </a>
+                    <span class="sidebar-tooltip">Logout</span>
+                </div>
             </div>
 
         </nav>
@@ -566,6 +631,26 @@
                 const isOpen = submenu.classList.toggle('open');
                 if (chevron) chevron.style.transform = isOpen ? 'rotate(180deg)' : '';
             }
+        }
+
+        // ===== Profile avatar dropdown =====
+        const profileBtn      = document.getElementById('profile-menu-btn');
+        const profileDropdown = document.getElementById('profile-dropdown');
+        const profileChevron  = document.getElementById('profile-chevron');
+        if (profileBtn && profileDropdown) {
+            profileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isOpen = !profileDropdown.classList.contains('hidden');
+                profileDropdown.classList.toggle('hidden', isOpen);
+                if (profileChevron) profileChevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+                profileBtn.setAttribute('aria-expanded', String(!isOpen));
+            });
+            // Close when clicking anywhere outside
+            document.addEventListener('click', () => {
+                profileDropdown.classList.add('hidden');
+                if (profileChevron) profileChevron.style.transform = '';
+                profileBtn.setAttribute('aria-expanded', 'false');
+            });
         }
     </script>
 

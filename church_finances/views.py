@@ -15,7 +15,8 @@ from datetime import timedelta
 from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, BabyChristening, CertificateTemplate, EmailOTP
 from .forms import (
     CustomUserCreationForm, TransactionForm, ChurchRegistrationForm,
-    ChurchMemberForm, MemberForm, ContributionForm, DashboardUserRegistrationForm
+    ChurchMemberForm, MemberForm, ContributionForm, DashboardUserRegistrationForm,
+    PersonalProfileForm, ChurchDetailForm
 )
 from django.contrib.auth.forms import AuthenticationForm
 from django.db import transaction
@@ -300,7 +301,7 @@ def register_view(request):
         
     if request.method == "POST":
         user_form = CustomUserCreationForm(request.POST)
-        church_form = ChurchRegistrationForm(request.POST, user=request.user if request.user.is_authenticated else None)
+        church_form = ChurchRegistrationForm(request.POST, prefix='church', user=request.user if request.user.is_authenticated else None)
 
         # Block submission if OTP has not been verified in this session
         if not request.session.get('otp_verified'):
@@ -308,7 +309,8 @@ def register_view(request):
             context = {"user_form": user_form, "church_form": church_form}
             return render(request, "church_finances/register.html", context)
 
-        # Ensure submitted email matches the one that was OTP-verified
+        # Ensure the user's submitted email matches the one that was OTP-verified
+        # (church email is a separate field and is allowed to be different)
         submitted_email = (request.POST.get('email') or '').strip().lower()
         verified_email = request.session.get('otp_email', '')
         if submitted_email != verified_email:
@@ -380,7 +382,7 @@ def register_view(request):
                     error(request, err)
     else:
         user_form = CustomUserCreationForm()
-        church_form = ChurchRegistrationForm(user=request.user if request.user.is_authenticated else None)
+        church_form = ChurchRegistrationForm(prefix='church', user=request.user if request.user.is_authenticated else None)
     
     context = {
         "user_form": user_form,
@@ -1004,6 +1006,53 @@ def dashboard_user_register_view(request):
         "form": form,
         "church": church
     })
+
+@login_required
+def profile_view(request):
+    """User profile page – edit personal details and (if admin) church details."""
+    church_member = request.user.churchmember_set.select_related('church').first()
+    church = church_member.church if church_member else None
+    is_church_admin = (
+        church_member is not None and church_member.role == 'admin'
+    ) or (
+        church is not None and getattr(church, 'registered_by_id', None) == request.user.pk
+    )
+
+    personal_form = PersonalProfileForm(instance=request.user)
+    church_form = ChurchDetailForm(instance=church) if (church and is_church_admin) else None
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'personal':
+            personal_form = PersonalProfileForm(request.POST, instance=request.user)
+            if personal_form.is_valid():
+                personal_form.save()
+                success(request, 'Personal details updated successfully.')
+                return redirect('profile')
+
+        elif action == 'church' and church and is_church_admin:
+            church_form = ChurchDetailForm(request.POST, request.FILES, instance=church)
+            if church_form.is_valid():
+                updated_church = church_form.save(commit=False)
+                # If a new logo file was uploaded, also store it as base64
+                new_logo = request.FILES.get('logo')
+                if new_logo:
+                    updated_church.save()          # save model first so ImageField path is set
+                    updated_church.save_logo(new_logo)  # now store base64 copy
+                else:
+                    updated_church.save()
+                success(request, 'Church details updated successfully.')
+                return redirect('profile')
+
+    return render(request, 'church_finances/profile.html', {
+        'personal_form': personal_form,
+        'church_form': church_form,
+        'church': church,
+        'church_member': church_member,
+        'is_church_admin': is_church_admin,
+    })
+
 
 @login_required
 def dashboard_view(request):
