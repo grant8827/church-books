@@ -4,6 +4,229 @@
 
 {% block content %}
 <div class="min-h-screen bg-gray-100 py-12">
+  <div class="container mx-auto px-4">
+
+    {# ── Trial / status banners ──────────────────────────────────────── #}
+    {% if user.is_authenticated %}
+      {% for m in user.churchmember_set.all %}
+        {% if m.church.is_trial_expired and m.church.subscription_status != 'active' %}
+          <div class="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg mb-8 max-w-4xl mx-auto flex items-start gap-4">
+            <svg class="w-6 h-6 text-red-500 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11H9v4h2V7zm0 6H9v2h2v-2z" clip-rule="evenodd"/></svg>
+            <div>
+              <p class="font-bold">Trial Expired — Payment Required</p>
+              <p class="text-sm">Your 30-day free trial has ended. Choose a plan below to continue using Church Books.</p>
+              {% if current_member_count %}
+                <p class="text-sm mt-1">Your church currently has <strong>{{ current_member_count }}</strong> active member{{ current_member_count|pluralize }}.</p>
+              {% endif %}
+            </div>
+          </div>
+        {% elif m.church.is_trial_active and m.church.subscription_status != 'active' %}
+          <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-6 py-4 rounded-lg mb-8 max-w-4xl mx-auto flex items-start gap-4">
+            <svg class="w-6 h-6 text-yellow-500 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10A8 8 0 110 10a8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+            <div>
+              <p class="font-bold">Free Trial Active — {{ m.church.trial_days_remaining }} day{{ m.church.trial_days_remaining|pluralize }} remaining</p>
+              <p class="text-sm">Lock in your plan now to ensure uninterrupted access after your trial ends.</p>
+              {% if current_member_count %}
+                <p class="text-sm mt-1">Your church currently has <strong>{{ current_member_count }}</strong> active member{{ current_member_count|pluralize }}.</p>
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+
+    {# ── Page header ─────────────────────────────────────────────────── #}
+    <div class="text-center mb-12">
+      <h1 class="text-4xl font-bold text-gray-900 mb-3">Choose Your Plan</h1>
+      <p class="text-xl text-gray-600">All plans include a <strong>30-day free trial</strong> with full access to every feature.</p>
+    </div>
+
+    {# ── Pricing cards ───────────────────────────────────────────────── #}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto mb-12">
+
+      {# ── Starter ───────────────────── #}
+      <div class="bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-200 hover:border-[#6e003d] hover:shadow-xl transition-all duration-300 flex flex-col">
+        <div class="text-center mb-6">
+          <h2 class="text-xl font-bold text-gray-900">Starter</h2>
+          <p class="text-sm text-gray-500 mb-4">Small congregations</p>
+          <div class="text-4xl font-bold text-[#6e003d]">$150<span class="text-base text-gray-500 font-normal">/yr</span></div>
+          <p class="text-sm text-gray-500 mt-1">Up to <strong>50 members</strong></p>
+        </div>
+        <ul class="space-y-2 text-sm text-gray-600 mb-8 flex-1">
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Complete Member Management</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Financial Tracking &amp; Reports</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Children's Ministry</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Attendance Tracking</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Multi-User Roles</li>
+        </ul>
+        <form method="post" action="{% url 'subscription_select' %}">
+          {% csrf_token %}
+          <input type="hidden" name="package" value="starter">
+          <button type="submit" class="w-full bg-[#6e003d] text-white py-3 rounded-lg hover:bg-[#8e005d] transition font-semibold">Get Started</button>
+        </form>
+      </div>
+
+      {# ── Growth ────────────────────── #}
+      <div class="bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-200 hover:border-[#6e003d] hover:shadow-xl transition-all duration-300 flex flex-col">
+        <div class="text-center mb-6">
+          <h2 class="text-xl font-bold text-gray-900">Growth</h2>
+          <p class="text-sm text-gray-500 mb-4">Growing churches</p>
+          <div class="text-4xl font-bold text-[#6e003d]">$240<span class="text-base text-gray-500 font-normal">/yr</span></div>
+          <p class="text-sm text-gray-500 mt-1">Up to <strong>100 members</strong></p>
+        </div>
+        <ul class="space-y-2 text-sm text-gray-600 mb-8 flex-1">
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Everything in Starter</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Up to 100 Members</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Christening Records</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Report Printing &amp; Export</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Transaction Management</li>
+        </ul>
+        <form method="post" action="{% url 'subscription_select' %}">
+          {% csrf_token %}
+          <input type="hidden" name="package" value="growth">
+          <button type="submit" class="w-full bg-[#6e003d] text-white py-3 rounded-lg hover:bg-[#8e005d] transition font-semibold">Get Started</button>
+        </form>
+      </div>
+
+      {# ── Community (featured) ──────── #}
+      <div class="bg-[#6e003d] rounded-2xl shadow-xl p-6 border-2 border-[#6e003d] hover:shadow-2xl transition-all duration-300 flex flex-col relative">
+        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Most Popular</div>
+        <div class="text-center mb-6">
+          <h2 class="text-xl font-bold text-white">Community</h2>
+          <p class="text-sm text-purple-200 mb-4">Established churches</p>
+          <div class="text-4xl font-bold text-white">$330<span class="text-base text-purple-200 font-normal">/yr</span></div>
+          <p class="text-sm text-purple-200 mt-1">Up to <strong>200 members</strong></p>
+        </div>
+        <ul class="space-y-2 text-sm text-purple-100 mb-8 flex-1">
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-yellow-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Everything in Growth</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-yellow-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Up to 200 Members</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-yellow-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Full Financial Suite</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-yellow-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Advanced Reporting</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-yellow-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Priority Support</li>
+        </ul>
+        <form method="post" action="{% url 'subscription_select' %}">
+          {% csrf_token %}
+          <input type="hidden" name="package" value="community">
+          <button type="submit" class="w-full bg-white text-[#6e003d] py-3 rounded-lg hover:bg-purple-50 transition font-semibold">Get Started</button>
+        </form>
+      </div>
+
+      {# ── Custom ────────────────────── #}
+      <div class="bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-200 hover:border-[#6e003d] hover:shadow-xl transition-all duration-300 flex flex-col" id="custom-plan-card">
+        <div class="text-center mb-6">
+          <h2 class="text-xl font-bold text-gray-900">Custom</h2>
+          <p class="text-sm text-gray-500 mb-4">Large congregations</p>
+          <div class="text-4xl font-bold text-[#6e003d]" id="custom-price-display">$330+</div>
+          <p class="text-sm text-gray-500 mt-1">200+ members</p>
+        </div>
+        <ul class="space-y-2 text-sm text-gray-600 mb-4 flex-1">
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Everything in Community</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Unlimited Growth</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>$330 base + $10/10 members</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Dedicated Support</li>
+        </ul>
+
+        {# Custom price calculator #}
+        <div class="bg-gray-50 rounded-lg p-3 mb-4">
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Enter your member count:</label>
+          <input type="number" id="custom-member-input" min="201" placeholder="e.g. 250"
+                 class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#6e003d]">
+          <p class="text-xs text-gray-400 mt-1">Must be more than 200 members</p>
+          <div id="custom-price-result" class="mt-2 text-sm font-semibold text-[#6e003d] hidden"></div>
+        </div>
+
+        <form method="post" action="{% url 'subscription_select' %}" id="custom-plan-form">
+          {% csrf_token %}
+          <input type="hidden" name="package" value="custom">
+          <input type="hidden" name="member_count" id="custom-member-count-hidden" value="">
+          <button type="submit" id="custom-submit-btn"
+                  class="w-full bg-[#6e003d] text-white py-3 rounded-lg hover:bg-[#8e005d] transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled>
+            Get Started
+          </button>
+        </form>
+      </div>
+
+    </div>{# /grid #}
+
+    {# ── Upgrade prompt for over-limit churches ───────────────────────── #}
+    {% if user.is_authenticated and current_plan and current_member_count %}
+      {% if current_plan.member_limit and current_member_count >= current_plan.member_limit %}
+        <div class="bg-orange-100 border border-orange-400 text-orange-800 px-6 py-4 rounded-lg mb-8 max-w-4xl mx-auto">
+          <p class="font-bold">Member Limit Reached</p>
+          <p class="text-sm">Your current <strong>{{ current_plan.name }}</strong> plan allows {{ current_plan.member_limit }} members.
+             Your church has <strong>{{ current_member_count }}</strong> active members.
+             Please upgrade to a larger plan to add more members.</p>
+        </div>
+      {% endif %}
+    {% endif %}
+
+    {# ── Trial info footer ───────────────────────────────────────────── #}
+    <div class="mt-4 text-center max-w-4xl mx-auto bg-white p-6 rounded-lg shadow">
+      <h3 class="text-lg font-bold text-gray-900 mb-3">What's included in every plan</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 text-left max-w-xl mx-auto">
+        <div class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>30-day free trial — no credit card required</div>
+        <div class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Secure PayPal payment processing</div>
+        <div class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Automatic account activation after payment</div>
+        <div class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Yearly subscription — easy cancellation</div>
+        <div class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Offline / bank transfer payment available</div>
+        <div class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Upgrade plan at any time</div>
+      </div>
+      <p class="text-xs text-gray-400 mt-4">
+        Prefer to pay by check or bank transfer?
+        <a href="{% url 'contact' %}" class="text-[#6e003d] hover:underline">Contact our support team.</a>
+      </p>
+    </div>
+
+  </div>{# /container #}
+</div>
+
+{# ── Custom plan JS calculator ─────────────────────────────────────────── #}
+<script>
+(function () {
+  const input   = document.getElementById('custom-member-input');
+  const display = document.getElementById('custom-price-display');
+  const result  = document.getElementById('custom-price-result');
+  const hidden  = document.getElementById('custom-member-count-hidden');
+  const btn     = document.getElementById('custom-submit-btn');
+
+  function calcPrice(count) {
+    // $330 base + $10 per 10 members (or part thereof) over 200
+    if (count <= 200) return 330;
+    var extra = Math.ceil((count - 200) / 10);
+    return 330 + (extra * 10);
+  }
+
+  input.addEventListener('input', function () {
+    var val = parseInt(this.value, 10);
+    if (!val || val <= 200) {
+      display.textContent = '$330+';
+      result.textContent  = '';
+      result.classList.add('hidden');
+      hidden.value = '';
+      btn.disabled = true;
+      return;
+    }
+    var price = calcPrice(val);
+    display.textContent = '$' + price + '/yr';
+    result.textContent  = val + ' members = $' + price + ' / year';
+    result.classList.remove('hidden');
+    hidden.value = val;
+    btn.disabled = false;
+  });
+
+  // Validate before submitting
+  document.getElementById('custom-plan-form').addEventListener('submit', function (e) {
+    var val = parseInt(input.value, 10);
+    if (!val || val <= 200) {
+      e.preventDefault();
+      alert('Please enter a member count greater than 200 to use the Custom plan.');
+    }
+  });
+})();
+</script>
+{% endblock %}
+<div class="min-h-screen bg-gray-100 py-12">
     <div class="container mx-auto px-4">
         {% if user.is_authenticated %}
             <!-- Trial Status Message -->

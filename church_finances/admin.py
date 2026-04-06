@@ -1,8 +1,16 @@
 from django.contrib import admin
 from django.utils import timezone
 from datetime import timedelta
-from .models import Church, Member, Contribution, Transaction, Child, BabyChristening, ChurchMember
+from .models import Church, Member, Contribution, Transaction, Child, BabyChristening, ChurchMember, SubscriptionPlan
 from .admin_site import church_admin_site
+
+
+@admin.register(SubscriptionPlan, site=church_admin_site)
+class SubscriptionPlanAdmin(admin.ModelAdmin):
+    list_display = ['name', 'slug', 'member_limit', 'annual_price', 'is_custom', 'is_active']
+    list_filter  = ['is_active', 'is_custom']
+    search_fields = ['name', 'slug']
+    readonly_fields = ['slug']  # slug is the stable key used in code logic
 
 
 @admin.register(Member, site=church_admin_site)
@@ -63,11 +71,12 @@ class ChurchAdmin(admin.ModelAdmin):
     list_display = [
         'name', 'email', 'phone', 'payment_method',
         'subscription_status', 'is_approved',
+        'plan_display', 'member_count_display',
         'payment_status_display', 'subscription_end_date', 'created_at',
     ]
-    list_filter = ['subscription_status', 'is_approved', 'payment_method', 'payment_status']
+    list_filter = ['subscription_status', 'is_approved', 'payment_method', 'payment_status', 'subscription_plan']
     search_fields = ['name', 'email', 'phone']
-    readonly_fields = ['created_at', 'updated_at', 'offline_verified_at', 'offline_verified_by']
+    readonly_fields = ['created_at', 'updated_at', 'offline_verified_at', 'offline_verified_by', 'member_count_display']
     actions = ['activate_churches', 'suspend_churches', 'mark_as_paid', 'mark_as_pending', 'renew_one_year']
 
     fieldsets = (
@@ -77,6 +86,11 @@ class ChurchAdmin(admin.ModelAdmin):
         ('Account Status', {
             'fields': ('is_approved', 'subscription_status', 'subscription_type',
                        'subscription_start_date', 'subscription_end_date')
+        }),
+        ('Subscription Plan', {
+            'fields': ('subscription_plan', 'declared_member_count', 'subscription_amount',
+                       'member_count_display'),
+            'description': 'Assign a pricing tier. member_count_display shows live active member count.'
         }),
         ('Payment', {
             'fields': ('payment_method', 'payment_status',
@@ -90,6 +104,24 @@ class ChurchAdmin(admin.ModelAdmin):
     )
 
     # ---- Custom display ----
+
+    def plan_display(self, obj):
+        if obj.subscription_plan:
+            return f"{obj.subscription_plan.name} ({obj.subscription_plan.member_limit or 'Custom'} members)"
+        return '— No plan assigned'
+    plan_display.short_description = 'Plan'
+
+    def member_count_display(self, obj):
+        from django.utils.html import format_html
+        count = obj.active_member_count
+        limit = obj.member_limit
+        if limit is None:
+            return format_html('<span style="color:gray;">{} (no limit)</span>', count)
+        colour = 'red' if count >= limit else ('orange' if count >= limit * 0.9 else 'green')
+        return format_html(
+            '<span style="color:{}; font-weight:bold;">{} / {}</span>', colour, count, limit
+        )
+    member_count_display.short_description = 'Members (used/limit)'
 
     def payment_status_badge(self, obj):
         from django.utils.html import format_html

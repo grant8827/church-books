@@ -1,9 +1,65 @@
 import base64
+import math
 from django.db import models
 from django.contrib.auth.models import User, AbstractUser
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
+
+
+class SubscriptionPlan(models.Model):
+    """
+    The four subscription tiers available to churches.
+    Starter: 50 members / $150 yr
+    Growth:  100 members / $240 yr
+    Community: 200 members / $330 yr
+    Custom:  200+ members / $330 + $10 per additional 10 members
+    """
+    PLAN_SLUGS = (
+        ('starter',   'Starter'),
+        ('growth',    'Growth'),
+        ('community', 'Community'),
+        ('custom',    'Custom'),
+    )
+
+    name         = models.CharField(max_length=100)
+    slug         = models.CharField(max_length=20, choices=PLAN_SLUGS, unique=True)
+    member_limit = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Max active congregation members allowed. Null = custom tier (no hard cap)."
+    )
+    annual_price = models.DecimalField(
+        max_digits=8, decimal_places=2,
+        help_text="Base annual price in USD."
+    )
+    is_custom    = models.BooleanField(
+        default=False,
+        help_text="If True the price is calculated from declared_member_count, not a fixed value."
+    )
+    description  = models.TextField(blank=True)
+    is_active    = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'cb_subscription_plans'
+        ordering = ['annual_price']
+
+    def __str__(self):
+        if self.member_limit:
+            return f"{self.name} — up to {self.member_limit} members — ${self.annual_price}/yr"
+        return f"{self.name} — Custom pricing"
+
+    @staticmethod
+    def calculate_custom_price(member_count):
+        """
+        Custom tier: $330 base + $10 for every 10 members (or part thereof) above 200.
+        e.g. 210 → $340,  220 → $350,  255 → $390
+        """
+        base = 330.00
+        if member_count <= 200:
+            return base
+        extra_blocks = math.ceil((member_count - 200) / 10)
+        return base + (extra_blocks * 10)
+
 
 class Church(models.Model):
     SUBSCRIPTION_TYPES = (
@@ -58,6 +114,23 @@ class Church(models.Model):
     offline_verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='offline_verifications', help_text='Admin user who verified offline payment')
     offline_verified_at = models.DateTimeField(blank=True, null=True)
     offline_notes = models.TextField(blank=True, help_text="Internal notes regarding offline payment verification")
+    # Subscription plan & member limit
+    subscription_plan = models.ForeignKey(
+        'SubscriptionPlan',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='churches',
+        help_text='The pricing tier this church is subscribed to. Null = legacy/no limit.'
+    )
+    declared_member_count = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text='Member count declared at signup — used to calculate custom tier price.'
+    )
+    subscription_amount = models.DecimalField(
+        max_digits=8, decimal_places=2,
+        null=True, blank=True,
+        help_text='Actual annual subscription amount in USD (stored so custom price is preserved).'
+    )
     registered_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='registered_churches', help_text='User who originally registered this church')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -128,6 +201,34 @@ class Church(models.Model):
 
         return False
     
+    @property
+    def active_member_count(self):
+        """Count of active congregation members (Member model only)."""
+        return self.members.filter(is_active=True).count()
+
+    @property
+    def member_limit(self):
+        """
+        The maximum number of active Members allowed for this church.
+        Returns None if no plan is assigned (legacy churches — no limit applied).
+        For the custom tier, the limit is the declared_member_count rounded up
+        to the nearest 10 above 200.
+        """
+        if not self.subscription_plan:
+            return None
+        if self.subscription_plan.is_custom:
+            # Custom tier limit = declared count (or effectively unlimited if not set)
+            return self.declared_member_count
+        return self.subscription_plan.member_limit
+
+    @property
+    def is_at_member_limit(self):
+        """True when the church has reached or exceeded their plan's member cap."""
+        limit = self.member_limit
+        if limit is None:
+            return False
+        return self.active_member_count >= limit
+
     def check_and_expire(self):
         """
         Called on each authenticated request via middleware.

@@ -686,10 +686,32 @@ def member_add_view(request):
     if member.role not in ['admin', 'treasurer', 'pastor']:
         raise PermissionDenied("You don't have permission to add members.")
 
+    # ---- Member limit enforcement ----------------------------------------
+    if church.is_at_member_limit:
+        limit = church.member_limit
+        plan_name = church.subscription_plan.name if church.subscription_plan else 'your current plan'
+        error(
+            request,
+            f"You have reached the member capacity for {plan_name} "
+            f"({limit} members). Please upgrade your plan to add more members."
+        )
+        return redirect('member_list')
+    # -----------------------------------------------------------------------
+
     if request.method == "POST":
         form = MemberForm(request.POST)
         if form.is_valid():
             try:
+                # Second check inside the transaction to prevent race conditions
+                if church.is_at_member_limit:
+                    limit = church.member_limit
+                    plan_name = church.subscription_plan.name if church.subscription_plan else 'your current plan'
+                    error(
+                        request,
+                        f"You have reached the member capacity for {plan_name} "
+                        f"({limit} members). Please upgrade your plan to add more members."
+                    )
+                    return redirect('member_list')
                 new_member = form.save(commit=False)
                 new_member.church = church
                 new_member.save()

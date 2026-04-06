@@ -14,7 +14,7 @@ from django.db import transaction
 from datetime import timedelta
 import json
 import stripe as stripe_lib
-from .models import Church, PayPalSubscription, ChurchMember
+from .models import Church, PayPalSubscription, ChurchMember, SubscriptionPlan
 from .paypal_service import PayPalService
 from .stripe_service import create_checkout_session, retrieve_checkout_session, construct_webhook_event
 from django.utils.decorators import method_decorator
@@ -23,7 +23,7 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from datetime import timedelta
 import json
-from .models import Church, PayPalSubscription, ChurchMember
+from .models import Church, PayPalSubscription, ChurchMember, SubscriptionPlan
 from .paypal_service import PayPalService
 from .mock_paypal_service import MockPayPalService
 
@@ -41,11 +41,13 @@ def subscription_view(request):
     """
     Display subscription packages
     """
+    plans = SubscriptionPlan.objects.filter(is_active=True).order_by('annual_price')
+
     context = {
         'paypal_client_id': getattr(settings, 'PAYPAL_CLIENT_ID', ''),
         'standard_plan_id': getattr(settings, 'PAYPAL_STANDARD_PLAN_ID', ''),
         'paypal_mode': getattr(settings, 'PAYPAL_MODE', 'sandbox'),
-        'package_price': 120
+        'plans': plans,
     }
     
     # Add trial information if user is authenticated
@@ -54,15 +56,17 @@ def subscription_view(request):
             from .models import ChurchMember
             member = ChurchMember.objects.filter(user=request.user).first()
             if member and member.church:
+                church = member.church
                 context.update({
-                    'church': member.church,
-                    'is_trial_active': member.church.is_trial_active,
-                    'trial_days_remaining': member.church.trial_days_remaining,
-                    'is_trial_expired': member.church.is_trial_expired,
-                    'trial_end_date': member.church.trial_end_date,
+                    'church': church,
+                    'is_trial_active': church.is_trial_active,
+                    'trial_days_remaining': church.trial_days_remaining,
+                    'is_trial_expired': church.is_trial_expired,
+                    'trial_end_date': church.trial_end_date,
+                    'current_member_count': church.active_member_count,
+                    'current_plan': church.subscription_plan,
                 })
         except Exception as e:
-            # Log error but don't break the view
             import logging
             logger = logging.getLogger(__name__)
             logger.error(f"Error getting trial info for user {request.user}: {e}")
@@ -71,22 +75,80 @@ def subscription_view(request):
 
 def subscription_select(request):
     """
-    Handle subscription package selection - redirect to payment selection
+    Handle subscription package selection — supports all 4 tiers.
+    For the custom tier the member_count POST field is required.
+    Validates that the selected plan can accommodate the church's current member count.
     """
     if request.method == "POST":
-        package = request.POST.get('package', 'standard')  # Default to standard
-        if package == 'standard':
-            request.session['selected_package'] = package
-            request.session['package_price'] = '120'
-            
-            # Store package selection and redirect to payment selection
-            plan_id = getattr(settings, 'PAYPAL_STANDARD_PLAN_ID', '')
-            request.session['paypal_plan_id'] = plan_id
-            
-            messages.success(request, "You have selected Church Books. Please choose your payment method.")
-            return redirect('payment_selection')
-        else:
+        package = request.POST.get('package', '')
+        member_count_raw = request.POST.get('member_count', '').strip()
+
+        valid_slugs = ['starter', 'growth', 'community', 'custom']
+        if package not in valid_slugs:
             messages.error(request, "Invalid package selection.")
+            return redirect('subscription')
+
+        try:
+            plan = SubscriptionPlan.objects.get(slug=package, is_active=True)
+        except SubscriptionPlan.DoesNotExist:
+            messages.error(
+                request,
+                "That plan is not currently available. Please contact support."
+            )
+            return redirect('subscription')
+
+        # --- Custom tier: need declared member count ---------------------------
+        declared_count = None
+        if plan.is_custom:
+            if not member_count_raw or not member_count_raw.isdigit():
+                messages.error(request, "Please enter your church's member count for the Custom plan.")
+                return redirect('subscription')
+            declared_count = int(member_count_raw)
+            if declared_count <= 200:
+                messages.error(
+                    request,
+                    "The Custom plan is for churches with more than 200 members. "
+                    "Please select the Community plan instead."
+                )
+                return redirect('subscription')
+            price = SubscriptionPlan.calculate_custom_price(declared_count)
+        else:
+            price = float(plan.annual_price)
+
+        # --- If authenticated, validate current member count vs chosen plan ----
+        if request.user.is_authenticated:
+            try:
+                church_member = ChurchMember.objects.filter(user=request.user).first()
+                if church_member and church_member.church:
+                    church = church_member.church
+                    current_count = church.active_member_count
+                    plan_limit = declared_count if plan.is_custom else plan.member_limit
+                    if plan_limit and current_count > plan_limit:
+                        messages.error(
+                            request,
+                            f"This plan only allows {plan_limit} members, but your church currently "
+                            f"has {current_count} active members. Please choose a larger plan."
+                        )
+                        return redirect('subscription')
+            except Exception:
+                pass
+
+        # --- Store in session and proceed -------------------------------------
+        request.session['selected_package'] = package
+        request.session['package_price'] = str(price)
+        request.session['selected_plan_id'] = plan.id
+        if declared_count:
+            request.session['declared_member_count'] = declared_count
+
+        plan_id = getattr(settings, 'PAYPAL_STANDARD_PLAN_ID', '')
+        request.session['paypal_plan_id'] = plan_id
+
+        messages.success(
+            request,
+            f"You have selected the {plan.name} plan. Please choose your payment method."
+        )
+        return redirect('payment_selection')
+
     return redirect('subscription')
 
 @ensure_csrf_cookie
@@ -103,8 +165,11 @@ def payment_selection_view(request):
             
             # For PayPal payment
             if payment_method in ['paypal', 'stripe']:
-                request.session['selected_package'] = 'standard'
-                request.session['package_price'] = '120'
+                # Preserve whatever package/price was already stored by subscription_select.
+                # Only fall back to defaults if nothing is in the session yet.
+                if not request.session.get('selected_package'):
+                    request.session['selected_package'] = 'starter'
+                    request.session['package_price'] = '150'
                 plan_id = getattr(settings, 'PAYPAL_STANDARD_PLAN_ID', '')
                 request.session['paypal_plan_id'] = plan_id
                 
@@ -299,6 +364,16 @@ def registration_form_view(request):
                 print(f"DEBUG: User created successfully with ID: {user.id}, active: {user.is_active}")
                 
                 # Create church record
+                plan_id_session = request.session.get('selected_plan_id')
+                plan_obj = None
+                if plan_id_session:
+                    try:
+                        plan_obj = SubscriptionPlan.objects.get(id=plan_id_session)
+                    except SubscriptionPlan.DoesNotExist:
+                        pass
+                declared_count = request.session.get('declared_member_count')
+                sub_amount = float(request.session.get('package_price', 0) or 0)
+
                 church = Church.objects.create(
                     name=church_name,
                     address=church_address,
@@ -308,7 +383,10 @@ def registration_form_view(request):
                     subscription_type=selected_package,
                     subscription_status=church_status,
                     is_approved=is_church_approved,
-                    payment_method=payment_method
+                    payment_method=payment_method,
+                    subscription_plan=plan_obj,
+                    declared_member_count=declared_count,
+                    subscription_amount=sub_amount if sub_amount else None,
                 )
                 # Save logo if uploaded
                 church_logo = request.FILES.get('church_logo')
@@ -574,6 +652,16 @@ def create_paypal_subscription(request):
             print(f"DEBUG: User created successfully with ID: {user.id}")
             
             # Create church record (not approved yet)
+            plan_id_session = request.session.get('selected_plan_id')
+            plan_obj = None
+            if plan_id_session:
+                try:
+                    plan_obj = SubscriptionPlan.objects.get(id=plan_id_session)
+                except SubscriptionPlan.DoesNotExist:
+                    pass
+            declared_count = request.session.get('declared_member_count')
+            sub_amount = float(request.session.get('package_price', 0) or 0)
+
             church = Church.objects.create(
                 name=church_name,
                 address=church_address,
@@ -583,7 +671,10 @@ def create_paypal_subscription(request):
                 subscription_type=selected_package,
                 subscription_status='pending',
                 is_approved=False,
-                payment_method=('offline' if payment_method == 'offline' else 'paypal')
+                payment_method=('offline' if payment_method == 'offline' else 'paypal'),
+                subscription_plan=plan_obj,
+                declared_member_count=declared_count,
+                subscription_amount=sub_amount if sub_amount else None,
             )
             # Save logo if uploaded
             church_logo = request.FILES.get('church_logo')
@@ -630,8 +721,12 @@ def create_paypal_subscription(request):
                 
                 # Use simple plan identifiers
                 plan_identifier = f"church_books_{selected_package}_plan"
+                session_amount  = request.session.get('package_price')
                 
-                result = paypal_service.create_subscription(plan_identifier, payer_info, church.id)
+                result = paypal_service.create_subscription(
+                    plan_identifier, payer_info, church.id,
+                    amount=session_amount
+                )
                 
                 if result['success']:
                     # Store subscription ID for later reference

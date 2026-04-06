@@ -42,19 +42,42 @@ class PayPalService:
         else:
             raise Exception(f"Failed to get access token: {response.text}")
 
-    def create_subscription(self, plan_id, payer_info, church_id):
+    def create_subscription(self, plan_id, payer_info, church_id, amount=None, plan_name=None):
         """
         Create a simple PayPal payment (one-time payment for annual subscription)
         This is more reliable than subscription APIs
         """
         try:
-            # Determine amount based on plan
-            if 'standard' in plan_id.lower():
-                amount = "100.00"
-                plan_name = "Standard Plan"
+            # Prefer explicitly-passed amount; fall back to lookup by plan slug keyword
+            if amount is None:
+                if 'starter' in plan_id.lower():
+                    amount = "150.00"
+                    plan_name = plan_name or "Starter Plan (50 members)"
+                elif 'growth' in plan_id.lower():
+                    amount = "240.00"
+                    plan_name = plan_name or "Growth Plan (100 members)"
+                elif 'community' in plan_id.lower():
+                    amount = "330.00"
+                    plan_name = plan_name or "Community Plan (200 members)"
+                elif 'custom' in plan_id.lower():
+                    # Attempt to read from Church record
+                    try:
+                        from .models import Church
+                        church = Church.objects.get(id=church_id)
+                        if church.subscription_amount:
+                            amount = str(church.subscription_amount)
+                        else:
+                            amount = "330.00"
+                    except Exception:
+                        amount = "330.00"
+                    plan_name = plan_name or "Custom Plan"
+                else:
+                    # Legacy fallback
+                    amount = "150.00"
+                    plan_name = plan_name or "Church Books Plan"
             else:
-                amount = "120.00"
-                plan_name = "Premium Plan"
+                amount = f"{float(amount):.2f}"
+                plan_name = plan_name or "Church Books Plan"
             
             # Create a simple PayPal checkout URL
             # We'll use the Express Checkout API which is more reliable
