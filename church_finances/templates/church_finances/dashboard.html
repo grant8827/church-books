@@ -3,8 +3,8 @@
 {% block title %}Dashboard - Church Finance App{% endblock %}
 
 {% block content %}
-<div class="bg-white p-8 rounded-xl shadow-lg mb-6">
-    <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Financial Dashboard</h2>
+<div class="bg-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-lg mb-6">
+    <h2 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-6 text-center">Financial Dashboard</h2>
 
     <!-- Financial Summary Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -13,21 +13,21 @@
                 <svg class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
             <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Total Income</h3>
-            <p class="text-4xl font-bold text-slate-900">${{ total_income|floatformat:2 }}</p>
+            <p class="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 break-all">${{ total_income|floatformat:2 }}</p>
         </div>
         <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-100 text-center">
             <div class="inline-flex items-center justify-center w-10 h-10 bg-slate-50 rounded-full mb-3">
                 <svg class="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
             <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Total Expenses</h3>
-            <p class="text-4xl font-bold text-slate-900">${{ total_expense|floatformat:2 }}</p>
+            <p class="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 break-all">${{ total_expense|floatformat:2 }}</p>
         </div>
         <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-100 text-center">
             <div class="inline-flex items-center justify-center w-10 h-10 bg-slate-50 rounded-full mb-3">
                 <svg class="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
             </div>
             <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Net Balance</h3>
-            <p class="text-4xl font-bold text-slate-900">${{ net_balance|floatformat:2 }}</p>
+            <p class="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 break-all">${{ net_balance|floatformat:2 }}</p>
         </div>
     </div>
 
@@ -74,50 +74,50 @@
     {% endif %}
 
     <!-- Church Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
-        <div class="bg-purple-100 p-6 rounded-lg shadow-md border border-purple-200 text-center">
-            <h3 class="text-xl font-semibold text-purple-800 mb-2">Active Members</h3>
-            <p class="text-4xl font-bold text-purple-700">{{ total_members }}</p>
-            <a href="{% url 'member_list' %}" class="text-sm text-purple-600 hover:text-purple-800 mt-2 inline-block">View Members →</a>
-            <a href="{% url 'baptism_list' %}" class="text-sm text-purple-600 hover:text-purple-800 mt-1 inline-block">Baptism →</a>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5 mb-8">
+        <div class="bg-purple-100 p-3 sm:p-4 lg:p-5 rounded-lg shadow-md border border-purple-200 text-center min-w-0">
+            <h3 class="text-xs sm:text-sm lg:text-xs xl:text-sm font-semibold text-purple-800 mb-2 leading-tight break-words">Active Members</h3>
+            <p class="text-2xl sm:text-3xl lg:text-4xl font-bold text-purple-700">{{ total_members }}</p>
+            <a href="{% url 'member_list' %}" class="text-xs text-purple-600 hover:text-purple-800 mt-2 inline-block">View Members →</a>
+            <a href="{% url 'baptism_list' %}" class="text-xs text-purple-600 hover:text-purple-800 mt-1 inline-block">Baptism →</a>
         </div>
-        <div class="bg-indigo-100 p-6 rounded-lg shadow-md border border-indigo-200 text-center">
-            <h3 class="text-xl font-semibold text-indigo-800 mb-2">Total Contributions</h3>
-            <p class="text-4xl font-bold text-indigo-700">{{ total_contributions }}</p>
-            <p class="text-sm text-indigo-600 mt-1">${{ this_month_contributions|floatformat:2 }} this month</p>
-            <a href="{% url 'tithes_offerings_dashboard' %}" class="text-sm text-indigo-600 hover:text-indigo-800 mt-2 inline-block">Tithes & Offerings →</a>
+        <div class="bg-indigo-100 p-3 sm:p-4 lg:p-5 rounded-lg shadow-md border border-indigo-200 text-center min-w-0">
+            <h3 class="text-xs sm:text-sm lg:text-xs xl:text-sm font-semibold text-indigo-800 mb-2 leading-tight break-words">Total Contributions</h3>
+            <p class="text-2xl sm:text-3xl lg:text-4xl font-bold text-indigo-700">{{ total_contributions }}</p>
+            <p class="text-xs text-indigo-600 mt-1">${{ this_month_contributions|floatformat:2 }} this month</p>
+            <a href="{% url 'tithes_offerings_dashboard' %}" class="text-xs text-indigo-600 hover:text-indigo-800 mt-2 inline-block">Tithes &amp; Offerings →</a>
         </div>
-        <div class="bg-yellow-100 p-6 rounded-lg shadow-md border border-yellow-200 text-center">
-            <h3 class="text-xl font-semibold text-yellow-800 mb-2">Transactions</h3>
-            <p class="text-4xl font-bold text-yellow-700">{{ total_transactions }}</p>
-            <a href="{% url 'transaction_list' %}" class="text-sm text-yellow-600 hover:text-yellow-800 mt-2 inline-block">View Transactions →</a>
+        <div class="bg-yellow-100 p-3 sm:p-4 lg:p-5 rounded-lg shadow-md border border-yellow-200 text-center min-w-0">
+            <h3 class="text-xs sm:text-sm lg:text-xs xl:text-sm font-semibold text-yellow-800 mb-2 leading-tight break-words">Transactions</h3>
+            <p class="text-2xl sm:text-3xl lg:text-4xl font-bold text-yellow-700">{{ total_transactions }}</p>
+            <a href="{% url 'transaction_list' %}" class="text-xs text-yellow-600 hover:text-yellow-800 mt-2 inline-block">View Transactions →</a>
         </div>
-        <div class="bg-pink-100 p-6 rounded-lg shadow-md border border-pink-200 text-center">
-            <h3 class="text-xl font-semibold text-pink-800 mb-2">Children</h3>
-            <p class="text-4xl font-bold text-pink-700">{{ total_children }}</p>
-            <a href="{% url 'children_list' %}" class="text-sm text-pink-600 hover:text-pink-800 mt-2 inline-block">View Children →</a>
+        <div class="bg-pink-100 p-3 sm:p-4 lg:p-5 rounded-lg shadow-md border border-pink-200 text-center min-w-0">
+            <h3 class="text-xs sm:text-sm lg:text-xs xl:text-sm font-semibold text-pink-800 mb-2 leading-tight break-words">Children</h3>
+            <p class="text-2xl sm:text-3xl lg:text-4xl font-bold text-pink-700">{{ total_children }}</p>
+            <a href="{% url 'children_list' %}" class="text-xs text-pink-600 hover:text-pink-800 mt-2 inline-block">View Children →</a>
         </div>
-        <div class="bg-teal-100 p-6 rounded-lg shadow-md border border-teal-200 text-center">
-            <h3 class="text-xl font-semibold text-teal-800 mb-2">Quick Actions</h3>
+        <div class="bg-teal-100 p-3 sm:p-4 lg:p-5 rounded-lg shadow-md border border-teal-200 text-center min-w-0">
+            <h3 class="text-xs sm:text-sm lg:text-xs xl:text-sm font-semibold text-teal-800 mb-2 leading-tight">Quick Actions</h3>
             <div class="space-y-2 mt-2">
                 {% if user.churchmember and user.churchmember.role == 'member' %}
-                    <a href="{% url 'quick_tithe_entry' %}" class="text-sm text-teal-600 hover:text-teal-800 block">Quick Tithe →</a>
-                    <a href="{% url 'member_contributions' %}" class="text-sm text-teal-600 hover:text-teal-800 block">My Contributions →</a>
+                    <a href="{% url 'quick_tithe_entry' %}" class="text-xs text-teal-600 hover:text-teal-800 block">Quick Tithe →</a>
+                    <a href="{% url 'member_contributions' %}" class="text-xs text-teal-600 hover:text-teal-800 block">My Contributions →</a>
                 {% else %}
-                    <a href="{% url 'member_add' %}" class="text-sm text-teal-600 hover:text-teal-800 block">Add Member →</a>
+                    <a href="{% url 'member_add' %}" class="text-xs text-teal-600 hover:text-teal-800 block">Add Member →</a>
                     {% if church_role == 'admin' or church_role == 'pastor' or church_role == 'bishop' or church_role == 'treasurer' %}
-                        <a href="{% url 'dashboard_user_register' %}" class="text-sm text-teal-600 hover:text-teal-800 block">Add Staff →</a>
+                        <a href="{% url 'dashboard_user_register' %}" class="text-xs text-teal-600 hover:text-teal-800 block">Add Staff →</a>
                     {% endif %}
-                    <a href="{% url 'bulk_contribution_entry' %}" class="text-sm text-teal-600 hover:text-teal-800 block">Bulk Entry →</a>
+                    <a href="{% url 'bulk_contribution_entry' %}" class="text-xs text-teal-600 hover:text-teal-800 block">Bulk Entry →</a>
                 {% endif %}
-                <a href="{% url 'transaction_create' %}" class="text-sm text-teal-600 hover:text-teal-800 block">Add Transaction →</a>
+                <a href="{% url 'transaction_create' %}" class="text-xs text-teal-600 hover:text-teal-800 block">Add Transaction →</a>
             </div>
         </div>
     </div>
 
     <!-- Children Ministry Section -->
     <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-100 mb-8">
-        <h3 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+        <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 mb-4 flex items-center">
             <i class="fas fa-child text-pink-600 mr-3"></i>
             Children Ministry
         </h3>
@@ -160,7 +160,7 @@
         </div>
     </div>
 
-    <h3 class="text-xl font-bold text-slate-900 mb-4">Recent Transactions</h3>
+    <h3 class="text-base sm:text-lg lg:text-xl font-bold text-slate-900 mb-4">Recent Transactions</h3>
     {% if recent_transactions %}
         <div class="overflow-x-auto rounded-lg border border-slate-100 shadow-sm">
             <table class="min-w-full bg-white">
