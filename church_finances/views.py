@@ -66,21 +66,17 @@ def contact_view(request):
 
 def pricing_view(request):
     """
-    Display the Pricing page
+    Redirect to the new subscription/pricing page.
     """
-    return render(request, 'pricing.html')
+    return redirect('subscription')
 
 def choose_plan_view(request):
     """
-    Display the single plan with free-trial info.
-    No payment required — clicking "Start Free Trial" routes to register.
+    Redirect to the new multi-tier subscription/pricing page.
+    All nav and home-page links use the 'choose_plan' URL name so we
+    redirect here rather than updating every template individually.
     """
-    if request.method == 'POST':
-        # There is only one plan — always 'standard'
-        request.session['selected_package'] = 'standard'
-        return redirect('register')
-
-    return render(request, 'choose_plan.html')
+    return redirect('subscription')
 
 def privacy_policy_view(request):
     """

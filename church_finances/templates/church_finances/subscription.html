@@ -125,8 +125,6 @@
           <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>$330 base + $10/10 members</li>
           <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Dedicated Support</li>
         </ul>
-
-        {# Custom price calculator #}
         <div class="bg-gray-50 rounded-lg p-3 mb-4">
           <label class="block text-xs font-semibold text-gray-600 mb-1">Enter your member count:</label>
           <input type="number" id="custom-member-input" min="201" placeholder="e.g. 250"
@@ -134,7 +132,6 @@
           <p class="text-xs text-gray-400 mt-1">Must be more than 200 members</p>
           <div id="custom-price-result" class="mt-2 text-sm font-semibold text-[#6e003d] hidden"></div>
         </div>
-
         <form method="post" action="{% url 'subscription_select' %}" id="custom-plan-form">
           {% csrf_token %}
           <input type="hidden" name="package" value="custom">
@@ -147,9 +144,9 @@
         </form>
       </div>
 
-    </div>{# /grid #}
+    </div>
 
-    {# ── Upgrade prompt for over-limit churches ───────────────────────── #}
+    {# ── Upgrade prompt ── #}
     {% if user.is_authenticated and current_plan and current_member_count %}
       {% if current_plan.member_limit and current_member_count >= current_plan.member_limit %}
         <div class="bg-orange-100 border border-orange-400 text-orange-800 px-6 py-4 rounded-lg mb-8 max-w-4xl mx-auto">
@@ -161,7 +158,7 @@
       {% endif %}
     {% endif %}
 
-    {# ── Trial info footer ───────────────────────────────────────────── #}
+    {# ── Footer ── #}
     <div class="mt-4 text-center max-w-4xl mx-auto bg-white p-6 rounded-lg shadow">
       <h3 class="text-lg font-bold text-gray-900 mb-3">What's included in every plan</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 text-left max-w-xl mx-auto">
@@ -178,10 +175,9 @@
       </p>
     </div>
 
-  </div>{# /container #}
+  </div>
 </div>
 
-{# ── Custom plan JS calculator ─────────────────────────────────────────── #}
 <script>
 (function () {
   const input   = document.getElementById('custom-member-input');
@@ -191,7 +187,6 @@
   const btn     = document.getElementById('custom-submit-btn');
 
   function calcPrice(count) {
-    // $330 base + $10 per 10 members (or part thereof) over 200
     if (count <= 200) return 330;
     var extra = Math.ceil((count - 200) / 10);
     return 330 + (extra * 10);
@@ -215,7 +210,6 @@
     btn.disabled = false;
   });
 
-  // Validate before submitting
   document.getElementById('custom-plan-form').addEventListener('submit', function (e) {
     var val = parseInt(input.value, 10);
     if (!val || val <= 200) {
@@ -225,161 +219,4 @@
   });
 })();
 </script>
-{% endblock %}
-<div class="min-h-screen bg-gray-100 py-12">
-    <div class="container mx-auto px-4">
-        {% if user.is_authenticated %}
-            <!-- Trial Status Message -->
-            {% for member in user.churchmember_set.all %}
-                {% if member.church.is_trial_expired and member.church.subscription_status != 'active' %}
-                    <div class="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg mb-8 max-w-2xl mx-auto">
-                        <div class="flex items-center">
-                            <div class="py-1">
-                                <svg class="fill-current h-6 w-6 text-red-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                    <path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM9 11V9h2v6H9v-4zm0-6h2v2H9V5z"/>
-                                </svg>
-                            </div>
-                            <div class="flex-1">
-                                <p class="font-bold">Trial Expired - Payment Required</p>
-                                <p class="text-sm">Your 30-day free trial has ended. Complete payment below to continue using Church Books and access your dashboard.</p>
-                            </div>
-                        </div>
-                    </div>
-                {% elif member.church.is_trial_active and member.church.subscription_status != 'active' %}
-                    <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-6 py-4 rounded-lg mb-8 max-w-2xl mx-auto">
-                        <div class="flex items-center">
-                            <div class="py-1">
-                                <svg class="fill-current h-6 w-6 text-yellow-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                    <path d="M10 0C4.48 0 0 4.48 0 10s4.48 10 10 10 10-4.48 10-10S15.52 0 10 0zM9 5h2v6H9V5zm0 8h2v2H9v-2z"/>
-                                </svg>
-                            </div>
-                            <div class="flex-1">
-                                <p class="font-bold">Trial Active - Upgrade Available</p>
-                                <p class="text-sm">
-                                    You have {{ member.church.trial_days_remaining }} days remaining in your free trial. 
-                                    Upgrade now to ensure uninterrupted service.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                {% endif %}
-            {% endfor %}
-        {% endif %}
-
-        <!-- Pricing Header -->
-        <div class="text-center mb-12">
-            <h1 class="text-4xl font-bold text-gray-900 mb-4">Choose Your Plan</h1>
-            <p class="text-xl text-gray-600">Select the best package for your church's needs</p>
-        </div>
-
-        <!-- Single Pricing Plan -->
-        <div class="flex justify-center max-w-lg mx-auto">
-            <!-- Church Books Plan -->
-            <div class="w-full bg-white rounded-2xl shadow-xl p-8 border-2 border-[#6e003d] hover:shadow-2xl transition-shadow duration-300">
-                <div class="text-center">
-                    <h2 class="text-3xl font-bold text-gray-900">Church Books</h2>
-                    <p class="text-gray-600 mb-4">Complete Church Management Solution</p>
-                    <div class="text-5xl font-bold text-[#6e003d] mb-6">
-                        $120
-                        <span class="text-lg text-gray-600">/year</span>
-                    </div>
-                </div>
-                <div class="space-y-4 mb-8">
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        <span>Complete Member Management</span>
-                    </div>
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        <span>Financial Tracking & Reporting</span>
-                    </div>
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        <span>Children Ministry Management</span>
-                    </div>
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        <span>Transaction Management</span>
-                    </div>
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        <span>Attendance Tracking</span>
-                    </div>
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        <span>Christening Records</span>
-                    </div>
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        <span>Report Printing & Export</span>
-                    </div>
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        <span>Multi-User Access & Roles</span>
-                    </div>
-                </div>
-                <div class="text-center">
-                    <form method="post" action="{% url 'subscription_select' %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="package" value="standard">
-                        <button type="submit" class="w-full bg-[#6e003d] text-white py-4 px-8 rounded-lg hover:bg-[#8e005d] transition duration-300 text-lg font-semibold">
-                            Get Started Now
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Offline Payment Instructions -->
-        <div class="mt-12 text-center max-w-2xl mx-auto bg-white p-6 rounded-lg shadow">
-            <h3 class="text-xl font-bold text-gray-900 mb-4">Secure Payment with Stripe</h3>
-            <div class="text-left text-gray-600 space-y-2 mb-6">
-                <div class="flex items-center">
-                    <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Secure payment processing with Stripe</span>
-                </div>
-                <div class="flex items-center">
-                    <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Automatic account activation upon payment</span>
-                </div>
-                <div class="flex items-center">
-                    <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Yearly subscription with easy cancellation</span>
-                </div>
-                <div class="flex items-center">
-                    <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Start using Church Books immediately after payment</span>
-                </div>
-            </div>
-            <p class="text-sm text-gray-500">Powered by Stripe for secure transactions. All major credit and debit cards accepted. Annual subscription with easy cancellation.</p>
-                   <h3 class="text-xl font-bold text-gray-900 mt-8 mb-4">Offline Payment</h3>
-                   <p>If you prefer to pay via check or bank transfer, please contact our <a class="text-blue-500 hover:underline" href="{% url 'contact' %}">support team</a></p>
-
-        </div>
-    </div>
-</div>
 {% endblock %}
