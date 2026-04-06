@@ -100,7 +100,7 @@ if not DEBUG:
     CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(base_origins))
     print(f"Final CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}")
 else:
-    # Development - allow local origins
+    # Development - allow local origins + any Railway domain set via env var
     CSRF_TRUSTED_ORIGINS = [
         'http://localhost:8000',
         'http://127.0.0.1:8000',
@@ -108,6 +108,14 @@ else:
         'http://127.0.0.1:8001',
         'http://localhost:8001',
     ]
+    # Also add Railway dev domain if provided (so DEBUG=True works on Railway dev service)
+    csrf_origins_env = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+    if csrf_origins_env:
+        extra = [o.strip() for o in csrf_origins_env.split(',') if o.strip()]
+        CSRF_TRUSTED_ORIGINS.extend(extra)
+    if railway_public_domain:
+        CSRF_TRUSTED_ORIGINS.append(f'https://{railway_public_domain}')
+    CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(CSRF_TRUSTED_ORIGINS))
     print(f"Development CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}")
 
 
