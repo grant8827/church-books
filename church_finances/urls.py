@@ -24,6 +24,9 @@ urlpatterns = [
     path('trial-expired/', views.trial_expired_payment_view, name='trial_expired_payment'),
     path('trial-expired/offline/', views.trial_expired_offline_request, name='trial_expired_offline_request'),
     
+    # Upgrade plan
+    path('upgrade-plan/', views_subscription.upgrade_plan_view, name='upgrade_plan'),
+
     # PayPal URLs
     path('paypal/subscription/', views_subscription.create_paypal_subscription, name='paypal_subscription_form'),
     path('paypal/pay/', views_subscription.paypal_payment_direct, name='paypal_payment_direct'),

@@ -36,6 +36,68 @@ def get_paypal_service():
     else:
         return PayPalService()
 
+# Plan upgrade order — used to determine which plans are higher than the current one
+_PLAN_ORDER = ['starter', 'growth', 'community', 'custom']
+
+@login_required
+def upgrade_plan_view(request):
+    """
+    Show plans the church can upgrade to (higher than their current plan).
+    POST: stores the chosen plan in the session and redirects to PayPal checkout.
+    """
+    church_member = ChurchMember.objects.filter(user=request.user).first()
+    if not church_member:
+        messages.error(request, "No church account found.")
+        return redirect('dashboard')
+    church = church_member.church
+
+    current_plan = church.subscription_plan
+    current_slug = current_plan.slug if current_plan else None
+
+    if current_slug and current_slug in _PLAN_ORDER:
+        current_idx = _PLAN_ORDER.index(current_slug)
+        upgrade_slugs = _PLAN_ORDER[current_idx + 1:]
+    else:
+        upgrade_slugs = _PLAN_ORDER
+
+    available_plans = SubscriptionPlan.objects.filter(
+        slug__in=upgrade_slugs, is_active=True
+    ).order_by('annual_price')
+
+    if request.method == 'POST':
+        plan_slug = request.POST.get('plan_slug', '').strip()
+        member_count_raw = request.POST.get('member_count', '').strip()
+
+        try:
+            chosen_plan = SubscriptionPlan.objects.get(slug=plan_slug, is_active=True)
+        except SubscriptionPlan.DoesNotExist:
+            messages.error(request, "Invalid plan selected.")
+            return redirect('upgrade_plan')
+
+        if chosen_plan.is_custom:
+            try:
+                member_count = int(member_count_raw)
+                if member_count < 1:
+                    raise ValueError
+            except (ValueError, TypeError):
+                messages.error(request, "Please enter a valid member count for the Custom plan.")
+                return redirect('upgrade_plan')
+            amount = SubscriptionPlan.calculate_custom_price(member_count)
+        else:
+            member_count = chosen_plan.member_limit
+            amount = float(chosen_plan.annual_price)
+
+        request.session['upgrade_plan_slug'] = plan_slug
+        request.session['upgrade_plan_amount'] = f"{amount:.2f}"
+        request.session['upgrade_member_count'] = member_count
+        return redirect('paypal_payment_direct')
+
+    return render(request, 'church_finances/upgrade_plan.html', {
+        'church': church,
+        'current_plan': current_plan,
+        'available_plans': available_plans,
+    })
+
 @ensure_csrf_cookie
 def subscription_view(request):
     """
@@ -478,6 +540,7 @@ def registration_form_view(request):
 def paypal_payment_direct(request):
     """
     Show the PayPal subscription button page for an authenticated user with a pending church.
+    Also handles the upgrade flow when 'upgrade_plan_slug' is in the session.
     """
     if not request.user.is_authenticated:
         request.session['next_url'] = '/finances/paypal/pay/'
@@ -492,28 +555,47 @@ def paypal_payment_direct(request):
 
     church = church_member.church
 
-    # Already paid and active — send to dashboard
-    if church.subscription_status == 'active' and church.is_approved:
+    # Check if this is an upgrade payment (plan stored in session)
+    upgrade_plan_slug = request.session.get('upgrade_plan_slug')
+    is_upgrade = False
+    upgrade_plan_obj = None
+    if upgrade_plan_slug:
+        try:
+            upgrade_plan_obj = SubscriptionPlan.objects.get(slug=upgrade_plan_slug, is_active=True)
+            is_upgrade = True
+        except SubscriptionPlan.DoesNotExist:
+            request.session.pop('upgrade_plan_slug', None)
+            request.session.pop('upgrade_plan_amount', None)
+            request.session.pop('upgrade_member_count', None)
+
+    # Already paid and active — only redirect if not an upgrade
+    if church.subscription_status == 'active' and church.is_approved and not is_upgrade:
         return redirect('dashboard')
 
     paypal_client_id = getattr(settings, 'PAYPAL_CLIENT_ID', '')
 
-    # Resolve plan display info from the church record
-    plan = church.subscription_plan
-    if plan:
-        plan_name = plan.name
+    if is_upgrade and upgrade_plan_obj:
+        plan = upgrade_plan_obj
+        plan_name = f"Upgrade to {plan.name}"
         member_limit_display = f"Up to {plan.member_limit} members" if plan.member_limit else "200+ members (custom pricing)"
+        amount = float(request.session.get('upgrade_plan_amount', float(plan.annual_price)))
     else:
-        plan_name = "Church Books"
-        member_limit_display = "All features included"
+        # Resolve plan display info from the church record
+        plan = church.subscription_plan
+        if plan:
+            plan_name = plan.name
+            member_limit_display = f"Up to {plan.member_limit} members" if plan.member_limit else "200+ members (custom pricing)"
+        else:
+            plan_name = "Church Books"
+            member_limit_display = "All features included"
 
-    # Use stored amount; fall back to plan base price; final fall back $150
-    if church.subscription_amount:
-        amount = float(church.subscription_amount)
-    elif plan:
-        amount = float(plan.annual_price)
-    else:
-        amount = 150.00
+        # Use stored amount; fall back to plan base price; final fall back $150
+        if church.subscription_amount:
+            amount = float(church.subscription_amount)
+        elif plan:
+            amount = float(plan.annual_price)
+        else:
+            amount = 150.00
 
     use_mock = getattr(settings, 'USE_MOCK_PAYPAL', False)
 
@@ -524,6 +606,7 @@ def paypal_payment_direct(request):
         'member_limit_display': member_limit_display,
         'amount': f"{amount:.2f}",
         'use_mock_paypal': use_mock,
+        'is_upgrade': is_upgrade,
     })
 
 
@@ -580,25 +663,40 @@ def paypal_create_order(request):
     """
     AJAX: creates a PayPal one-time order with the church's actual subscription amount.
     Returns { orderID } to the PayPal JS SDK createOrder callback.
+    Respects session upgrade plan if present.
     """
     church_member = ChurchMember.objects.filter(user=request.user).first()
     if not church_member:
         return JsonResponse({'error': 'No church account found.'}, status=400)
     church = church_member.church
 
-    # Determine amount and plan name
-    plan = church.subscription_plan
-    if church.subscription_amount:
-        amount = f"{float(church.subscription_amount):.2f}"
-    elif plan:
-        amount = f"{float(plan.annual_price):.2f}"
+    # If this is an upgrade, use the plan/amount stored in session
+    upgrade_plan_slug = request.session.get('upgrade_plan_slug')
+    upgrade_plan_amount = request.session.get('upgrade_plan_amount')
+    if upgrade_plan_slug and upgrade_plan_amount:
+        try:
+            upgrade_plan_obj = SubscriptionPlan.objects.get(slug=upgrade_plan_slug, is_active=True)
+            plan_name = f"Upgrade to {upgrade_plan_obj.name}"
+            plan_id = upgrade_plan_slug
+        except SubscriptionPlan.DoesNotExist:
+            plan_name = "Church Books Upgrade"
+            plan_id = 'standard'
+        amount = upgrade_plan_amount
     else:
-        amount = "150.00"
-    plan_name = plan.name if plan else "Church Books"
+        # Standard (non-upgrade) payment
+        plan = church.subscription_plan
+        if church.subscription_amount:
+            amount = f"{float(church.subscription_amount):.2f}"
+        elif plan:
+            amount = f"{float(plan.annual_price):.2f}"
+        else:
+            amount = "150.00"
+        plan_id = plan.slug if plan else 'standard'
+        plan_name = plan.name if plan else "Church Books"
 
     paypal = get_paypal_service()
     result = paypal.create_subscription(
-        plan_id=plan.slug if plan else 'standard',
+        plan_id=plan_id,
         payer_info={},
         church_id=church.id,
         amount=amount,
@@ -651,6 +749,28 @@ def paypal_capture_order(request):
         church.subscription_start_date = timezone.now()
     if not church.subscription_end_date:
         church.subscription_end_date = timezone.now() + timedelta(days=365)
+
+    # Apply upgrade plan if this was an upgrade payment
+    upgrade_plan_slug = request.session.get('upgrade_plan_slug')
+    upgrade_member_count = request.session.get('upgrade_member_count')
+    upgrade_plan_amount = request.session.get('upgrade_plan_amount')
+    if upgrade_plan_slug:
+        try:
+            new_plan = SubscriptionPlan.objects.get(slug=upgrade_plan_slug, is_active=True)
+            church.subscription_plan = new_plan
+            if upgrade_plan_amount:
+                church.subscription_amount = upgrade_plan_amount
+            if new_plan.is_custom and upgrade_member_count:
+                church.declared_member_count = upgrade_member_count
+            elif not new_plan.is_custom:
+                church.declared_member_count = new_plan.member_limit
+        except SubscriptionPlan.DoesNotExist:
+            pass
+        # Clear upgrade session data
+        request.session.pop('upgrade_plan_slug', None)
+        request.session.pop('upgrade_plan_amount', None)
+        request.session.pop('upgrade_member_count', None)
+
     church.save()
 
     church_member.is_active = True

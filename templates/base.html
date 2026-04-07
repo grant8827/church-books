@@ -403,6 +403,19 @@
                 <span class="sidebar-tooltip">Baptisms</span>
             </div>
 
+            <!-- Upgrade Plan -->
+            {% if not user.is_superuser %}
+            <div class="sidebar-item mt-1">
+                <a href="{% url 'upgrade_plan' %}" class="sidebar-item-link flex items-center gap-3 text-white rounded-lg px-3 py-2.5 transition-colors group {% if request.resolver_match.url_name == 'upgrade_plan' %}bg-green-700{% else %}hover:bg-green-700{% endif %}">
+                    <svg class="h-5 w-5 flex-shrink-0 text-green-300 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+                    </svg>
+                    <span class="sidebar-label text-sm font-medium">Upgrade Plan</span>
+                </a>
+                <span class="sidebar-tooltip">Upgrade Plan</span>
+            </div>
+            {% endif %}
+
             <!-- Certificates -->
             <div class="sidebar-item mt-1">
                 <a href="{% url 'certificate_templates_list' %}" class="sidebar-item-link flex items-center gap-3 text-white rounded-lg px-3 py-2.5 transition-colors group {% if request.resolver_match.url_name == 'certificate_templates_list' %}bg-blue-700{% else %}hover:bg-blue-700{% endif %}">
