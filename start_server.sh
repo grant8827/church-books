@@ -31,6 +31,11 @@ python manage.py migrate --noinput || {
     echo "Migration failed, but continuing..."
 }
 
+echo "Seeding subscription plans..."
+python manage.py seed_plans || {
+    echo "Plan seeding failed, but continuing..."
+}
+
 # Ensure the local media directory exists (used when USE_S3 is not set / Railway Volume)
 mkdir -p /app/media/church_logos
 
