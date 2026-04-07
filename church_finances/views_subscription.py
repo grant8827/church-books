@@ -145,9 +145,9 @@ def subscription_select(request):
 
         messages.success(
             request,
-            f"You have selected the {plan.name} plan. Please choose your payment method."
+            f"You have selected the {plan.name} plan. Please complete your registration to start your free trial."
         )
-        return redirect('payment_selection')
+        return redirect('registration_form')
 
     return redirect('subscription')
 
@@ -222,12 +222,8 @@ def registration_form_view(request):
     Show registration form after payment method selection
     """
     if request.method == "POST":
-        # Get payment method from session
+        # Get payment method from session (empty = free trial sign-up)
         payment_method = request.session.get('payment_method', '')
-        
-        if not payment_method:
-            messages.error(request, "Please select a payment method first.")
-            return redirect('payment_selection')
         
         try:
             # Get form data
@@ -341,13 +337,15 @@ def registration_form_view(request):
                 return redirect('subscription')
             
             print(f"DEBUG: Creating user account for {username} with payment method: {payment_method}")
+            is_free_trial = not payment_method
             
             # Use database transaction to ensure data consistency
             with transaction.atomic():
                 # Stripe: user inactive until payment confirmed
                 # Offline: user active, church pending admin approval
+                # Free trial: user active immediately, church approved, trial clock starts
                 is_user_active   = payment_method != 'stripe'
-                is_church_approved = False
+                is_church_approved = is_free_trial
                 church_status    = 'pending'
                 is_member_active = payment_method != 'stripe'
                 
@@ -383,7 +381,8 @@ def registration_form_view(request):
                     subscription_type=selected_package,
                     subscription_status=church_status,
                     is_approved=is_church_approved,
-                    payment_method=payment_method,
+                    payment_method=payment_method if payment_method else 'offline',
+                    trial_end_date=timezone.now() + timedelta(days=30) if is_free_trial else None,
                     subscription_plan=plan_obj,
                     declared_member_count=declared_count,
                     subscription_amount=sub_amount if sub_amount else None,
@@ -410,6 +409,11 @@ def registration_form_view(request):
                 request.session['church_id'] = church.id
             
             # Handle payment method
+            if is_free_trial:
+                login(request, user)
+                messages.success(request, f"Welcome to Church Books! Your 30-day free trial has started. No payment is needed right now — enjoy full access to all features.")
+                return redirect('dashboard')
+
             if payment_method == 'offline':
                 # For offline payment, create records - admin approval needed
                 messages.success(request, f"Registration successful! Your account '{username}' is pending admin approval. You will receive payment instructions once approved.")
@@ -463,10 +467,6 @@ def registration_form_view(request):
     if not selected_package:
         messages.error(request, "Please select a subscription package first.")
         return redirect('subscription')
-    
-    if not payment_method:
-        messages.error(request, "Please select a payment method first.")
-        return redirect('payment_selection')
     
     context = {
         'selected_package': selected_package,
