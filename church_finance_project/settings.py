@@ -370,11 +370,9 @@ SITE_ID = 1
 # Email settings
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Church Books <info@churchbooksmanagement.com>')
 
-if DEBUG:
-    # Development: Print emails to console
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-else:
-    # Production: Use SMTP
+# Use SMTP whenever EMAIL_HOST_PASSWORD is configured (covers DEBUG=True on Railway dev).
+# Only fall back to console backend in true local dev where no password is set.
+if os.getenv('EMAIL_HOST_PASSWORD', ''):
     EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
     EMAIL_HOST = os.getenv('EMAIL_HOST', 'webhosting2023.is.cc')
     EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
@@ -385,6 +383,9 @@ else:
     DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Church Books <info@churchbooksmanagement.com>')
     SERVER_EMAIL = DEFAULT_FROM_EMAIL
     EMAIL_TIMEOUT = 30  # Timeout in seconds
+else:
+    # No SMTP credentials available — print to console (local dev only)
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # PayPal Configuration - REMOVED DUPLICATE (configuration moved to end of file)
 
