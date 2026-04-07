@@ -147,7 +147,7 @@ def subscription_select(request):
             request,
             f"You have selected the {plan.name} plan. Please complete your registration to start your free trial."
         )
-        return redirect('registration_form')
+        return redirect('register')
 
     return redirect('subscription')
 

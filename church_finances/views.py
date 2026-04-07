@@ -12,7 +12,7 @@ from functools import wraps
 import random
 import string
 from datetime import timedelta
-from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, BabyChristening, CertificateTemplate, EmailOTP
+from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, BabyChristening, CertificateTemplate, EmailOTP, SubscriptionPlan
 from .forms import (
     CustomUserCreationForm, TransactionForm, ChurchRegistrationForm,
     ChurchMemberForm, MemberForm, ContributionForm, DashboardUserRegistrationForm,
@@ -323,7 +323,21 @@ def register_view(request):
                     church.subscription_type = selected_package
                     church.subscription_status = 'pending'  # Still pending payment, but approved for trial
                     church.registered_by = user  # Set the registering user
-                    # Trial system will be set automatically by the model's save method
+                    # Attach subscription plan chosen on pricing page (if any)
+                    plan_id_session = request.session.get('selected_plan_id')
+                    if plan_id_session:
+                        try:
+                            church.subscription_plan = SubscriptionPlan.objects.get(id=plan_id_session)
+                        except SubscriptionPlan.DoesNotExist:
+                            pass
+                    declared_count = request.session.get('declared_member_count')
+                    if declared_count:
+                        church.declared_member_count = declared_count
+                    sub_amount = request.session.get('package_price')
+                    if sub_amount:
+                        church.subscription_amount = float(sub_amount)
+                    # Start the 30-day trial clock
+                    church.trial_end_date = timezone.now() + timedelta(days=30)
                     church.save()
                     # Validate and save logo if uploaded
                     logo_file = request.FILES.get('church_logo')
@@ -347,6 +361,8 @@ def register_view(request):
                     # Clear the subscription session data
                     request.session.pop('selected_package', None)
                     request.session.pop('package_price', None)
+                    request.session.pop('selected_plan_id', None)
+                    request.session.pop('declared_member_count', None)
                     # Clear OTP session data after successful registration
                     request.session.pop('otp_verified', None)
                     request.session.pop('otp_email', None)
