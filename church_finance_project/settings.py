@@ -119,8 +119,10 @@ else:
     print(f"Development CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}")
 
 
-# Session Settings - will be overridden in security section below
-SESSION_COOKIE_AGE = 1209600  # 2 weeks
+# Session Settings
+# 8 hours is appropriate for a financial app handling donation/member data.
+# SESSION_SAVE_EVERY_REQUEST ensures the idle timeout resets on activity.
+SESSION_COOKIE_AGE = 28800  # 8 hours
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_SAVE_EVERY_REQUEST = True
 
@@ -137,8 +139,10 @@ if not DEBUG:
     
     # CSRF security
     CSRF_COOKIE_SECURE = True
-    CSRF_COOKIE_HTTPONLY = True  # Prevent JavaScript from reading CSRF cookie
-    CSRF_COOKIE_SAMESITE = 'Lax'  # Changed from 'Strict' to 'Lax' for better compatibility
+    # Note: Django's CSRF cookie must remain JS-readable so AJAX fetch() calls
+    # can include X-CSRFToken. CSRF_COOKIE_HTTPONLY is not a Django setting and
+    # has no effect — omitted to avoid confusion.
+    CSRF_COOKIE_SAMESITE = 'Lax'  # 'Lax' required for cross-tab navigation to work
     CSRF_COOKIE_AGE = 31449600  # 1 year
     CSRF_USE_SESSIONS = False  # Use cookies instead of sessions for CSRF tokens
     CSRF_COOKIE_NAME = 'csrftoken'  # Explicit cookie name
@@ -175,6 +179,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    "church_finances.middleware.SecurityMiddleware",  # Block WordPress probes and malicious file requests
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",

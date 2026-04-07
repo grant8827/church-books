@@ -497,13 +497,30 @@ def paypal_payment_direct(request):
         return redirect('dashboard')
 
     paypal_client_id = getattr(settings, 'PAYPAL_CLIENT_ID', '')
-    plan_id = getattr(settings, 'PAYPAL_STANDARD_PLAN_ID', '')
+
+    # Resolve plan display info from the church record
+    plan = church.subscription_plan
+    if plan:
+        plan_name = plan.name
+        member_limit_display = f"Up to {plan.member_limit} members" if plan.member_limit else "200+ members (custom pricing)"
+    else:
+        plan_name = "Church Books"
+        member_limit_display = "All features included"
+
+    # Use stored amount; fall back to plan base price; final fall back $150
+    if church.subscription_amount:
+        amount = float(church.subscription_amount)
+    elif plan:
+        amount = float(plan.annual_price)
+    else:
+        amount = 150.00
 
     return render(request, 'church_finances/paypal_checkout.html', {
         'church': church,
         'paypal_client_id': paypal_client_id,
-        'plan_id': plan_id,
-        'package_price': 120,
+        'plan_name': plan_name,
+        'member_limit_display': member_limit_display,
+        'amount': f"{amount:.2f}",
     })
 
 
@@ -551,6 +568,98 @@ def paypal_activate_subscription(request):
         request.user.save()
 
     print(f"PayPal subscription activated: church={church.name}, subscription_id={subscription_id}")
+    return JsonResponse({'success': True, 'redirect': '/finances/dashboard/'})
+
+
+@login_required
+@require_POST
+def paypal_create_order(request):
+    """
+    AJAX: creates a PayPal one-time order with the church's actual subscription amount.
+    Returns { orderID } to the PayPal JS SDK createOrder callback.
+    """
+    church_member = ChurchMember.objects.filter(user=request.user).first()
+    if not church_member:
+        return JsonResponse({'error': 'No church account found.'}, status=400)
+    church = church_member.church
+
+    # Determine amount and plan name
+    plan = church.subscription_plan
+    if church.subscription_amount:
+        amount = f"{float(church.subscription_amount):.2f}"
+    elif plan:
+        amount = f"{float(plan.annual_price):.2f}"
+    else:
+        amount = "150.00"
+    plan_name = plan.name if plan else "Church Books"
+
+    from .paypal_service import PayPalService
+    paypal = PayPalService()
+    result = paypal.create_subscription(
+        plan_id=plan.slug if plan else 'standard',
+        payer_info={},
+        church_id=church.id,
+        amount=amount,
+        plan_name=plan_name,
+    )
+    if result.get('success'):
+        return JsonResponse({'orderID': result['subscription_id']})
+    return JsonResponse({'error': result.get('error', 'Could not create PayPal order. Please try again.')}, status=500)
+
+
+@login_required
+@require_POST
+def paypal_capture_order(request):
+    """
+    AJAX: captures the approved PayPal order server-side, verifies COMPLETED status,
+    then activates the church subscription.
+    """
+    try:
+        data = json.loads(request.body)
+        order_id = data.get('order_id', '').strip()
+    except (json.JSONDecodeError, ValueError):
+        order_id = request.POST.get('order_id', '').strip()
+
+    if not order_id:
+        return JsonResponse({'success': False, 'error': 'No order ID provided.'}, status=400)
+
+    church_member = ChurchMember.objects.filter(user=request.user).first()
+    if not church_member:
+        return JsonResponse({'success': False, 'error': 'No church account found.'}, status=400)
+    church = church_member.church
+
+    from .paypal_service import PayPalService
+    paypal = PayPalService()
+    result = paypal.capture_payment(order_id)
+
+    if not result.get('success'):
+        return JsonResponse({'success': False, 'error': result.get('error', 'Payment capture failed. Please contact support with your order ID: ' + order_id)})
+
+    order_data = result.get('order', {})
+    if order_data.get('status') != 'COMPLETED':
+        return JsonResponse({'success': False, 'error': f"Payment not completed (status: {order_data.get('status', 'unknown')}). Please contact support."})
+
+    # Activate the church
+    church.paypal_subscription_id = order_id
+    church.subscription_status = 'active'
+    church.payment_status = 'paid'
+    church.is_approved = True
+    church.is_trial_active = False
+    church.payment_method = 'paypal'
+    if not church.subscription_start_date:
+        church.subscription_start_date = timezone.now()
+    if not church.subscription_end_date:
+        church.subscription_end_date = timezone.now() + timedelta(days=365)
+    church.save()
+
+    church_member.is_active = True
+    church_member.save()
+
+    if not request.user.is_active:
+        request.user.is_active = True
+        request.user.save()
+
+    print(f"PayPal order captured & church activated: church={church.name}, order_id={order_id}")
     return JsonResponse({'success': True, 'redirect': '/finances/dashboard/'})
 
 @ensure_csrf_cookie
