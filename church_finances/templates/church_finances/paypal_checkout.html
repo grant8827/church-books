@@ -53,10 +53,29 @@
                 Pay securely with your PayPal account or any major credit / debit card.
             </p>
 
-            {% if not paypal_client_id %}
+            {% if use_mock_paypal %}
+            {# ── DEV / MOCK MODE ── real PayPal SDK is skipped to avoid infinite spinner #}
+            <div class="mb-4 p-3 bg-amber-50 border border-amber-300 rounded-lg text-amber-800 text-xs text-center">
+                <i class="fas fa-flask mr-1"></i> <strong>Dev / Sandbox Mode</strong> — payment is simulated, no real charge.
+            </div>
+            <button id="mock-pay-btn"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2">
+                <i class="fab fa-paypal"></i> Simulate PayPal Payment
+            </button>
+            <div id="payment-processing" class="hidden text-center py-4">
+                <div class="inline-flex items-center text-blue-600">
+                    <svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 22 6.477 22 12h-4z"></path>
+                    </svg>
+                    Activating your account…
+                </div>
+            </div>
+            <div id="payment-error" class="hidden mt-4 p-4 bg-red-50 text-red-800 rounded-lg text-sm"></div>
+            {% elif not paypal_client_id %}
             <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm text-center">
                 <i class="fas fa-exclamation-triangle mr-2"></i>
-                <strong>PayPal not configured.</strong> The <code>PAYPAL_CLIENT_ID</code> environment variable is not set on this server. Please add it in the Railway dashboard under <strong>Variables</strong>.
+                <strong>PayPal not configured.</strong> The <code>PAYPAL_CLIENT_ID</code> environment variable is not set on this server.
             </div>
             {% else %}
             <div id="paypal-button-container"></div>
@@ -89,20 +108,61 @@
 <!-- PayPal SDK — only loaded when client ID is configured -->
 {% if paypal_client_id %}
 <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD&intent=capture"></script>
+{% endif %}
 <script>
 const CSRF_TOKEN  = '{{ csrf_token }}';
 const CREATE_URL  = '{% url "paypal_create_order" %}';
 const CAPTURE_URL = '{% url "paypal_capture_order" %}';
 
-paypal.Buttons({
-    style: {
-        shape: 'rect',
-        color: 'gold',
-        layout: 'vertical',
-        label: 'pay'
-    },
+function handleCaptureResponse(data, orderID) {
+    if (data.success) {
+        window.location.href = data.redirect;
+    } else {
+        document.getElementById('payment-processing').classList.add('hidden');
+        const errEl = document.getElementById('payment-error');
+        errEl.classList.remove('hidden');
+        errEl.textContent = data.error || 'Activation failed. Please contact support with order ID: ' + orderID;
+        const btn = document.getElementById('mock-pay-btn') || document.getElementById('paypal-button-container');
+        if (btn) btn.style.display = '';
+    }
+}
 
-    // Step 1 — ask our server to create the PayPal order
+{% if use_mock_paypal %}
+// ── MOCK MODE ──────────────────────────────────────────────────────────────
+document.getElementById('mock-pay-btn').addEventListener('click', function() {
+    this.style.display = 'none';
+    document.getElementById('payment-processing').classList.remove('hidden');
+
+    // Step 1: create a mock order
+    fetch(CREATE_URL, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+    })
+    .then(r => r.json())
+    .then(function(res) {
+        if (!res.orderID) throw new Error(res.error || 'Could not create order.');
+        // Step 2: immediately capture the mock order
+        return fetch(CAPTURE_URL, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF_TOKEN, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: res.orderID })
+        }).then(r => r.json()).then(data => handleCaptureResponse(data, res.orderID));
+    })
+    .catch(function(err) {
+        document.getElementById('payment-processing').classList.add('hidden');
+        const errEl = document.getElementById('payment-error');
+        errEl.classList.remove('hidden');
+        errEl.textContent = 'Error: ' + err.message;
+        document.getElementById('mock-pay-btn').style.display = '';
+    });
+});
+
+{% elif paypal_client_id %}
+// ── REAL PAYPAL SDK ────────────────────────────────────────────────────────
+paypal.Buttons({
+    style: { shape: 'rect', color: 'gold', layout: 'vertical', label: 'pay' },
+
     createOrder: function(data, actions) {
         return fetch(CREATE_URL, {
             method: 'POST',
@@ -116,7 +176,6 @@ paypal.Buttons({
         });
     },
 
-    // Step 2 — buyer approved, capture on our server
     onApprove: function(data, actions) {
         document.getElementById('paypal-button-container').style.display = 'none';
         document.getElementById('payment-processing').classList.remove('hidden');
@@ -127,34 +186,26 @@ paypal.Buttons({
             body: JSON.stringify({ order_id: data.orderID })
         })
         .then(r => r.json())
-        .then(function(result) {
-            if (result.success) {
-                window.location.href = result.redirect;
-            } else {
-                document.getElementById('payment-processing').classList.add('hidden');
-                document.getElementById('payment-error').classList.remove('hidden');
-                document.getElementById('payment-error').textContent = result.error || 'Activation failed. Please contact support with your PayPal order ID: ' + data.orderID;
-                document.getElementById('paypal-button-container').style.display = '';
-            }
-        })
+        .then(result => handleCaptureResponse(result, data.orderID))
         .catch(function(err) {
             document.getElementById('payment-processing').classList.add('hidden');
-            document.getElementById('payment-error').classList.remove('hidden');
-            document.getElementById('payment-error').textContent = 'Network error. Please contact support with order ID: ' + data.orderID;
+            const errEl = document.getElementById('payment-error');
+            errEl.classList.remove('hidden');
+            errEl.textContent = 'Network error. Please contact support with order ID: ' + data.orderID;
             document.getElementById('paypal-button-container').style.display = '';
         });
     },
 
     onError: function(err) {
         console.error('PayPal error:', err);
-        document.getElementById('payment-error').classList.remove('hidden');
-        document.getElementById('payment-error').textContent = 'A PayPal error occurred. Please try again or contact support.';
+        const errEl = document.getElementById('payment-error');
+        errEl.classList.remove('hidden');
+        errEl.textContent = 'A PayPal error occurred. Please try again or contact support.';
     },
 
-    onCancel: function(data) {
-        // User cancelled — leave the button visible, do nothing
-    }
+    onCancel: function(data) {}
+
 }).render('#paypal-button-container');
-</script>
 {% endif %}
+</script>
 {% endblock %}

@@ -515,12 +515,15 @@ def paypal_payment_direct(request):
     else:
         amount = 150.00
 
+    use_mock = getattr(settings, 'USE_MOCK_PAYPAL', False)
+
     return render(request, 'church_finances/paypal_checkout.html', {
         'church': church,
         'paypal_client_id': paypal_client_id,
         'plan_name': plan_name,
         'member_limit_display': member_limit_display,
         'amount': f"{amount:.2f}",
+        'use_mock_paypal': use_mock,
     })
 
 

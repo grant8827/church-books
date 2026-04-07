@@ -82,6 +82,8 @@ class TrialExpirationMiddleware:
             '/finances/trial-expired/',
             '/finances/paypal/pay/',
             '/finances/paypal/activate/',
+            '/finances/paypal/create-order/',
+            '/finances/paypal/capture-order/',
             '/finances/paypal/webhook/',
             '/finances/stripe/pay/',
             '/finances/stripe/create-checkout/',
