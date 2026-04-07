@@ -322,7 +322,7 @@ textarea.field-input { min-height: 5rem; resize: vertical; padding-top: 0.75rem;
                 <label class="block text-sm font-medium text-gray-700 mb-1">Church Name <span class="text-red-500">*</span></label>
                 <div class="field-wrap">
                   <i class="fas fa-church icon"></i>
-                  <input type="text" name="{{ church_form.name.name }}" id="{{ church_form.name.id_for_label }}"
+                  <input type="text" name="{{ church_form.name.html_name }}" id="{{ church_form.name.id_for_label }}"
                          value="{{ church_form.name.value|default:'' }}" required
                          placeholder="e.g. Grace Community Church" class="field-input {% if church_form.name.errors %}error{% endif %}">
                 </div>
@@ -331,7 +331,7 @@ textarea.field-input { min-height: 5rem; resize: vertical; padding-top: 0.75rem;
                 <label class="block text-sm font-medium text-gray-700 mb-1">Church Address <span class="text-red-500">*</span></label>
                 <div class="field-wrap textarea-wrap">
                   <i class="fas fa-map-marker-alt icon"></i>
-                  <textarea name="{{ church_form.address.name }}" id="{{ church_form.address.id_for_label }}"
+                  <textarea name="{{ church_form.address.html_name }}" id="{{ church_form.address.id_for_label }}"
                             rows="3" required placeholder="Street, City, State, Zip"
                             class="field-input {% if church_form.address.errors %}error{% endif %}">{{ church_form.address.value|default:'' }}</textarea>
                 </div>
@@ -341,7 +341,7 @@ textarea.field-input { min-height: 5rem; resize: vertical; padding-top: 0.75rem;
                   <label class="block text-sm font-medium text-gray-700 mb-1">Church Phone <span class="text-red-500">*</span></label>
                   <div class="field-wrap">
                     <i class="fas fa-phone icon"></i>
-                    <input type="tel" name="{{ church_form.phone.name }}" id="{{ church_form.phone.id_for_label }}"
+                    <input type="tel" name="{{ church_form.phone.html_name }}" id="{{ church_form.phone.id_for_label }}"
                            value="{{ church_form.phone.value|default:'' }}" required
                            placeholder="(555) 123-4567" class="field-input {% if church_form.phone.errors %}error{% endif %}">
                   </div>
@@ -350,7 +350,7 @@ textarea.field-input { min-height: 5rem; resize: vertical; padding-top: 0.75rem;
                   <label class="block text-sm font-medium text-gray-700 mb-1">Church Email <span class="text-red-500">*</span></label>
                   <div class="field-wrap">
                     <i class="fas fa-envelope icon"></i>
-                    <input type="email" name="{{ church_form.email.name }}" id="{{ church_form.email.id_for_label }}"
+                    <input type="email" name="{{ church_form.email.html_name }}" id="{{ church_form.email.id_for_label }}"
                            value="{{ church_form.email.value|default:'' }}" required
                            placeholder="church@example.com" class="field-input {% if church_form.email.errors %}error{% endif %}">
                   </div>
@@ -360,7 +360,7 @@ textarea.field-input { min-height: 5rem; resize: vertical; padding-top: 0.75rem;
                 <label class="block text-sm font-medium text-gray-700 mb-1">Church Website <span class="text-xs text-gray-400">(optional)</span></label>
                 <div class="field-wrap">
                   <i class="fas fa-globe icon"></i>
-                  <input type="url" name="{{ church_form.website.name }}" id="{{ church_form.website.id_for_label }}"
+                  <input type="url" name="{{ church_form.website.html_name }}" id="{{ church_form.website.id_for_label }}"
                          value="{{ church_form.website.value|default:'' }}"
                          placeholder="https://yourchurch.com" class="field-input">
                 </div>
