@@ -296,24 +296,27 @@ def register_view(request):
             return redirect('dashboard')
         
     if request.method == "POST":
-        user_form = CustomUserCreationForm(request.POST)
-        church_form = ChurchRegistrationForm(request.POST, prefix='church', user=request.user if request.user.is_authenticated else None)
-
         # Block submission if OTP has not been verified in this session
         if not request.session.get('otp_verified'):
+            user_form = CustomUserCreationForm(request.POST)
+            church_form = ChurchRegistrationForm(request.POST, prefix='church', user=request.user if request.user.is_authenticated else None)
             error(request, 'Please verify your email address before completing registration.')
             context = {"user_form": user_form, "church_form": church_form}
             return render(request, "church_finances/register.html", context)
 
-        # Ensure the user's submitted email matches the one that was OTP-verified
-        # (church email is a separate field and is allowed to be different)
-        submitted_email = (request.POST.get('email') or '').strip().lower()
-        verified_email = request.session.get('otp_email', '')
-        if submitted_email != verified_email:
-            error(request, 'The email address does not match the verified email. Please go back and verify again.')
-            context = {"user_form": user_form, "church_form": church_form}
-            return render(request, "church_finances/register.html", context)
-        
+        # Trust the OTP-verified session email — override whatever was submitted in the
+        # form field (guards against browser autofill or navigating back to Step 1 and
+        # changing the email after the OTP has already been verified).
+        # The church email is a separate prefixed field and is always allowed to differ.
+        verified_email = request.session.get('otp_email', '').strip().lower()
+        if not verified_email:
+            error(request, 'Your session has expired. Please start registration again.')
+            return redirect('register')
+        post_data = request.POST.copy()
+        post_data['email'] = verified_email
+        user_form = CustomUserCreationForm(post_data)
+        church_form = ChurchRegistrationForm(post_data, prefix='church', user=request.user if request.user.is_authenticated else None)
+
         if user_form.is_valid() and church_form.is_valid():
             try:
                 with transaction.atomic():
