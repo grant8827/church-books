@@ -21,7 +21,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
 from church_finances.admin_site import church_admin_site
-from church_finances.views_health import health_check
+from church_finances.views_health import health_check, paypal_debug_config
 from church_finances.railway_health import railway_health_check
 from church_finances.railway_db_health import railway_db_health_check, railway_env_debug
 from church_finances.debug_views import debug_database, debug_auth
@@ -41,6 +41,7 @@ urlpatterns = [
     path('debug/startup/', startup_debug, name='startup_debug'), # Startup debug endpoint
     path('debug/database/', debug_database, name='debug_database'), # Database debug endpoint
     path('debug/auth/', debug_auth, name='debug_auth'), # Auth system debug endpoint
+    path('debug/paypal-config/', paypal_debug_config, name='paypal_debug_config'), # PayPal config debug
     # Favicon redirect to prevent 404 errors
     path('favicon.ico', RedirectView.as_view(url=settings.STATIC_URL + 'images/logo.png', permanent=True)),
 ]
