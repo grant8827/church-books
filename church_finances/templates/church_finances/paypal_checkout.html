@@ -53,6 +53,12 @@
                 Pay securely with your PayPal account or any major credit / debit card.
             </p>
 
+            {% if not paypal_client_id %}
+            <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm text-center">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <strong>PayPal not configured.</strong> The <code>PAYPAL_CLIENT_ID</code> environment variable is not set on this server. Please add it in the Railway dashboard under <strong>Variables</strong>.
+            </div>
+            {% else %}
             <div id="paypal-button-container"></div>
 
             <div id="payment-processing" class="hidden text-center py-4">
@@ -66,6 +72,7 @@
             </div>
 
             <div id="payment-error" class="hidden mt-4 p-4 bg-red-50 text-red-800 rounded-lg text-sm"></div>
+            {% endif %}
 
             <p class="text-xs text-gray-400 text-center mt-4">
                 <i class="fas fa-lock mr-1"></i> Secured by PayPal. Your payment info is never stored on our servers.
@@ -79,7 +86,8 @@
     </div>
 </div>
 
-<!-- PayPal SDK — currency=USD, intent=capture (one-time order, no pre-created plan needed) -->
+<!-- PayPal SDK — only loaded when client ID is configured -->
+{% if paypal_client_id %}
 <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD&intent=capture"></script>
 <script>
 const CSRF_TOKEN  = '{{ csrf_token }}';
@@ -148,4 +156,5 @@ paypal.Buttons({
     }
 }).render('#paypal-button-container');
 </script>
+{% endif %}
 {% endblock %}

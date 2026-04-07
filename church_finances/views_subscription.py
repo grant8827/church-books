@@ -593,8 +593,7 @@ def paypal_create_order(request):
         amount = "150.00"
     plan_name = plan.name if plan else "Church Books"
 
-    from .paypal_service import PayPalService
-    paypal = PayPalService()
+    paypal = get_paypal_service()
     result = paypal.create_subscription(
         plan_id=plan.slug if plan else 'standard',
         payer_info={},
@@ -628,8 +627,7 @@ def paypal_capture_order(request):
         return JsonResponse({'success': False, 'error': 'No church account found.'}, status=400)
     church = church_member.church
 
-    from .paypal_service import PayPalService
-    paypal = PayPalService()
+    paypal = get_paypal_service()
     result = paypal.capture_payment(order_id)
 
     if not result.get('success'):

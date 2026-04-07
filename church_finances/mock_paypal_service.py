@@ -19,18 +19,23 @@ class MockPayPalService:
         """
         return "mock_access_token_12345abcdef"
     
-    def create_subscription(self, plan_id, payer_info, church_id):
+    def create_subscription(self, plan_id, payer_info, church_id, amount=None, plan_name=None):
         """
         Mock subscription creation - returns fake but valid-looking response
         """
         try:
-            # Determine amount based on plan
-            if 'standard' in plan_id.lower():
-                amount = "120.00"
-                plan_name = "Standard Plan"
-            else:
-                amount = "200.00"
-                plan_name = "Premium Plan"
+            # Use passed-in values; fall back to defaults based on plan slug
+            if amount is None:
+                if 'starter' in plan_id.lower():
+                    amount = "150.00"
+                elif 'growth' in plan_id.lower():
+                    amount = "240.00"
+                elif 'community' in plan_id.lower():
+                    amount = "330.00"
+                else:
+                    amount = "150.00"
+            if plan_name is None:
+                plan_name = "Church Books Plan"
             
             # Create mock order ID
             mock_order_id = f"MOCK_ORDER_{church_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -61,9 +66,11 @@ class MockPayPalService:
         """
         return {
             'success': True,
-            'payment_id': f'MOCK_PAYMENT_{order_id}',
-            'status': 'COMPLETED',
-            'amount': '100.00',
+            'order': {
+                'id': order_id,
+                'status': 'COMPLETED',
+                'purchase_units': []
+            },
             'mock_service': True
         }
     
