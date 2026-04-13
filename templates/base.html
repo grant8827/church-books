@@ -12,12 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="icon" href="{% static 'images/churchbooks-bg.png' %}" type="image/png">
     <link rel="shortcut icon" href="{% static 'images/churchbooks-bg.png' %}" type="image/png">
-    {% if debug %}
-    <script>
-        console.log('CSRF Token from Meta:', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-        console.log('Available Cookies:', document.cookie);
-    </script>
-    {% endif %}
+
     <style>
         body {
             font-family: 'Inter', sans-serif;

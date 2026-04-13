@@ -349,10 +349,10 @@ def register_view(request):
                         allowed_types = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
                         if logo_file.content_type not in allowed_types:
                             error(request, 'Logo must be a JPEG, PNG, GIF, or WebP image.')
-                            return render(request, 'church_finances/register.html', context)
+                            return render(request, 'church_finances/register.html', {"user_form": user_form, "church_form": church_form})
                         if logo_file.size > 5 * 1024 * 1024:  # 5 MB
                             error(request, 'Logo file is too large. Maximum size is 5 MB.')
-                            return render(request, 'church_finances/register.html', context)
+                            return render(request, 'church_finances/register.html', {"user_form": user_form, "church_form": church_form})
                         church.save_logo(logo_file)
                     # Create an active church member for immediate trial access
                     ChurchMember.objects.create(

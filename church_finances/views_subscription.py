@@ -256,7 +256,7 @@ def payment_selection_view(request):
                     try:
                         church_member = ChurchMember.objects.get(user=request.user)
                         messages.info(request, "Payment selected. Please proceed with payment instructions.")
-                        return redirect('offline_payment_form')
+                        return redirect('pending_approval')
                     except ChurchMember.DoesNotExist:
                         messages.info(request, "Payment selected. Please complete your registration for approval.")
                         return redirect('registration_form')
@@ -398,7 +398,6 @@ def registration_form_view(request):
                 messages.error(request, "Please select a subscription package first.")
                 return redirect('subscription')
             
-            print(f"DEBUG: Creating user account for {username} with payment method: {payment_method}")
             is_free_trial = not payment_method
             
             # Use database transaction to ensure data consistency
@@ -420,8 +419,6 @@ def registration_form_view(request):
                     last_name=last_name,
                     is_active=is_user_active  # User can login immediately
                 )
-                
-                print(f"DEBUG: User created successfully with ID: {user.id}, active: {user.is_active}")
                 
                 # Create church record
                 plan_id_session = request.session.get('selected_plan_id')
@@ -454,8 +451,6 @@ def registration_form_view(request):
                 if church_logo:
                     church.save_logo(church_logo)
                 
-                print(f"DEBUG: Church created successfully with ID: {church.id}, approved: {church.is_approved}")
-                
                 # Create ChurchMember relationship
                 church_member = ChurchMember.objects.create(
                     user=user,
@@ -464,8 +459,6 @@ def registration_form_view(request):
                     phone_number=phone_number,
                     is_active=is_member_active
                 )
-                print(f"DEBUG: ChurchMember created successfully with ID: {church_member.id}, active: {church_member.is_active}")
-                
                 # Store user ID and church ID in session for later use
                 request.session['pending_user_id'] = user.id
                 request.session['church_id'] = church.id
@@ -510,7 +503,6 @@ def registration_form_view(request):
                     )
                     return redirect(session.url, permanent=False)
                 except Exception as e:
-                    print(f"Stripe error: {str(e)}")
                     messages.error(request, f"Could not start Stripe payment: {str(e)}")
                     # Clean up pending records
                     church.delete()
@@ -518,7 +510,6 @@ def registration_form_view(request):
                     return redirect('subscription')
                 
         except Exception as e:
-            print(f"DEBUG: Exception occurred: {str(e)}")
             messages.error(request, f"An error occurred: {str(e)}")
             return redirect('subscription')
     
@@ -653,7 +644,6 @@ def paypal_activate_subscription(request):
         request.user.is_active = True
         request.user.save()
 
-    print(f"PayPal subscription activated: church={church.name}, subscription_id={subscription_id}")
     return JsonResponse({'success': True, 'redirect': '/finances/dashboard/'})
 
 
@@ -780,7 +770,6 @@ def paypal_capture_order(request):
         request.user.is_active = True
         request.user.save()
 
-    print(f"PayPal order captured & church activated: church={church.name}, order_id={order_id}")
     return JsonResponse({'success': True, 'redirect': '/finances/dashboard/'})
 
 @ensure_csrf_cookie
@@ -807,14 +796,6 @@ def create_paypal_subscription(request):
             church_phone = request.POST.get('church_phone', '')
             church_email = request.POST.get('church_email', '')
             church_website = request.POST.get('church_website', '')
-            
-            # Debug: Print received data
-            print(f"DEBUG: Received form data:")
-            print(f"Username: {username}")
-            print(f"Email: {email}")
-            print(f"First Name: {first_name}")
-            print(f"Last Name: {last_name}")
-            print(f"Church Name: {church_name}")
             
             # Validate required fields
             if not username or not password or not email or not first_name or not last_name or not role:
@@ -865,8 +846,6 @@ def create_paypal_subscription(request):
                 messages.error(request, "Please select a subscription package first.")
                 return redirect('subscription')
             
-            print(f"DEBUG: Creating user account for {username}")
-            
             # Create user account (inactive for offline payment, active for online payment approval)
             is_active = False if payment_method == 'offline' else False  # Always inactive until payment/approval
             
@@ -878,8 +857,6 @@ def create_paypal_subscription(request):
                 last_name=last_name,
                 is_active=is_active
             )
-            
-            print(f"DEBUG: User created successfully with ID: {user.id}")
             
             # Create church record (not approved yet)
             plan_id_session = request.session.get('selected_plan_id')
@@ -911,8 +888,6 @@ def create_paypal_subscription(request):
             if church_logo:
                 church.save_logo(church_logo)
             
-            print(f"DEBUG: Church created successfully with ID: {church.id}")
-            
             # Create ChurchMember relationship with the selected role and phone number
             church_member = ChurchMember.objects.create(
                 user=user,
@@ -921,8 +896,6 @@ def create_paypal_subscription(request):
                 phone_number=phone_number,
                 is_active=False  # Will be activated when admin approves or payment is confirmed
             )
-            print(f"DEBUG: ChurchMember created successfully with ID: {church_member.id}")
-            
             # Store user ID with church for later activation
             request.session['pending_user_id'] = user.id
             request.session['church_id'] = church.id
@@ -972,14 +945,12 @@ def create_paypal_subscription(request):
                     return redirect('subscription')
             except Exception as e:
                 # If PayPal fails, redirect to offline payment option
-                print(f"PayPal service error: {str(e)}")
                 messages.warning(request, "PayPal service temporarily unavailable. Please use offline payment option or try again later.")
                 church.delete()
                 user.delete()
                 return redirect('pending_approval')
                 
         except Exception as e:
-            print(f"DEBUG: Exception occurred: {str(e)}")
             messages.error(request, f"An error occurred: {str(e)}")
             return redirect('subscription')
     
@@ -1334,7 +1305,6 @@ def create_stripe_checkout(request):
         return redirect(session.url, permanent=False)
 
     except Exception as e:
-        print(f"create_stripe_checkout error: {e}")
         messages.error(request, f"An error occurred: {str(e)}")
         return redirect('subscription')
 

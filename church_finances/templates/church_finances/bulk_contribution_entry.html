@@ -184,7 +184,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize members data
     try {
         members = {{ members_json|safe }};
-        console.log('Members loaded:', members.length);
     } catch (e) {
         console.error('Error loading members data:', e);
         members = [];
@@ -197,7 +196,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const addRowBtn = document.getElementById('add-row-btn');
     if (addRowBtn) {
         addRowBtn.addEventListener('click', function() {
-            console.log('Add row clicked');
             addRow();
         });
     }
