@@ -89,6 +89,7 @@ urlpatterns = [
     path("contributions/add/", views.contribution_add_view, name="contribution_add"),
     path("contributions/<int:pk>/", views.contribution_detail_view, name="contribution_detail"),
     path("contributions/<int:pk>/edit/", views.contribution_edit_view, name="contribution_edit"),
+    path("contributions/<int:pk>/delete/", views.contribution_delete_view, name="contribution_delete"),
     path("contributions/print/monthly/", views.contribution_print_monthly, name="contribution_print_monthly"),
     path("contributions/print/yearly/", views.contribution_print_yearly, name="contribution_print_yearly"),
     path("contributions/print/member-annual/", views.contribution_member_annual_summary, name="contribution_member_annual"),

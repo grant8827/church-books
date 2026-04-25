@@ -4,6 +4,7 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.models import User, Group
 from django.contrib.messages import success, error, info
 from django.db.models import Sum, Q
+from decimal import Decimal
 from django.http import HttpResponseNotAllowed, HttpResponse, JsonResponse
 from django.utils import timezone
 from django.urls import reverse
@@ -115,6 +116,69 @@ def get_user_church(user):
         return member.church if member.church.is_approved else None
     except ChurchMember.DoesNotExist:
         return None
+
+
+# ---------------------------------------------------------------------------
+# Contribution → Transaction sync helpers
+# ---------------------------------------------------------------------------
+
+# Maps each Contribution.contribution_type to a Transaction.category
+CONTRIBUTION_CATEGORY_MAP = {
+    'tithe':            'tithes',
+    'offering':         'offerings',
+    'special_offering': 'offerings',
+    'building_fund':    'donations',
+    'missions':         'other_income',
+    'other':            'other_income',
+}
+
+# Reverse: category → all contribution_types that feed it
+_CATEGORY_TO_CONTRIB_TYPES = {}
+for _ct, _cat in CONTRIBUTION_CATEGORY_MAP.items():
+    _CATEGORY_TO_CONTRIB_TYPES.setdefault(_cat, []).append(_ct)
+
+
+def _sync_contribution_transaction(church, date, contribution_type, recorded_by=None):
+    """
+    Recalculate and upsert/delete the Transaction that represents the total
+    of all contributions for a given (church, date, contribution_type).
+
+    - Multiple contribution_types can share one category (e.g. offering +
+      special_offering → 'offerings'), so we always sum ALL types in that
+      category before saving.
+    - If the total drops to zero (e.g. after a delete) the Transaction row
+      is removed so the transactions list stays clean.
+    """
+    category = CONTRIBUTION_CATEGORY_MAP.get(contribution_type)
+    if not category:
+        return
+
+    contrib_types = _CATEGORY_TO_CONTRIB_TYPES[category]
+    total = (
+        Contribution.objects
+        .filter(church=church, date=date, contribution_type__in=contrib_types)
+        .aggregate(total=Sum('amount'))['total']
+    ) or Decimal('0.00')
+
+    if total > 0:
+        txn, created = Transaction.objects.get_or_create(
+            church=church,
+            date=date,
+            category=category,
+            type='income',
+            defaults={
+                'amount': total,
+                'description': f'Contributions – {category.replace("_", " ").title()}',
+                'recorded_by': recorded_by,
+            },
+        )
+        if not created:
+            txn.amount = total
+            txn.save(update_fields=['amount', 'updated_at'])
+    else:
+        Transaction.objects.filter(
+            church=church, date=date, category=category, type='income'
+        ).delete()
 
 
 def _is_rate_limited(cache_key, max_attempts, window_seconds):
@@ -960,6 +1024,7 @@ def contribution_add_view(request):
             contribution.church = church
             contribution.recorded_by = request.user
             contribution.save()
+            _sync_contribution_transaction(church, contribution.date, contribution.contribution_type, request.user)
             success(request, "Contribution recorded successfully!")
             return redirect("contribution_list")
     else:
@@ -1002,13 +1067,45 @@ def contribution_edit_view(request, pk):
     if request.method == "POST":
         form = ContributionForm(request.POST, instance=contribution, church=church)
         if form.is_valid():
-            form.save()
+            # Capture old values before saving so we can re-sync if they changed
+            old_date = contribution.date
+            old_type = contribution.contribution_type
+            updated = form.save()
+            # Sync old slot (in case date or type changed, that slot needs recalculating)
+            _sync_contribution_transaction(church, old_date, old_type, request.user)
+            # Sync new slot
+            _sync_contribution_transaction(church, updated.date, updated.contribution_type, request.user)
             success(request, "Contribution updated successfully!")
             return redirect("contribution_list")
     else:
         form = ContributionForm(instance=contribution, church=church)
 
     return render(request, "church_finances/contribution_form.html", {"form": form})
+
+
+@login_required
+@require_POST
+def contribution_delete_view(request, pk):
+    """
+    Delete a contribution and re-sync its transaction total.
+    Requires POST (triggered by a small form with a delete button).
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    member = ChurchMember.objects.get(user=request.user, church=church)
+    if member.role not in ['admin', 'treasurer', 'pastor']:
+        raise PermissionDenied("You don't have permission to delete contributions.")
+
+    contribution = get_object_or_404(Contribution, pk=pk, church=church)
+    saved_date = contribution.date
+    saved_type = contribution.contribution_type
+    contribution.delete()
+    _sync_contribution_transaction(church, saved_date, saved_type, request.user)
+    success(request, "Contribution deleted successfully.")
+    return redirect("contribution_list")
 
 
 @login_required
@@ -2113,6 +2210,7 @@ def bulk_contribution_entry(request):
         
         success_count = 0
         error_count = 0
+        synced_keys = set()  # track (date, contrib_type) pairs to sync after all saves
         
         # Process each row of contributions
         row_index = 0
@@ -2142,16 +2240,18 @@ def bulk_contribution_entry(request):
                         try:
                             amount = float(amount_str)
                             if amount > 0:
+                                contrib_date = datetime.strptime(service_date, '%Y-%m-%d').date()
                                 Contribution.objects.create(
                                     member=contrib_member,
                                     church=church,
-                                    date=datetime.strptime(service_date, '%Y-%m-%d').date(),
+                                    date=contrib_date,
                                     contribution_type=contrib_type,
                                     amount=amount,
                                     payment_method=row_payment_method,
                                     notes=f"Bulk entry - {request.POST.get('service_type', 'Regular Service')}",
                                     recorded_by=request.user
                                 )
+                                synced_keys.add((contrib_date, contrib_type))
                                 success_count += 1
                         except (ValueError, TypeError):
                             error_count += 1
@@ -2162,7 +2262,11 @@ def bulk_contribution_entry(request):
                 error_count += 1
                 
             row_index += 1
-                
+
+        # Sync transactions for every (date, contrib_type) that was created
+        for sync_date, sync_type in synced_keys:
+            _sync_contribution_transaction(church, sync_date, sync_type, request.user)
+
         if success_count > 0:
             success(request, f"Successfully recorded {success_count} contributions.")
         if error_count > 0:
