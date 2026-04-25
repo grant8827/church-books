@@ -301,9 +301,9 @@
                             <div class="prev-header">
                                 {% if tmpl.show_logo %}
                                     {% if church.logo_base64 %}
-                                        <img src="{{ church.logo_base64 }}" alt="{{ church.name }}" style="max-height:45px;max-width:90px;margin-bottom:0.4rem;object-fit:contain;">
+                                        <img src="{{ church.logo_base64 }}" alt="{{ church.name }}" style="max-height:45px;max-width:90px;margin:0 auto 0.4rem;object-fit:contain;display:block;">
                                     {% elif church.logo %}
-                                        <img src="{{ church.logo.url }}" alt="{{ church.name }}" style="max-height:45px;max-width:90px;margin-bottom:0.4rem;object-fit:contain;">
+                                        <img src="{{ church.logo.url }}" alt="{{ church.name }}" style="max-height:45px;max-width:90px;margin:0 auto 0.4rem;object-fit:contain;display:block;">
                                     {% endif %}
                                 {% endif %}
                                 <p class="prev-church">{{ church.name }}</p>
