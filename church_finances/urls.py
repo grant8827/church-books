@@ -155,6 +155,7 @@ urlpatterns = [
     # Certificate Template URLs
     path("certificates/", views.certificate_templates_list, name="certificate_templates_list"),
     path("certificates/new/", views.certificate_template_create, name="certificate_template_create"),
+    path("certificates/<int:template_id>/view/", views.certificate_template_detail, name="certificate_template_detail"),
     path("certificates/<int:template_id>/edit/", views.certificate_template_edit, name="certificate_template_edit"),
     path("certificates/<int:template_id>/delete/", views.certificate_template_delete, name="certificate_template_delete"),
 ]

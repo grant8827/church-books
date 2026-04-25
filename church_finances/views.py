@@ -2769,6 +2769,32 @@ def certificate_template_delete(request, template_id):
 
 
 @login_required
+def certificate_template_detail(request, template_id):
+    """View full details and a live preview of a certificate template."""
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    member = ChurchMember.objects.get(user=request.user, church=church)
+    if member.role not in ['admin', 'pastor']:
+        raise PermissionDenied("You don't have permission to view certificate templates.")
+
+    tmpl = get_object_or_404(CertificateTemplate, pk=template_id, church=church)
+    context = {
+        'church': church,
+        'tmpl': tmpl,
+        'colour_fields': [
+            ('Primary Colour',    tmpl.primary_color),
+            ('Accent Colour',     tmpl.accent_color),
+            ('Background Colour', tmpl.background_color),
+            ('Background Colour 2', tmpl.background_color2),
+        ],
+    }
+    return render(request, "church_finances/certificate_template_detail.html", context)
+
+
+@login_required
 def christening_certificate_view(request, christening_id):
     """Render a printable christening certificate using the church's active template."""
     church = get_user_church(request.user)

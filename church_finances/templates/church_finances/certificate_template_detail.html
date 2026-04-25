@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+{% block title %}{{ tmpl.name }} — Template Detail{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-8">
+
+    <!-- Page header -->
+    <div class="flex flex-wrap items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+                <i class="fas fa-certificate text-yellow-600 mr-3"></i>{{ tmpl.name }}
+            </h1>
+            <p class="text-gray-600 mt-1">{{ tmpl.get_certificate_type_display }} — Template Detail</p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'certificate_template_edit' tmpl.id %}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                <i class="fas fa-edit mr-2"></i>Edit Template
+            </a>
+            <a href="{% url 'certificate_templates_list' %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i>Back to List
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+
+        <!-- ── Left column: settings table ── -->
+        <div class="space-y-6">
+
+            <!-- Basic Info -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="bg-gray-50 px-6 py-3 border-b border-gray-200">
+                    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Basic Information</h2>
+                </div>
+                <div class="divide-y divide-gray-100">
+                    <div class="px-6 py-3 flex justify-between">
+                        <span class="text-sm text-gray-500">Internal Name</span>
+                        <span class="text-sm font-medium text-gray-900">{{ tmpl.name }}</span>
+                    </div>
+                    <div class="px-6 py-3 flex justify-between">
+                        <span class="text-sm text-gray-500">Certificate Type</span>
+                        <span class="text-sm font-medium text-gray-900">{{ tmpl.get_certificate_type_display }}</span>
+                    </div>
+                    <div class="px-6 py-3 flex justify-between">
+                        <span class="text-sm text-gray-500">Status</span>
+                        <span>
+                            {% if tmpl.is_active %}
+                                <span class="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">Active</span>
+                            {% else %}
+                                <span class="bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-1 rounded-full">Inactive</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="px-6 py-3 flex justify-between">
+                        <span class="text-sm text-gray-500">Show Church Logo</span>
+                        <span class="text-sm font-medium text-gray-900">{% if tmpl.show_logo %}Yes{% else %}No{% endif %}</span>
+                    </div>
+                    <div class="px-6 py-3 flex justify-between">
+                        <span class="text-sm text-gray-500">Created</span>
+                        <span class="text-sm text-gray-600">{{ tmpl.created_at|date:"F j, Y" }}</span>
+                    </div>
+                    <div class="px-6 py-3 flex justify-between">
+                        <span class="text-sm text-gray-500">Last Updated</span>
+                        <span class="text-sm text-gray-600">{{ tmpl.updated_at|date:"F j, Y" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Text Content -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="bg-gray-50 px-6 py-3 border-b border-gray-200">
+                    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Text Content</h2>
+                </div>
+                <div class="divide-y divide-gray-100">
+                    <div class="px-6 py-3">
+                        <p class="text-sm text-gray-500 mb-1">Title</p>
+                        <p class="text-sm font-medium text-gray-900">{{ tmpl.title_text }}</p>
+                    </div>
+                    <div class="px-6 py-3">
+                        <p class="text-sm text-gray-500 mb-1">Subtitle</p>
+                        <p class="text-sm text-gray-900">{% if tmpl.subtitle_text %}{{ tmpl.subtitle_text }}{% else %}<span class="text-gray-400 italic">None</span>{% endif %}</p>
+                    </div>
+                    <div class="px-6 py-3">
+                        <p class="text-sm text-gray-500 mb-1">Footer / Bible Verse</p>
+                        <p class="text-sm text-gray-900">{% if tmpl.footer_text %}{{ tmpl.footer_text }}{% else %}<span class="text-gray-400 italic">None</span>{% endif %}</p>
+                    </div>
+                    {% if tmpl.certificate_type == 'baptism' %}
+                    <div class="px-6 py-3">
+                        <p class="text-sm text-gray-500 mb-1">Baptism Declaration</p>
+                        <p class="text-sm text-gray-900">{{ tmpl.baptism_declaration }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Colours -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="bg-gray-50 px-6 py-3 border-b border-gray-200">
+                    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Colours</h2>
+                </div>
+                <div class="divide-y divide-gray-100">
+                    {% for label, value in colour_fields %}
+                    <div class="px-6 py-3 flex items-center justify-between">
+                        <span class="text-sm text-gray-500">{{ label }}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="inline-block w-6 h-6 rounded border border-gray-300" style="background:{{ value }}"></span>
+                            <span class="text-sm font-mono text-gray-700">{{ value }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="px-6 py-3 flex justify-between">
+                        <span class="text-sm text-gray-500">Background Style</span>
+                        <span class="text-sm font-medium text-gray-900">{{ tmpl.get_background_style_display }}</span>
+                    </div>
+                    {% if tmpl.background_style == 'gradient' %}
+                    <div class="px-6 py-3 flex justify-between">
+                        <span class="text-sm text-gray-500">Gradient Direction</span>
+                        <span class="text-sm font-medium text-gray-900">{{ tmpl.get_gradient_direction_display }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Border & Corners -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="bg-gray-50 px-6 py-3 border-b border-gray-200">
+                    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Border &amp; Corners</h2>
+                </div>
+                <div class="divide-y divide-gray-100">
+                    <div class="px-6 py-3 flex justify-between">
+                        <span class="text-sm text-gray-500">Border Style</span>
+                        <span class="text-sm font-medium text-gray-900">{{ tmpl.get_border_style_display }}</span>
+                    </div>
+                    <div class="px-6 py-3 flex justify-between">
+                        <span class="text-sm text-gray-500">Border Width</span>
+                        <span class="text-sm font-medium text-gray-900">{{ tmpl.border_width }}px</span>
+                    </div>
+                    <div class="px-6 py-3 flex items-center justify-between">
+                        <span class="text-sm text-gray-500">Border Colour</span>
+                        <div class="flex items-center gap-2">
+                            <span class="inline-block w-6 h-6 rounded border border-gray-300" style="background:{{ tmpl.border_color }}"></span>
+                            <span class="text-sm font-mono text-gray-700">{{ tmpl.border_color }}</span>
+                        </div>
+                    </div>
+                    <div class="px-6 py-3 flex justify-between">
+                        <span class="text-sm text-gray-500">Corner Style</span>
+                        <span class="text-sm font-medium text-gray-900">{{ tmpl.get_corner_style_display }}</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ── Right column: live certificate preview ── -->
+        <div>
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="bg-gray-50 px-6 py-3 border-b border-gray-200">
+                    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Live Preview</h2>
+                </div>
+                <div class="p-4 bg-gray-200 flex items-center justify-center overflow-auto">
+                    <div class="preview-wrap">
+                        <!-- ── Inline certificate preview ── -->
+                        <style>
+                            .prev-cert {
+                                width: 550px;
+                                min-height: 390px;
+                                {% if tmpl.background_style == 'gradient' %}
+                                background: linear-gradient({{ tmpl.gradient_direction }}, {{ tmpl.background_color }}, {{ tmpl.background_color2 }});
+                                {% else %}
+                                background: {{ tmpl.background_color }};
+                                {% endif %}
+                                position: relative;
+                                padding: 34px 34px 26px 34px;
+                                display: flex;
+                                flex-direction: column;
+                                align-items: center;
+                                justify-content: space-between;
+                                box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+                                font-family: Georgia, 'Times New Roman', serif;
+                                border: {{ tmpl.border_width }}px
+                                    {% if tmpl.border_style == 'double' %}double
+                                    {% elif tmpl.border_style == 'dashed' %}dashed
+                                    {% else %}solid{% endif %}
+                                    {{ tmpl.border_color }};
+                            }
+                            {% if tmpl.border_style == 'double' %}
+                            .prev-cert::before {
+                                content: '';
+                                position: absolute;
+                                inset: 5px;
+                                border: 2px solid {{ tmpl.accent_color }};
+                                pointer-events: none;
+                            }
+                            {% endif %}
+                            .prev-corner { position:absolute; font-size:1.6rem; line-height:1; color:{{ tmpl.accent_color }};
+                                {% if tmpl.border_style != 'ornate' %}display:none;{% endif %} }
+                            .prev-corner-tl { top:7px; left:9px; }
+                            .prev-corner-tr { top:7px; right:9px; transform:scaleX(-1); }
+                            .prev-corner-bl { bottom:7px; left:9px; transform:scaleY(-1); }
+                            .prev-corner-br { bottom:7px; right:9px; transform:scale(-1,-1); }
+
+                            .prev-header { text-align:center; width:100%; position:relative; z-index:1; }
+                            .prev-church  { font-family:Arial,sans-serif; font-size:0.55rem; font-weight:700;
+                                letter-spacing:0.2em; text-transform:uppercase; color:{{ tmpl.primary_color }}; margin-bottom:0.2rem; }
+                            .prev-divider { width:55px; height:2px; background:{{ tmpl.accent_color }}; margin:0.35rem auto; }
+                            .prev-title   { font-size:1.35rem; font-weight:bold; color:{{ tmpl.primary_color }};
+                                margin:0.3rem 0 0.15rem; letter-spacing:0.03em; }
+                            .prev-subtitle{ font-size:0.65rem; font-style:italic; color:#555; }
+
+                            .prev-body { text-align:center; width:100%; flex:1; display:flex; flex-direction:column;
+                                align-items:center; justify-content:center; gap:0.35rem; padding:0.75rem 0; position:relative; z-index:1; }
+                            .prev-intro   { font-size:0.7rem; color:#444; font-style:italic; }
+                            .prev-name    { font-size:1.7rem; font-weight:bold; color:{{ tmpl.primary_color }};
+                                letter-spacing:0.05em; border-bottom:2px solid {{ tmpl.accent_color }};
+                                padding-bottom:0.2rem; margin:0.3rem 0; }
+                            .prev-details { font-size:0.68rem; color:#333; line-height:1.9; }
+                            .prev-details strong { color:{{ tmpl.primary_color }}; }
+
+                            .prev-footer { width:100%; text-align:center; position:relative; z-index:1; }
+                            .prev-sig-row { display:flex; justify-content:space-around; width:100%; margin-bottom:0.7rem; }
+                            .prev-sig-block { text-align:center; width:110px; }
+                            .prev-sig-line  { border-bottom:1px solid {{ tmpl.accent_color }}; margin-bottom:0.2rem; height:22px; }
+                            .prev-sig-label { font-size:0.5rem; color:#777; text-transform:uppercase; letter-spacing:0.1em; font-family:Arial,sans-serif; }
+                            .prev-footer-text { font-size:0.58rem; font-style:italic; color:#666; margin-top:0.4rem; }
+                        </style>
+
+                        <div class="prev-cert">
+                            <!-- Ornate text corners -->
+                            <span class="prev-corner prev-corner-tl">&#10087;</span>
+                            <span class="prev-corner prev-corner-tr">&#10087;</span>
+                            <span class="prev-corner prev-corner-bl">&#10087;</span>
+                            <span class="prev-corner prev-corner-br">&#10087;</span>
+
+                            <!-- SVG corner accents -->
+                            {% if tmpl.corner_style != 'none' %}
+                            <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 550 390" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                                {% with p=tmpl.primary_color a=tmpl.accent_color %}
+                                {% if tmpl.corner_style == 'filled' %}
+                                    <polygon points="0,0 98,0 0,71" fill="{{ a }}"/>
+                                    <polygon points="550,0 452,0 550,71" fill="{{ a }}"/>
+                                    <polygon points="0,390 98,390 0,319" fill="{{ a }}"/>
+                                    <polygon points="550,390 452,390 550,319" fill="{{ a }}"/>
+                                {% elif tmpl.corner_style == 'slash' %}
+                                    <polygon points="0,0 120,0 0,87" fill="{{ a }}" opacity="0.85"/>
+                                    <polygon points="550,0 430,0 550,87" fill="{{ a }}" opacity="0.85"/>
+                                    <polygon points="0,390 120,390 0,303" fill="{{ a }}" opacity="0.85"/>
+                                    <polygon points="550,390 430,390 550,303" fill="{{ a }}" opacity="0.85"/>
+                                {% elif tmpl.corner_style == 'diag2' %}
+                                    <polygon points="0,0 131,0 92,390 0,390" fill="{{ p }}"/>
+                                    <polygon points="131,0 146,0 107,390 92,390" fill="{{ a }}"/>
+                                    <polygon points="550,0 419,0 458,390 550,390" fill="{{ p }}"/>
+                                    <polygon points="419,0 404,0 443,390 458,390" fill="{{ a }}"/>
+                                {% elif tmpl.corner_style == 'diag4' %}
+                                    <polygon points="0,0 148,0 0,105" fill="{{ p }}"/>
+                                    <polygon points="148,0 164,0 0,122 0,105" fill="{{ a }}"/>
+                                    <polygon points="550,0 402,0 550,105" fill="{{ p }}"/>
+                                    <polygon points="402,0 386,0 550,122 550,105" fill="{{ a }}"/>
+                                    <polygon points="0,390 148,390 0,285" fill="{{ p }}"/>
+                                    <polygon points="148,390 164,390 0,268 0,285" fill="{{ a }}"/>
+                                    <polygon points="550,390 402,390 550,285" fill="{{ p }}"/>
+                                    <polygon points="402,390 386,390 550,268 550,285" fill="{{ a }}"/>
+                                    <rect x="15" y="10" width="520" height="370" fill="none" stroke="{{ a }}" stroke-width="3"/>
+                                {% elif tmpl.corner_style == 'wave' %}
+                                    <path d="M 550,0 L 273,0 C 328,11 366,33 344,78 C 322,121 362,147 550,120 Z" fill="{{ p }}"/>
+                                    <path d="M 273,0 L 257,0 C 312,11 350,33 328,78 C 306,121 346,147 550,123 L 550,120 C 362,147 322,121 344,78 C 366,33 328,11 273,0 Z" fill="{{ a }}"/>
+                                    <path d="M 0,390 L 277,390 C 222,379 184,357 206,312 C 228,267 188,241 0,270 Z" fill="{{ p }}"/>
+                                    <path d="M 277,390 L 293,390 C 238,379 200,357 222,312 C 244,267 204,241 0,267 L 0,270 C 188,241 228,267 206,312 C 184,357 222,379 277,390 Z" fill="{{ a }}"/>
+                                {% elif tmpl.corner_style == 'tl_only' %}
+                                    <polygon points="0,0 194,0 0,138" fill="{{ p }}"/>
+                                    <polygon points="194,0 216,0 0,155 0,138" fill="{{ a }}"/>
+                                {% elif tmpl.corner_style == 'bracket' %}
+                                    <polyline points="66,22 22,22 22,78" fill="none" stroke="{{ a }}" stroke-width="6" stroke-linecap="round"/>
+                                    <polyline points="484,22 528,22 528,78" fill="none" stroke="{{ a }}" stroke-width="6" stroke-linecap="round"/>
+                                    <polyline points="66,368 22,368 22,312" fill="none" stroke="{{ a }}" stroke-width="6" stroke-linecap="round"/>
+                                    <polyline points="484,368 528,368 528,312" fill="none" stroke="{{ a }}" stroke-width="6" stroke-linecap="round"/>
+                                    <rect x="8" y="8" width="534" height="374" fill="none" stroke="{{ p }}" stroke-width="2" opacity="0.4"/>
+                                {% elif tmpl.corner_style == 'band_tb' %}
+                                    <polygon points="0,0 550,0 550,66 0,56" fill="{{ p }}"/>
+                                    <polygon points="0,50 550,61 550,72 0,61" fill="{{ a }}"/>
+                                    <polygon points="0,390 550,390 550,324 0,334" fill="{{ p }}"/>
+                                    <polygon points="0,340 550,329 550,318 0,329" fill="{{ a }}"/>
+                                {% elif tmpl.corner_style == 'double_tri' %}
+                                    <polygon points="0,0 120,0 0,87" fill="{{ p }}"/>
+                                    <polygon points="0,0 66,0 0,48" fill="{{ a }}"/>
+                                    <polygon points="550,0 430,0 550,87" fill="{{ p }}"/>
+                                    <polygon points="550,0 484,0 550,48" fill="{{ a }}"/>
+                                    <polygon points="0,390 120,390 0,303" fill="{{ p }}"/>
+                                    <polygon points="0,390 66,390 0,342" fill="{{ a }}"/>
+                                    <polygon points="550,390 430,390 550,303" fill="{{ p }}"/>
+                                    <polygon points="550,390 484,390 550,342" fill="{{ a }}"/>
+                                {% elif tmpl.corner_style == 'ribbon_side' %}
+                                    <polygon points="0,0 122,0 83,390 0,390" fill="{{ p }}"/>
+                                    <polygon points="122,0 138,0 99,390 83,390" fill="{{ a }}"/>
+                                    <polygon points="138,0 155,0 116,390 99,390" fill="{{ p }}" opacity="0.5"/>
+                                {% endif %}
+                                {% endwith %}
+                            </svg>
+                            {% endif %}
+
+                            <!-- Header -->
+                            <div class="prev-header">
+                                {% if tmpl.show_logo %}
+                                    {% if church.logo_base64 %}
+                                        <img src="{{ church.logo_base64 }}" alt="{{ church.name }}" style="max-height:45px;max-width:90px;margin-bottom:0.4rem;object-fit:contain;">
+                                    {% elif church.logo %}
+                                        <img src="{{ church.logo.url }}" alt="{{ church.name }}" style="max-height:45px;max-width:90px;margin-bottom:0.4rem;object-fit:contain;">
+                                    {% endif %}
+                                {% endif %}
+                                <p class="prev-church">{{ church.name }}</p>
+                                <div class="prev-divider"></div>
+                                <h1 class="prev-title">{{ tmpl.title_text }}</h1>
+                                {% if tmpl.subtitle_text %}<p class="prev-subtitle">{{ tmpl.subtitle_text }}</p>{% endif %}
+                            </div>
+
+                            <!-- Body (sample placeholder) -->
+                            <div class="prev-body">
+                                <p class="prev-intro">This is to certify that</p>
+                                <p class="prev-name">Sample Name</p>
+                                <div class="prev-details">
+                                    {% if tmpl.certificate_type == 'baptism' %}
+                                        {{ tmpl.baptism_declaration }}<br>
+                                        on <strong>January 1, 2025</strong>
+                                    {% elif tmpl.certificate_type == 'christening' %}
+                                        was received into the family of God through Holy Christening<br>
+                                        on <strong>January 1, 2025</strong>
+                                    {% elif tmpl.certificate_type == 'membership' %}
+                                        was received into full membership of this church<br>
+                                        on <strong>January 1, 2025</strong>
+                                    {% elif tmpl.certificate_type == 'graduation' %}
+                                        has successfully completed the required programme<br>
+                                        on <strong>January 1, 2025</strong>
+                                    {% elif tmpl.certificate_type == 'marriage' %}
+                                        received a marriage blessing<br>
+                                        on <strong>January 1, 2025</strong>
+                                    {% else %}
+                                        is hereby recognised and honoured<br>
+                                        on <strong>January 1, 2025</strong>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Footer -->
+                            <div class="prev-footer">
+                                <div class="prev-sig-row">
+                                    <div class="prev-sig-block">
+                                        <div class="prev-sig-line"></div>
+                                        <p class="prev-sig-label">Pastor / Officiant</p>
+                                    </div>
+                                    <div class="prev-sig-block">
+                                        <div class="prev-sig-line"></div>
+                                        <p class="prev-sig-label">Date</p>
+                                    </div>
+                                </div>
+                                {% if tmpl.footer_text %}
+                                    <p class="prev-footer-text">{{ tmpl.footer_text }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <!-- end .prev-cert -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- end right column -->
+
+    </div>
+    <!-- end grid -->
+
+</div>
+{% endblock %}
