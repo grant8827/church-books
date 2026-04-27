@@ -244,7 +244,7 @@ class ContributionForm(forms.ModelForm):
     class Meta:
         model = Contribution
         fields = [
-            'member', 'date', 'contribution_type', 'amount',
+            'member', 'contributor_name', 'date', 'contribution_type', 'amount',
             'payment_method', 'reference_number', 'notes'
         ]
         widgets = {
@@ -252,6 +252,12 @@ class ContributionForm(forms.ModelForm):
                 attrs={
                     'class': 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm truncate',
                     'style': 'max-width: 100%; overflow: hidden; text-overflow: ellipsis;'
+                }
+            ),
+            'contributor_name': forms.TextInput(
+                attrs={
+                    'class': 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
+                    'placeholder': 'Enter contributor name (optional)'
                 }
             ),
             'date': forms.DateInput(
@@ -375,6 +381,14 @@ class TransactionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.church = kwargs.pop('church', None)
         super().__init__(*args, **kwargs)
+        # Tithes and Offerings are managed automatically via Contributions.
+        # Remove them from manual transaction entry to prevent duplication.
+        excluded = {'tithes', 'offerings'}
+        self.fields['category'].choices = [
+            (value, label)
+            for value, label in self.fields['category'].choices
+            if value not in excluded
+        ]
 
     class Meta:
         model = Transaction

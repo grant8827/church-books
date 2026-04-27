@@ -504,6 +504,7 @@ class Contribution(models.Model):
     contribution_type = models.CharField(max_length=20, choices=CONTRIBUTION_TYPES)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS)
+    contributor_name = models.CharField(max_length=100, blank=True, help_text="Name of contributor (for non-member offerings and other contributions)")
     reference_number = models.CharField(max_length=50, blank=True, help_text="Check number, transaction ID, etc.")
     notes = models.TextField(blank=True)
     recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
@@ -514,8 +515,13 @@ class Contribution(models.Model):
         db_table = 'cb_contributions'
 
     def __str__(self):
-        member_name = self.member.full_name if self.member else 'Unknown'
-        return f"{member_name} - {self.contribution_type} - ${self.amount} ({self.date})"
+        if self.member:
+            name = self.member.full_name
+        elif self.contributor_name:
+            name = self.contributor_name
+        else:
+            name = 'Unknown'
+        return f"{name} - {self.contribution_type} - ${self.amount} ({self.date})"
 
 class Transaction(models.Model):
     """
@@ -563,6 +569,7 @@ class Transaction(models.Model):
         Church, on_delete=models.CASCADE, related_name='transactions',
         null=True, blank=True  # Allow null temporarily for migration
     )
+    from_contribution = models.BooleanField(default=False, help_text="True if this transaction was auto-created by the contribution sync.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -81,7 +81,7 @@
             {% for contribution in contributions %}
             <tr>
                 <td class="border px-4 py-2">{{ contribution.date|date:"M d, Y" }}</td>
-                <td class="border px-4 py-2">{{ contribution.member.full_name }}</td>
+                <td class="border px-4 py-2">{{ contribution.member.full_name|default:contribution.contributor_name|default:"-" }}</td>
                 <td class="border px-4 py-2">{{ contribution.get_contribution_type_display }}</td>
                 <td class="border px-4 py-2">{{ contribution.get_payment_method_display }}</td>
                 <td class="border px-4 py-2 text-right">${{ contribution.amount|floatformat:2 }}</td>

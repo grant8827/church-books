@@ -22,7 +22,7 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <p class="text-sm text-gray-600">Name</p>
-                            <p class="text-base">{{ contribution.member.full_name }}</p>
+                            <p class="text-base">{{ contribution.member.full_name|default:contribution.contributor_name|default:"—" }}</p>
                         </div>
                     </div>
                 </div>

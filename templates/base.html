@@ -27,6 +27,7 @@
         .messages .success { background-color: #d1fae5; color: #065f46; border: 1px solid #34d399; }
         .messages .error { background-color: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
         .messages .info { background-color: #e0f2fe; color: #1e40af; border: 1px solid #60a5fa; }
+        .messages .warning { background-color: #fef9c3; color: #854d0e; border: 1px solid #fbbf24; }
 
         @media (max-width: 1030px) {
             .responsive-table { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -661,5 +662,6 @@
         }
     </script>
 
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

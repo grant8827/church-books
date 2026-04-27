@@ -139,7 +139,7 @@
                                 <div>
                                     <div class="text-sm font-medium text-gray-900">
                                         {% if context_type == 'admin' %}
-                                            {{ contribution.member.full_name }}
+                                            {{ contribution.member.full_name|default:contribution.contributor_name|default:"—" }}
                                         {% endif %}
                                         <span class="{% if context_type == 'admin' %}text-xs {% else %}text-sm {% endif %}text-gray-600">
                                             {{ contribution.get_contribution_type_display }}

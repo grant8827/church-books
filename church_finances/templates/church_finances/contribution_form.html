@@ -32,16 +32,33 @@
 
             <form method="post" class="space-y-8">
                 {% csrf_token %}
-                
-                <!-- Member Information -->
+
+                <!-- Contribution Category & Contributor -->
                 <div class="bg-blue-50 rounded-lg p-6 border-l-4 border-blue-400">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                        <i class="fas fa-user text-blue-600 mr-3"></i>Member Information
+                        <i class="fas fa-user text-blue-600 mr-3"></i>Contribution Category &amp; Contributor
                     </h2>
-                    
-                    <div class="space-y-1">
-                        <label for="{{ form.member.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.member.label }} *</label>
-                        <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.member.id_for_label }}" name="{{ form.member.name }}" required>
+
+                    <!-- Radio buttons -->
+                    <div class="flex flex-wrap gap-6 mb-5">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" name="contrib_category" value="tithe" id="radio_tithe" class="h-4 w-4 text-blue-600 mr-2" required>
+                            <span class="font-medium text-gray-700">Tithes</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" name="contrib_category" value="offering" id="radio_offering" class="h-4 w-4 text-blue-600 mr-2">
+                            <span class="font-medium text-gray-700">Offering</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" name="contrib_category" value="other" id="radio_other" class="h-4 w-4 text-blue-600 mr-2">
+                            <span class="font-medium text-gray-700">Other</span>
+                        </label>
+                    </div>
+
+                    <!-- Member dropdown (Tithes) -->
+                    <div id="member_field" class="space-y-1 hidden">
+                        <label for="{{ form.member.id_for_label }}" class="block text-sm font-medium text-gray-700">Member Name *</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.member.id_for_label }}" name="{{ form.member.name }}" id="member_select">
                             <option value="">Select a Member</option>
                             {% for choice in form.member.field.queryset %}
                                 <option value="{{ choice.id }}" {% if choice.id == form.member.value %}selected{% endif %}>
@@ -50,6 +67,15 @@
                             {% endfor %}
                         </select>
                         {% for error in form.member.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Contributor name field (Offering / Other) -->
+                    <div id="name_field" class="space-y-1 hidden">
+                        <label for="{{ form.contributor_name.id_for_label }}" class="block text-sm font-medium text-gray-700">Contributor Name <span class="text-gray-400 font-normal">(optional)</span></label>
+                        <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.contributor_name.id_for_label }}" name="{{ form.contributor_name.name }}" value="{{ form.contributor_name.value|default:'' }}" placeholder="Enter contributor name">
+                        {% for error in form.contributor_name.errors %}
                             <p class="text-red-500 text-sm mt-1">{{ error }}</p>
                         {% endfor %}
                     </div>
@@ -74,7 +100,7 @@
                             <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.contribution_type.id_for_label }}" name="{{ form.contribution_type.name }}" required>
                                 <option value="">Select Contribution Type</option>
                                 {% for choice in form.contribution_type.field.choices %}
-                                    <option value="{{ choice.0 }}" {% if choice.0 == form.contribution_type.value %}selected{% endif %}>{{ choice.1 }}</option>
+                                    <option value="{{ choice.0 }}" data-category="{% if choice.0 == 'tithe' %}tithe{% elif choice.0 == 'offering' or choice.0 == 'special_offering' %}offering{% else %}other{% endif %}" {% if choice.0 == form.contribution_type.value %}selected{% endif %}>{{ choice.1 }}</option>
                                 {% endfor %}
                             </select>
                             {% for error in form.contribution_type.errors %}
@@ -158,4 +184,68 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    // Map contribution_type value → radio category
+    var typeToCategory = {
+        'tithe': 'tithe',
+        'offering': 'offering',
+        'special_offering': 'offering',
+        'building_fund': 'other',
+        'missions': 'other',
+        'other': 'other'
+    };
+
+    var radios       = document.querySelectorAll('input[name="contrib_category"]');
+    var memberField  = document.getElementById('member_field');
+    var nameField    = document.getElementById('name_field');
+    var memberSelect = memberField ? memberField.querySelector('select') : null;
+    var typeSelect   = document.getElementById('{{ form.contribution_type.id_for_label }}');
+
+    function applyCategory(category) {
+        // Show / hide contributor fields
+        memberField.classList.toggle('hidden', category !== 'tithe');
+        nameField.classList.toggle('hidden', category === 'tithe');
+
+        // Member select is only required for Tithes
+        if (memberSelect) memberSelect.required = (category === 'tithe');
+
+        // Filter contribution_type options to match selected category
+        Array.from(typeSelect.options).forEach(function (opt) {
+            if (!opt.value) return;
+            var optCat   = opt.dataset.category;
+            opt.hidden   = (optCat !== category);
+            opt.disabled = (optCat !== category);
+        });
+
+        // If current selection is now hidden, reset and auto-pick first visible
+        if (typeSelect.value && typeSelect.selectedOptions[0] && typeSelect.selectedOptions[0].hidden) {
+            typeSelect.value = '';
+        }
+        if (!typeSelect.value) {
+            var first = Array.from(typeSelect.options).find(function (o) { return o.value && !o.hidden; });
+            if (first) typeSelect.value = first.value;
+        }
+    }
+
+    radios.forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            applyCategory(this.value);
+        });
+    });
+
+    // On page load: pre-select radio based on existing contribution_type (edit form)
+    var existingType     = typeSelect.value;
+    var initialCategory  = typeToCategory[existingType] || null;
+
+    if (initialCategory) {
+        var target = document.querySelector('input[name="contrib_category"][value="' + initialCategory + '"]');
+        if (target) { target.checked = true; }
+        applyCategory(initialCategory);
+    }
+})();
+</script>
 {% endblock %}

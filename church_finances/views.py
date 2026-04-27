@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import login, logout
 from django.contrib.auth.models import User, Group
-from django.contrib.messages import success, error, info
+from django.contrib.messages import success, error, info, warning
 from django.db.models import Sum, Q
 from decimal import Decimal
 from django.http import HttpResponseNotAllowed, HttpResponse, JsonResponse
@@ -170,11 +170,13 @@ def _sync_contribution_transaction(church, date, contribution_type, recorded_by=
                 'amount': total,
                 'description': f'Contributions – {category.replace("_", " ").title()}',
                 'recorded_by': recorded_by,
+                'from_contribution': True,
             },
         )
         if not created:
             txn.amount = total
-            txn.save(update_fields=['amount', 'updated_at'])
+            txn.from_contribution = True
+            txn.save(update_fields=['amount', 'from_contribution', 'updated_at'])
     else:
         Transaction.objects.filter(
             church=church, date=date, category=category, type='income'
@@ -1375,6 +1377,7 @@ def transaction_update_view(request, pk):
         raise PermissionDenied("You don't have permission to update transactions.")
 
     transaction = get_object_or_404(Transaction, pk=pk, church=church)
+
     if request.method == "POST":
         form = TransactionForm(request.POST, instance=transaction, church=church)
         if form.is_valid():
