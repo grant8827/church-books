@@ -2,15 +2,15 @@
 {% block title %}Certificate Templates{% endblock %}
 
 {% block content %}
-<div class="container mx-auto p-8">
-    <div class="flex flex-wrap items-center justify-between mb-8">
+<div class="container mx-auto p-4 md:p-8">
+    <div class="flex flex-wrap items-start gap-4 justify-between mb-8">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 flex items-center">
                 <i class="fas fa-certificate text-yellow-600 mr-3"></i>Certificate Templates
             </h1>
             <p class="text-gray-600 mt-1">Manage printable certificate designs for your church</p>
         </div>
-        <div class="flex gap-3">
+        <div class="flex flex-wrap gap-2">
             <a href="{% url 'certificate_template_create' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded inline-flex items-center">
                 <i class="fas fa-plus-circle mr-2"></i>New Template
             </a>
@@ -21,7 +21,7 @@
     </div>
 
     {% if templates %}
-    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div class="bg-white rounded-lg shadow-md overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
