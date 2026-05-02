@@ -39,11 +39,6 @@ python manage.py seed_plans || {
 # Ensure the local media directory exists (used when USE_S3 is not set / Railway Volume)
 mkdir -p /app/media/church_logos
 
-echo "Collecting static files..."
-python manage.py collectstatic --noinput --clear || {
-    echo "Static file collection failed, but continuing..."
-}
-
 echo "Ensuring superuser exists..."
 python manage.py ensure_superuser || {
     echo "Superuser creation failed, but continuing..."
