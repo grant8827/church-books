@@ -468,6 +468,15 @@ STRIPE_WEBHOOK_SECRET  = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    # Exempt health check endpoints from SSL redirect so Railway's internal
+    # HTTP healthcheck can reach them (Railway terminates SSL at the proxy layer,
+    # so container-level requests arrive over plain HTTP).
+    SECURE_REDIRECT_EXEMPT = [
+        r'^startup/$',
+        r'^healthz/?$',
+        r'^health/?$',
+        r'^health/.*$',
+    ]
 else:
     # Ensure local/dev usage does not attempt HTTPS redirection
     SECURE_SSL_REDIRECT = False
