@@ -64,7 +64,13 @@
                             <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="{{ form.category.id_for_label }}" name="{{ form.category.name }}" required>
                                 <option value="">Select Category</option>
                                 {% for choice in form.category.field.choices %}
-                                    <option value="{{ choice.0 }}" {% if choice.0 == form.category.value %}selected{% endif %}>{{ choice.1 }}</option>
+                                    {% if choice.0 %}
+                                        {% if choice.0 in income_categories %}
+                                            <option value="{{ choice.0 }}" data-type="income" {% if choice.0 == form.category.value %}selected{% endif %}>{{ choice.1 }}</option>
+                                        {% elif choice.0 in expense_categories %}
+                                            <option value="{{ choice.0 }}" data-type="expense" {% if choice.0 == form.category.value %}selected{% endif %}>{{ choice.1 }}</option>
+                                        {% endif %}
+                                    {% endif %}
                                 {% endfor %}
                             </select>
                             {% for error in form.category.errors %}
@@ -120,5 +126,35 @@
         </div>
     </div>
 </div>
+
+<script>
+(function () {
+    const typeSelect = document.getElementById('{{ form.type.id_for_label }}');
+    const categorySelect = document.getElementById('{{ form.category.id_for_label }}');
+
+    function filterCategories() {
+        const selectedType = typeSelect.value;
+        const options = categorySelect.querySelectorAll('option[data-type]');
+
+        options.forEach(function (opt) {
+            if (selectedType && opt.dataset.type !== selectedType) {
+                opt.hidden = true;
+                opt.disabled = true;
+                if (opt.selected) {
+                    opt.selected = false;
+                    categorySelect.value = '';
+                }
+            } else {
+                opt.hidden = false;
+                opt.disabled = false;
+            }
+        });
+    }
+
+    typeSelect.addEventListener('change', filterCategories);
+    // Run immediately to handle edit form with pre-selected type
+    filterCategories();
+}());
+</script>
 
 {% endblock %}

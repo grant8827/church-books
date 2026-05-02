@@ -22,12 +22,7 @@ def custom_password_reset_confirm(request, uidb64, token):
         user = None
 
     # Check if user exists and token is valid
-    # TEMPORARY FIX: Allow password reset if user exists and token is not 'set-password'
-    # This bypasses the SECRET_KEY mismatch issue between local and Railway
-    token_valid = user is not None and (
-        default_token_generator.check_token(user, token) or 
-        (token != 'set-password' and len(token) > 20)  # Basic token format check
-    )
+    token_valid = user is not None and default_token_generator.check_token(user, token)
     
     if user is not None and token_valid:
         validlink = True

@@ -623,6 +623,19 @@ def paypal_activate_subscription(request):
 
     church = church_member.church
 
+    # Verify the order with PayPal server-side before activating
+    if not getattr(settings, 'USE_MOCK_PAYPAL', False):
+        try:
+            paypal_service = get_paypal_service()
+            order_result = paypal_service.get_order_details(subscription_id)
+            if not order_result.get('success'):
+                return JsonResponse({'success': False, 'error': 'Could not verify payment with PayPal.'}, status=400)
+            order = order_result.get('order', {})
+            if order.get('status') != 'COMPLETED':
+                return JsonResponse({'success': False, 'error': 'Payment has not been completed.'}, status=400)
+        except Exception:
+            return JsonResponse({'success': False, 'error': 'PayPal verification failed. Please contact support.'}, status=400)
+
     # Activate the church
     church.paypal_subscription_id = subscription_id
     church.subscription_status = 'active'
@@ -1137,10 +1150,11 @@ def paypal_webhook(request):
             )
             return HttpResponse('Forbidden', status=403)
     else:
-        webhook_logger.warning(
-            'PAYPAL_WEBHOOK_TOKEN is not set. Webhook received without token verification. '
+        webhook_logger.error(
+            'PAYPAL_WEBHOOK_TOKEN is not set. Webhook request rejected. '
             'Set PAYPAL_WEBHOOK_TOKEN in Railway env vars and update your PayPal webhook URL.'
         )
+        return HttpResponse('Forbidden', status=403)
 
     try:
         webhook_data = json.loads(request.body)

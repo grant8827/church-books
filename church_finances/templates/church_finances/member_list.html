@@ -41,9 +41,13 @@
                             <a href="{% url 'member_detail' member.id %}" class="text-blue-600 hover:text-blue-900 mr-3">View</a>
                             <a href="{% url 'member_edit' member.id %}" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
                             {% if member.is_active %}
-                            <a href="{% url 'member_deactivate' member.id %}" class="text-red-600 hover:text-red-900" onclick="return confirm('Are you sure you want to deactivate this member?')">Deactivate</a>
+                            <form method="post" action="{% url 'member_deactivate' member.id %}" style="display:inline" onsubmit="return confirm('Are you sure you want to deactivate this member?')">{% csrf_token %}
+                                <button type="submit" class="text-red-600 hover:text-red-900 bg-transparent border-none cursor-pointer p-0">Deactivate</button>
+                            </form>
                             {% else %}
-                            <a href="{% url 'member_activate' member.id %}" class="text-green-600 hover:text-green-900">Activate</a>
+                            <form method="post" action="{% url 'member_activate' member.id %}" style="display:inline">{% csrf_token %}
+                                <button type="submit" class="text-green-600 hover:text-green-900 bg-transparent border-none cursor-pointer p-0">Activate</button>
+                            </form>
                             {% endif %}
                         </td>
                     </tr>

@@ -28,7 +28,7 @@ from calendar import monthrange
 from collections import defaultdict
 import io
 from django.template.loader import get_template
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 
 
 # Conditional import for PDF generation
@@ -112,7 +112,9 @@ def get_user_church(user):
         return None
         
     try:
-        member = ChurchMember.objects.get(user=user, is_active=True)
+        member = ChurchMember.objects.filter(user=user, is_active=True).first()
+        if member is None:
+            return None
         return member.church if member.church.is_approved else None
     except ChurchMember.DoesNotExist:
         return None
@@ -196,12 +198,100 @@ def _is_rate_limited(cache_key, max_attempts, window_seconds):
     return False
 
 
+def _get_fail_count(cache_key):
+    """Return the current failure count for a cache key."""
+    from django.core.cache import cache
+    return cache.get(cache_key, 0)
+
+
+def _increment_fail_count(cache_key, window_seconds):
+    """Increment failure count and return the new value."""
+    from django.core.cache import cache
+    count = cache.get(cache_key, 0) + 1
+    cache.set(cache_key, count, timeout=window_seconds)
+    return count
+
+
+def _clear_rate_limit(cache_key):
+    """Remove a rate-limit counter from cache (e.g. after a successful login)."""
+    from django.core.cache import cache
+    cache.delete(cache_key)
+
+
 def _client_ip(request):
     """Return the real client IP, honouring Railway's forwarded header."""
     forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
     if forwarded:
         return forwarded.split(',')[0].strip()
     return request.META.get('REMOTE_ADDR', '0.0.0.0')
+
+
+def _send_login_notification(user, request):
+    """Email the user a notification that their account was just logged into."""
+    if not user.email:
+        return
+    try:
+        from django.core.mail import send_mail
+        from django.conf import settings as django_settings
+        ip = _client_ip(request)
+        ua = request.META.get('HTTP_USER_AGENT', 'Unknown device')[:120]
+        now = timezone.now().strftime('%d %b %Y at %H:%M UTC')
+        reset_url = request.build_absolute_uri('/finances/password-reset/')
+        first_name = user.first_name or user.username
+        send_mail(
+            subject='Church Books — New Login to Your Account',
+            message=(
+                f'Hi {first_name},\n\n'
+                f'A successful login was made to your Church Books account.\n\n'
+                f'Time:       {now}\n'
+                f'IP Address: {ip}\n'
+                f'Device:     {ua}\n\n'
+                f'If this was you, no action is needed.\n\n'
+                f'If you did NOT make this login, your account may be compromised. '
+                f'Change your password immediately:\n{reset_url}\n\n'
+                f'— Church Books Security'
+            ),
+            from_email=django_settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=True,
+        )
+        logging.getLogger(__name__).info(f'Login notification sent to {user.email}')
+    except Exception:
+        pass  # Never block a login because of a notification failure
+
+
+def _send_lockout_notification(user, request):
+    """Email the user a warning that their account has been temporarily locked."""
+    if not user.email:
+        return
+    try:
+        from django.core.mail import send_mail
+        from django.conf import settings as django_settings
+        ip = _client_ip(request)
+        now = timezone.now().strftime('%d %b %Y at %H:%M UTC')
+        reset_url = request.build_absolute_uri('/finances/password-reset/')
+        first_name = user.first_name or user.username
+        send_mail(
+            subject='Church Books — Account Temporarily Locked',
+            message=(
+                f'Hi {first_name},\n\n'
+                f'Your Church Books account has been temporarily locked after '
+                f'5 failed login attempts.\n\n'
+                f'Time:       {now}\n'
+                f'IP Address: {ip}\n\n'
+                f'Your account will automatically unlock in 15 minutes.\n\n'
+                f'If this was you, please wait and try again later.\n\n'
+                f'If you did NOT make these attempts, your password may be '
+                f'compromised. Reset it immediately:\n{reset_url}\n\n'
+                f'— Church Books Security'
+            ),
+            from_email=django_settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=True,
+        )
+        logging.getLogger(__name__).warning(f'Lockout notification sent to {user.email}')
+    except Exception:
+        pass
 
 
 def send_otp_view(request):
@@ -656,15 +746,21 @@ def user_login_view(request):
     Handles user login.
     """
     if request.method == "POST":
-        # Rate-limit: max 10 login attempts per IP per 5 minutes
+        # 1. IP-based rate limit: max 5 attempts per IP per 5 minutes
         ip = _client_ip(request)
-        if _is_rate_limited(f'login_attempt_{ip}', max_attempts=10, window_seconds=300):
-            error(request, 'Too many login attempts. Please wait 5 minutes before trying again.')
+        if _is_rate_limited(f'login_attempt_{ip}', max_attempts=5, window_seconds=300):
+            error(request, 'Too many login attempts from your network. Please wait 5 minutes before trying again.')
             return render(request, 'church_finances/login.html', {'form': AuthenticationForm()})
 
-        username = request.POST.get('username', '')
+        username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
-        
+
+        # 2. Per-username lockout: locked after 5 failed attempts for 15 minutes
+        username_fail_key = f'login_fail_user_{username.lower()}'
+        if _get_fail_count(username_fail_key) >= 5:
+            error(request, 'This account has been temporarily locked due to too many failed attempts. Please try again in 15 minutes or reset your password.')
+            return render(request, 'church_finances/login.html', {'form': AuthenticationForm()})
+
         # Check if user exists but is inactive
         try:
             user = User.objects.get(username=username)
@@ -674,22 +770,22 @@ def user_login_view(request):
                 return render(request, "church_finances/login.html", {"form": form})
         except User.DoesNotExist:
             pass  # Will be handled by AuthenticationForm
-        
+
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
-            
+
             # Additional check for church member status
             try:
                 member = ChurchMember.objects.get(user=user)
                 if not member.is_active:
                     error(request, "Your church membership is pending approval. Please contact an administrator.")
                     return render(request, "church_finances/login.html", {"form": form})
-                    
+
                 if not member.church.is_approved:
                     error(request, "Your church account is pending approval. Please contact an administrator.")
                     return render(request, "church_finances/login.html", {"form": form})
-                
+
                 # Check trial status and redirect to payment if expired
                 if not member.church.can_access_dashboard:
                     if member.church.is_trial_expired:
@@ -699,28 +795,38 @@ def user_login_view(request):
                     else:
                         error(request, "Your church account does not have access. Please contact an administrator.")
                         return render(request, "church_finances/login.html", {"form": form})
-                    
+
             except ChurchMember.DoesNotExist:
                 # Allow admin users without church membership
                 if not user.is_superuser:
                     error(request, "No church membership found. Please contact an administrator.")
                     return render(request, "church_finances/login.html", {"form": form})
-            
+
+            # Successful login: reset failure counter and notify the account owner
+            _clear_rate_limit(username_fail_key)
+            _send_login_notification(user, request)
             login(request, user)
-            
+
             # Check if there's a redirect URL in session (e.g., from PayPal payment)
             next_url = request.session.get('next_url')
             if next_url:
                 del request.session['next_url']  # Clear it from session
                 return redirect(next_url)
-            
+
             return redirect("dashboard")
         else:
-            # Simple error message for any login failure
+            # Track per-username failures; send lockout email when threshold reached
+            try:
+                fail_user = User.objects.get(username=username)
+                fail_count = _increment_fail_count(username_fail_key, window_seconds=900)
+                if fail_count >= 5:
+                    _send_lockout_notification(fail_user, request)
+            except User.DoesNotExist:
+                pass  # Don't reveal whether the username exists
             error(request, "Something went wrong. Please check your credentials and try again.")
     else:
         form = AuthenticationForm()
-    
+
     response = render(request, "church_finances/login.html", {
         "form": form,
     })
@@ -828,6 +934,7 @@ def member_detail_view(request, pk):
     return render(request, "church_finances/member_detail.html", context)
 
 @login_required
+@require_http_methods(["POST"])
 def member_activate_view(request, pk):
     """
     Activate a church member
@@ -849,6 +956,7 @@ def member_activate_view(request, pk):
     return redirect('member_list')
 
 @login_required
+@require_http_methods(["POST"])
 def member_deactivate_view(request, pk):
     """
     Deactivate a church member
@@ -1335,11 +1443,18 @@ def transaction_create_view(request):
                     error(request, f"{field}: {err}")
     else:
         form = TransactionForm(church=church)
-    
+
+    income_categories = [v for v, _ in Transaction.INCOME_CATEGORIES]
+    expense_categories = [v for v, _ in Transaction.EXPENSE_CATEGORIES]
     return render(
         request,
         "church_finances/transaction_form.html",
-        {"form": form, "title": "Add New Transaction"},
+        {
+            "form": form,
+            "title": "Add New Transaction",
+            "income_categories": income_categories,
+            "expense_categories": expense_categories,
+        },
     )
 
 
@@ -1390,10 +1505,18 @@ def transaction_update_view(request, pk):
                     error(request, f"{field}: {err}")
     else:
         form = TransactionForm(instance=transaction, church=church)
+
+    income_categories = [v for v, _ in Transaction.INCOME_CATEGORIES]
+    expense_categories = [v for v, _ in Transaction.EXPENSE_CATEGORIES]
     return render(
         request,
         "church_finances/transaction_form.html",
-        {"form": form, "title": "Update Transaction"},
+        {
+            "form": form,
+            "title": "Update Transaction",
+            "income_categories": income_categories,
+            "expense_categories": expense_categories,
+        },
     )
 
 
@@ -1860,11 +1983,20 @@ def member_contributions_view(request):
     # Get member's contributions for the year
     start_date = date(year, 1, 1)
     end_date = date(year, 12, 31)
-    
-    contributions = Contribution.objects.filter(
-        member=member,
-        date__range=[start_date, end_date]
-    ).order_by('-date')
+
+    # Contribution.member is a FK to Member (congregation), not ChurchMember (staff).
+    # Try to match by email so staff with a congregation Member record can see their contributions.
+    member_record = None
+    if request.user.email:
+        member_record = Member.objects.filter(church=church, email=request.user.email).first()
+
+    if member_record:
+        contributions = Contribution.objects.filter(
+            member=member_record,
+            date__range=[start_date, end_date]
+        ).order_by('-date')
+    else:
+        contributions = Contribution.objects.none()
 
     # Calculate totals by type
     totals = {
@@ -2223,7 +2355,7 @@ def bulk_contribution_entry(request):
                 break
                 
             try:
-                contrib_member = ChurchMember.objects.get(id=member_id, church=church)
+                contrib_member = Member.objects.get(id=member_id, church=church)
                 row_payment_method = request.POST.get(f'contributions[{row_index}][payment_method]') or default_payment_method
                 
                 # Define contribution types mapping
@@ -2259,7 +2391,7 @@ def bulk_contribution_entry(request):
                         except (ValueError, TypeError):
                             error_count += 1
                             
-            except ChurchMember.DoesNotExist:
+            except Member.DoesNotExist:
                 error_count += 1
             except Exception as e:
                 error_count += 1
@@ -2361,6 +2493,11 @@ def child_add_view(request):
         info(request, "Your church account is pending approval.")
         return render(request, "church_finances/pending_approval.html")
 
+    church_member = ChurchMember.objects.filter(user=request.user, church=church).first()
+    if not church_member or church_member.role not in ['admin', 'pastor', 'bishop', 'assistant_pastor']:
+        error(request, "You don't have permission to add children records.")
+        return redirect('dashboard')
+
     if request.method == 'POST':
         # Get form data
         first_name = request.POST.get('first_name', '')
@@ -2430,7 +2567,12 @@ def child_edit_view(request, child_id):
     if not church:
         info(request, "Your church account is pending approval.")
         return render(request, "church_finances/pending_approval.html")
-    
+
+    church_member = ChurchMember.objects.filter(user=request.user, church=church).first()
+    if not church_member or church_member.role not in ['admin', 'pastor', 'bishop', 'assistant_pastor']:
+        error(request, "You don't have permission to edit children records.")
+        return redirect('dashboard')
+
     child = get_object_or_404(Child, id=child_id, church=church)
     
     if request.method == 'POST':
@@ -2496,6 +2638,11 @@ def attendance_record_view(request):
     if not church:
         info(request, "Your church account is pending approval.")
         return render(request, "church_finances/pending_approval.html")
+
+    church_member = ChurchMember.objects.filter(user=request.user, church=church).first()
+    if not church_member or church_member.role not in ['admin', 'pastor', 'bishop', 'assistant_pastor', 'deacon']:
+        error(request, "You don't have permission to record attendance.")
+        return redirect('dashboard')
 
     if request.method == 'POST':
         date = request.POST.get('date')

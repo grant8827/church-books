@@ -334,8 +334,8 @@ if USE_S3:
     AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
     # Optional public custom domain (e.g. CDN / R2 public URL)
     AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN', '')
-    AWS_DEFAULT_ACL = 'public-read'
-    AWS_QUERYSTRING_AUTH = False  # Public URLs without expiry
+    AWS_DEFAULT_ACL = 'private'
+    AWS_QUERYSTRING_AUTH = True  # Use signed URLs for private access
     AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
     AWS_S3_FILE_OVERWRITE = False
     AWS_LOCATION = 'media'  # Store uploads under a media/ prefix inside the bucket
@@ -465,10 +465,7 @@ STRIPE_SECRET_KEY      = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET  = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 
 # Security Settings for Production
-# Some hosting platforms set DEBUG=False even in review/staging contexts.
-# To avoid breaking local development when DEBUG=False in .env, require an explicit FORCE_SSL flag.
-FORCE_SSL = os.getenv('FORCE_SSL', '0') in ('1', 'true', 'True', 'yes', 'on')
-if not DEBUG and FORCE_SSL:
+if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 else:
