@@ -1603,7 +1603,8 @@ def contribution_member_annual_summary(request):
 
     contributions = Contribution.objects.filter(
         church=church,
-        date__year=year
+        date__year=year,
+        member__isnull=False
     ).select_related('member').order_by('member__last_name', 'member__first_name')
 
     # Build per-member totals
