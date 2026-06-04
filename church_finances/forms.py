@@ -170,8 +170,16 @@ class MemberForm(forms.ModelForm):
     no login account required).
     """
     membership_date = forms.DateField(
+        label='Member Since',
         required=False,
-        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-input rounded-md shadow-sm'}),
+        input_formats=['%Y-%m-%d'],
+        widget=forms.DateInput(
+            format='%Y-%m-%d',
+            attrs={
+                'type': 'date',
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+            },
+        ),
         help_text='Leave blank to use today\'s date.',
     )
 
