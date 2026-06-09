@@ -21,6 +21,12 @@
     overflow: hidden;
 }
 
+.child-detail-container {
+    background: transparent;
+    animation: none;
+    overflow: visible;
+}
+
 .ministry-container::before, 
 .child-detail-container::before, 
 .edit-form-container::before, 
@@ -35,6 +41,10 @@
         radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
         radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
     pointer-events: none;
+}
+
+.child-detail-container::before {
+    display: none;
 }
 
 /* Professional Button System */
@@ -635,4 +645,57 @@
         width: 100%;
         justify-content: center;
     }
+}
+
+/* Child detail page: remove the blue ministry background treatment. */
+.child-detail-container {
+    background: #f8fafc !important;
+    background-image: none !important;
+    animation: none !important;
+}
+
+.child-detail-container::before,
+.child-detail-container .child-profile-card::before,
+.child-detail-container .enhanced-card::before {
+    display: none !important;
+}
+
+.child-detail-container .child-profile-card,
+.child-detail-container .enhanced-card,
+.child-detail-container .card {
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
+}
+
+.child-detail-container .card-header,
+.child-detail-container .profile-header {
+    background: #ffffff !important;
+    background-image: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-bottom: 1px solid #e5e7eb !important;
+}
+
+.child-detail-container .card-title,
+.child-detail-container .profile-name,
+.child-detail-container .profile-age {
+    color: #1f2937 !important;
+    text-shadow: none !important;
+}
+
+.child-detail-container .profile-header,
+.child-detail-container .card-body,
+.child-detail-container .enhanced-card .card-header {
+    padding-left: 1.75rem !important;
+}
+
+.child-detail-container .btn-secondary-pro,
+.child-detail-container .btn-secondary-pro:hover,
+.child-detail-container .btn-secondary-pro i,
+.child-detail-container .btn-secondary-pro span {
+    color: #111827 !important;
+    text-shadow: none !important;
 }

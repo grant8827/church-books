@@ -74,6 +74,15 @@
                                 {% endfor %}
                             </select>
                         </div>
+                        <div class="md:col-span-2">
+                            <div class="flex items-center">
+                                <input class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" type="checkbox" id="is_active" name="is_active" checked>
+                                <label class="ml-2 block text-sm text-gray-900" for="is_active">
+                                    Active Child
+                                </label>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Uncheck if child is not currently attending</p>
+                        </div>
                     </div>
                 </div>
 
@@ -118,17 +127,48 @@
                         <i class="fas fa-users text-green-600 mr-3"></i>Parents & Guardians
                     </h2>
                     
-                    <div class="space-y-1">
-                        <label for="parents" class="block text-sm font-medium text-gray-700">Select Parents/Guardians</label>
-                        <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="parents" name="parents" multiple size="6">
+                    <div class="space-y-3">
+                        <div class="space-y-1">
+                            <label for="guardian_name_entry" class="block text-sm font-medium text-gray-700">Full Name</label>
+                            <div class="flex flex-col sm:flex-row gap-3">
+                                <input
+                                    type="text"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    id="guardian_name_entry"
+                                    list="parent_guardian_options"
+                                    autocomplete="off"
+                                    placeholder="Type parent or guardian full name"
+                                >
+                                <button type="button" id="add_guardian_name" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                                    Add
+                                </button>
+                            </div>
+                            <datalist id="parent_guardian_options">
+                                {% for member in church_members %}
+                                    <option value="{{ member.full_name }}" data-member-id="{{ member.id }}">
+                                        {{ member.email|default:member.phone_number }}
+                                    </option>
+                                {% endfor %}
+                            </datalist>
+                            <p class="text-xs text-gray-500 mt-1">Matching church members will be linked automatically.</p>
+                        </div>
+
+                        <div id="guardian_name_list" class="flex flex-wrap gap-2"></div>
+                        <div id="guardian_parent_inputs"></div>
+                        <textarea id="guardian_names" name="guardian_names" class="hidden"></textarea>
+
+                        <details class="mt-2">
+                            <summary class="cursor-pointer text-sm font-medium text-gray-700">Choose from member list</summary>
+                            <select class="mt-3 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" id="parents" name="parents" multiple size="6">
                             {% for member in church_members %}
                                 <option value="{{ member.id }}">
                                     {{ member.full_name }}
-                                    {% if member.role %}({{ member.get_role_display }}){% endif %}
+                                    {% if member.email %} - {{ member.email }}{% endif %}
                                 </option>
                             {% endfor %}
-                        </select>
-                        <p class="text-xs text-gray-500 mt-1">Hold Ctrl (or Cmd) to select multiple parents</p>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Hold Ctrl (or Cmd) to select multiple parents, then submit the form.</p>
+                        </details>
                     </div>
                 </div>
 
@@ -215,4 +255,110 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        const nameInput = document.getElementById('guardian_name_entry');
+        const addButton = document.getElementById('add_guardian_name');
+        const selectedList = document.getElementById('guardian_name_list');
+        const hiddenNames = document.getElementById('guardian_names');
+        const hiddenParents = document.getElementById('guardian_parent_inputs');
+        const parentSelect = document.getElementById('parents');
+        const form = nameInput ? nameInput.closest('form') : null;
+        const optionMap = {};
+        const selectedNames = [];
+        const selectedParentIds = new Set();
+
+        document.querySelectorAll('#parent_guardian_options option').forEach((option) => {
+            optionMap[option.value.toLowerCase()] = option.dataset.memberId;
+        });
+
+        function rebuildParentIds() {
+            selectedParentIds.clear();
+            Array.from(parentSelect.selectedOptions).forEach((option) => {
+                selectedParentIds.add(option.value);
+            });
+            selectedNames.forEach((name) => {
+                const memberId = optionMap[name.toLowerCase()];
+                if (memberId) {
+                    selectedParentIds.add(memberId);
+                }
+            });
+        }
+
+        function syncHiddenFields() {
+            rebuildParentIds();
+            hiddenNames.value = selectedNames.join('\n');
+            hiddenParents.innerHTML = '';
+            selectedParentIds.forEach((id) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'parents';
+                input.value = id;
+                hiddenParents.appendChild(input);
+            });
+        }
+
+        function renderNames() {
+            selectedList.innerHTML = '';
+            selectedNames.forEach((name, index) => {
+                const item = document.createElement('span');
+                item.className = 'inline-flex items-center gap-2 bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full';
+                item.textContent = name;
+
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'text-green-900 hover:text-red-700 font-bold';
+                remove.textContent = 'x';
+                remove.setAttribute('aria-label', `Remove ${name}`);
+                remove.addEventListener('click', () => {
+                    const memberId = optionMap[name.toLowerCase()];
+                    selectedNames.splice(index, 1);
+                    if (memberId && !selectedNames.some((itemName) => optionMap[itemName.toLowerCase()] === memberId)) {
+                        selectedParentIds.delete(memberId);
+                    }
+                    renderNames();
+                    syncHiddenFields();
+                });
+
+                item.appendChild(remove);
+                selectedList.appendChild(item);
+            });
+        }
+
+        function addName(name) {
+            const cleanedName = name.trim();
+            if (!cleanedName || selectedNames.includes(cleanedName)) {
+                return;
+            }
+
+            selectedNames.push(cleanedName);
+            renderNames();
+            syncHiddenFields();
+            nameInput.value = '';
+        }
+
+        addButton.addEventListener('click', () => addName(nameInput.value));
+        nameInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                addName(nameInput.value);
+            }
+        });
+
+        parentSelect.addEventListener('change', () => {
+            Array.from(parentSelect.selectedOptions).forEach((option) => {
+                addName(option.textContent.split(' - ')[0].trim());
+            });
+            syncHiddenFields();
+        });
+
+        form.addEventListener('submit', () => {
+            addName(nameInput.value);
+            syncHiddenFields();
+        });
+    })();
+</script>
 {% endblock %}

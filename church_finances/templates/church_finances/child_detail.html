@@ -3,6 +3,63 @@
 
 {% block title %}{{ child.full_name }} - Children Directory{% endblock %}
 
+{% block extra_css %}
+<style>
+    .child-detail-container {
+        background: #f1f1f1 !important;
+        background-image: none !important;
+        animation: none !important;
+        overflow: visible !important;
+    }
+
+    .child-detail-container::before,
+    .child-detail-container .child-profile-card::before,
+    .child-detail-container .enhanced-card::before {
+        display: none !important;
+    }
+
+    .child-detail-container .child-profile-card,
+    .child-detail-container .enhanced-card,
+    .child-detail-container .card {
+        background: #f1f1f1 !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border: 1px solid #e5e7eb !important;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
+    }
+
+    .child-detail-container .card-header,
+    .child-detail-container .profile-header {
+        background: #f1f1f1 !important;
+        background-image: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border-bottom: 1px solid #e5e7eb !important;
+    }
+
+    .child-detail-container .card-title,
+    .child-detail-container .profile-name,
+    .child-detail-container .profile-age {
+        color: #1f2937 !important;
+        text-shadow: none !important;
+    }
+
+    .child-detail-container .profile-header,
+    .child-detail-container .card-body,
+    .child-detail-container .enhanced-card .card-header {
+        padding-left: 1.72rem !important;
+    }
+
+    .child-detail-container .btn-secondary-pro,
+    .child-detail-container .btn-secondary-pro:hover,
+    .child-detail-container .btn-secondary-pro i,
+    .child-detail-container .btn-secondary-pro span {
+        color: #111827 !important;
+        text-shadow: none !important;
+    }
+</style>
+{% endblock %}
+
 
 
 {% block content %}
@@ -11,11 +68,17 @@
     <!-- Breadcrumb -->
     <div class="modern-breadcrumb">
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'children_list' %}">Children</a></li>
-                    <li class="breadcrumb-item active">{{ child.full_name }}</li>
-            </ol>
+            <div class="w-full flex flex-col sm:flex-row sm:items-center gap-3">
+                <span class="font-semibold text-gray-800">Child Details</span>
+                <div class="flex gap-2 sm:ml-auto">
+                    <a href="{% url 'children_list' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold py-2 px-4 rounded inline-flex items-center">
+                        <i class="fas fa-arrow-left mr-2"></i>Back
+                    </a>
+                    <a href="{% url 'child_edit' child.id %}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                        <i class="fas fa-edit mr-2"></i>Edit Child
+                    </a>
+                </div>
+            </div>
         </nav>
     </div>
     
@@ -28,17 +91,6 @@
             {% if child.date_of_birth %}
                 <div class="profile-age">{{ child.age }} years old</div>
             {% endif %}
-            
-            <div class="action-buttons">
-                <a href="{% url 'child_edit' child.id %}" class="btn-professional btn-warning-pro">
-                    <i class="fas fa-edit"></i>
-                    <span>Edit Child</span>
-                </a>
-                <a href="{% url 'children_list' %}" class="btn-professional btn-secondary-pro">
-                    <i class="fas fa-arrow-left"></i>
-                    <span>Back to List</span>
-                </a>
-            </div>
         </div>
         
         <div class="p-4">
@@ -106,7 +158,7 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    {% if child.parents.exists %}
+                    {% if child.parents.exists or child.guardian_names %}
                         {% for parent in child.parents.all %}
                             <div class="d-flex align-items-center mb-3">
                                 <div class="flex-grow-1">
@@ -123,6 +175,13 @@
                             </div>
                             {% if not forloop.last %}<hr>{% endif %}
                         {% endfor %}
+                        {% if child.guardian_names %}
+                            {% if child.parents.exists %}<hr>{% endif %}
+                            <div class="text-gray-700">
+                                <strong>Typed Parent/Guardian Names:</strong>
+                                <div class="mt-1">{{ child.guardian_names|linebreaksbr }}</div>
+                            </div>
+                        {% endif %}
                     {% else %}
                         <div class="text-center text-muted py-3">
                             <i class="fas fa-users fa-2x mb-2"></i>
@@ -174,7 +233,7 @@
         </div>
 
                 <!-- Medical Information -->
-                <div class="col-md-6">
+               <!-- <div class="col-md-6">
                     <div class="enhanced-card mb-4">
                 <div class="card-header">
                     <h5 class="card-title mb-0">
@@ -216,7 +275,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div>-->
 
     <!-- Recent Attendance -->
     <div class="row">

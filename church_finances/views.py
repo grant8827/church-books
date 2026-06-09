@@ -852,10 +852,22 @@ def member_list_view(request):
         info(request, "Your church account is pending approval.")
         return render(request, "church_finances/pending_approval.html")
 
+    search_query = request.GET.get("q", "").strip()
     members = Member.objects.filter(church=church)
+
+    if search_query:
+        for term in search_query.split():
+            members = members.filter(
+                Q(first_name__icontains=term) |
+                Q(last_name__icontains=term) |
+                Q(email__icontains=term) |
+                Q(phone_number__icontains=term)
+            )
+
     return render(request, "church_finances/member_list.html", {
         "members": members,
-        "church": church
+        "church": church,
+        "search_query": search_query,
     })
 
 @login_required
@@ -2507,6 +2519,7 @@ def child_add_view(request):
         grade_level = request.POST.get('grade_level', '')
         sunday_school_class = request.POST.get('sunday_school_class', '')
         parent_ids = request.POST.getlist('parents')
+        guardian_names = request.POST.get('guardian_names', '').strip()
         
         # Emergency contact info
         emergency_contact_name = request.POST.get('emergency_contact_name', '')
@@ -2515,8 +2528,14 @@ def child_add_view(request):
         
         # Additional info
         address = request.POST.get('address', '')
+        street_address = request.POST.get('street_address', '')
+        city = request.POST.get('city', '')
+        state = request.POST.get('state', '')
+        zip_code = request.POST.get('zip_code', '')
+        country = request.POST.get('country', 'United States')
         phone_number = request.POST.get('phone_number', '')
         notes = request.POST.get('notes', '')
+        is_active = request.POST.get('is_active', 'on') == 'on'
         
         try:
             # Create the child
@@ -2530,15 +2549,29 @@ def child_add_view(request):
                 emergency_contact_name=emergency_contact_name,
                 emergency_contact_phone=emergency_contact_phone,
                 emergency_contact_relationship=emergency_contact_relationship,
+                guardian_names=guardian_names,
                 address=address,
+                street_address=street_address,
+                city=city,
+                state=state,
+                zip_code=zip_code,
+                country=country,
                 phone_number=phone_number,
                 notes=notes,
+                is_active=is_active,
                 added_by=request.user
             )
             
-            # Add parents if selected
-            if parent_ids:
+            # Add parent links for selected/autocompleted church members.
+            if parent_ids or guardian_names:
                 parents = Member.objects.filter(id__in=parent_ids, church=church)
+                typed_names = [name.strip().lower() for name in guardian_names.splitlines() if name.strip()]
+                if typed_names:
+                    matched_parents = [
+                        member.id for member in Member.objects.filter(church=church, is_active=True)
+                        if member.full_name.lower() in typed_names
+                    ]
+                    parents = parents | Member.objects.filter(id__in=matched_parents, church=church)
                 child.parents.set(parents)
             
             success(request, f"Successfully added {child.full_name} to the children's directory.")
@@ -2583,19 +2616,20 @@ def child_edit_view(request, child_id):
         child.date_of_birth = request.POST.get('date_of_birth')
         child.grade_level = request.POST.get('grade_level')
         child.sunday_school_class = request.POST.get('sunday_school_class')
+        child.guardian_names = request.POST.get('guardian_names', '').strip()
         
         # Emergency contact info
         child.emergency_contact_name = request.POST.get('emergency_contact_name')
         child.emergency_contact_phone = request.POST.get('emergency_contact_phone')
         child.emergency_contact_relationship = request.POST.get('emergency_contact_relationship')
         
-        # Medical info
-        child.allergies = request.POST.get('allergies')
-        child.medications = request.POST.get('medications')
-        child.medical_notes = request.POST.get('medical_notes')
-        
         # Additional info
-        child.address = request.POST.get('address')
+        child.address = request.POST.get('address', '')
+        child.street_address = request.POST.get('street_address', '')
+        child.city = request.POST.get('city', '')
+        child.state = request.POST.get('state', '')
+        child.zip_code = request.POST.get('zip_code', '')
+        child.country = request.POST.get('country', 'United States')
         child.phone_number = request.POST.get('phone_number')
         child.notes = request.POST.get('notes')
         child.is_active = request.POST.get('is_active') == 'on'
@@ -2603,10 +2637,17 @@ def child_edit_view(request, child_id):
         try:
             child.save()
             
-            # Update parents
+            # Update parent links for selected/autocompleted church members.
             parent_ids = request.POST.getlist('parents')
-            if parent_ids:
+            if parent_ids or child.guardian_names:
                 parents = Member.objects.filter(id__in=parent_ids, church=church)
+                typed_names = [name.strip().lower() for name in child.guardian_names.splitlines() if name.strip()]
+                if typed_names:
+                    matched_parents = [
+                        member.id for member in Member.objects.filter(church=church, is_active=True)
+                        if member.full_name.lower() in typed_names
+                    ]
+                    parents = parents | Member.objects.filter(id__in=matched_parents, church=church)
                 child.parents.set(parents)
             else:
                 child.parents.clear()

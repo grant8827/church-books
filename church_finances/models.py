@@ -630,6 +630,7 @@ class Child(models.Model):
     church = models.ForeignKey(Church, on_delete=models.CASCADE, related_name='children')
     parents = models.ManyToManyField('Member', related_name='children', blank=True,
                                    help_text="Select the parent(s) or guardian(s) from church members")
+    guardian_names = models.TextField(default="", blank=True, help_text="Parent or guardian names typed on the child form")
     
     # Church Activities
     sunday_school_class = models.CharField(max_length=20, choices=SUNDAY_SCHOOL_CLASSES, blank=True)
