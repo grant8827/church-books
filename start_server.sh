@@ -4,7 +4,7 @@ set -e
 # Function to wait for database to be ready using Django management command
 wait_for_db() {
     echo "Waiting for database to be ready..."
-    python manage.py wait_for_db --timeout=60 || {
+    "$PYTHON_BIN" manage.py wait_for_db --timeout=60 || {
         echo "Database connection failed, but attempting to continue..."
         return 1
     }
@@ -14,6 +14,7 @@ wait_for_db() {
 echo "=== Railway Django Startup ==="
 echo "DATABASE_URL exists: $([ -n "$DATABASE_URL" ] && echo "Yes" || echo "No")"
 echo "RAILWAY_ENVIRONMENT: ${RAILWAY_ENVIRONMENT}"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 # Set default PORT if not provided
 if [ -z "$PORT" ]; then
@@ -21,35 +22,43 @@ if [ -z "$PORT" ]; then
 fi
 echo "PORT: $PORT"
 
-# Wait for database to be ready before migrations
-if ! wait_for_db; then
-    echo "Database connection failed, but continuing with startup..."
-fi
+run_startup_tasks() {
+    # Wait for database to be ready before migrations
+    if ! wait_for_db; then
+        echo "Database connection failed, but continuing with startup..."
+    fi
 
-echo "Running database migrations..."
-python manage.py migrate --noinput || {
-    echo "Migration failed, but continuing..."
-}
+    echo "Running database migrations..."
+    "$PYTHON_BIN" manage.py migrate --noinput || {
+        echo "Migration failed, but continuing..."
+    }
 
-echo "Seeding subscription plans..."
-python manage.py seed_plans || {
-    echo "Plan seeding failed, but continuing..."
+    echo "Seeding subscription plans..."
+    "$PYTHON_BIN" manage.py seed_plans || {
+        echo "Plan seeding failed, but continuing..."
+    }
+
+    echo "Ensuring superuser exists..."
+    "$PYTHON_BIN" manage.py ensure_superuser || {
+        echo "Superuser creation failed, but continuing..."
+    }
 }
 
 # Ensure the local media directory exists (used when USE_S3 is not set / Railway Volume)
-mkdir -p /app/media/church_logos
+mkdir -p "${MEDIA_ROOT:-media}/church_logos"
 
-echo "Ensuring superuser exists..."
-python manage.py ensure_superuser || {
-    echo "Superuser creation failed, but continuing..."
-}
+# Run setup work in the background so Railway can reach /startup/ quickly.
+run_startup_tasks &
+startup_tasks_pid=$!
+
+echo "Startup tasks running in background with PID $startup_tasks_pid"
 
 echo "=== Starting Gunicorn Server ==="
 echo "Server will be available at http://0.0.0.0:$PORT"
 echo "Health check endpoint: /healthz"
 
 # Start Gunicorn with better configuration for Railway
-exec gunicorn church_finance_project.wsgi:application \
+exec "$PYTHON_BIN" -m gunicorn church_finance_project.wsgi:application \
     --bind 0.0.0.0:$PORT \
     --workers 2 \
     --worker-class sync \
