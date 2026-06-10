@@ -58,7 +58,7 @@
               <td class="px-4 py-4">
                 <div class="font-medium text-gray-900">{{ church.name }}</div>
                 <div class="text-xs text-gray-400">Added {{ church.created_at|date:"M d, Y" }}</div>
-                {% if church.website %}<a href="{{ church.website }}" target="_blank" class="text-xs text-blue-500 hover:underline">website</a>{% endif %}
+                {% if church.website %}<a href="{{ church.website }}" class="text-xs text-blue-500 hover:underline">website</a>{% endif %}
               </td>
               <td class="px-4 py-4 text-gray-600">
                 <div>{{ church.email }}</div>
