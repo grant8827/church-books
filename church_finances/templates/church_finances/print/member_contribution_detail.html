@@ -1,6 +1,9 @@
 {% extends "church_finances/print/base_print.html" %}
 
-{% block extra_head %}
+{% block report_title %}Individual Contribution Report{% endblock %}
+{% block report_period %}{{ member.full_name }} - Year {{ year }}{% endblock %}
+
+{% block extra_style %}
 <style>
     @media print {
         .no-print {
@@ -43,15 +46,6 @@
                 &larr; Back
             </a>
         </div>
-    </div>
-
-    <!-- Report Header -->
-    <div class="text-center mb-8">
-        <h1 class="text-2xl font-bold">{{ church.name }}</h1>
-        <h2 class="text-xl">Individual Contribution Report</h2>
-        <p class="text-lg font-semibold text-gray-700 mt-1">{{ member.full_name }}</p>
-        <p class="text-gray-600">Year {{ year }}</p>
-        <p class="text-sm text-gray-500">Generated on {{ print_date|date:"F d, Y H:i" }}</p>
     </div>
 
     <!-- Contribution Detail Table -->
@@ -106,7 +100,7 @@
     </table>
 
     <!-- Signatures Section -->
-    <div class="mt-16 grid grid-cols-2 gap-8">
+    <div class="no-print report-signatures mt-16 grid grid-cols-2 gap-8">
         <div class="border-t pt-4">
             <p class="text-center">_____________________</p>
             <p class="text-center text-sm text-gray-600">Treasurer's Signature</p>

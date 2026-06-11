@@ -1,13 +1,22 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Print Report{% endblock %} - {{ church.name }}</title>
+    <link rel="icon" href="{% static 'images/church-books-management2.png' %}" type="image/png">
+    <link rel="shortcut icon" href="{% static 'images/church-books-management2.png' %}" type="image/png">
+    <link rel="apple-touch-icon" href="{% static 'images/church-books-management2.png' %}">
     <style>
         @page {
             size: letter portrait;
             margin: 2cm;
+            margin-header: 0mm;
+            margin-footer: 0mm;
+        }
+        @page :first {
+            margin-top: 2cm;
         }
         body {
             font-family: Arial, sans-serif;
@@ -74,13 +83,26 @@
         }
         @media print {
             .no-print {
-                display: none;
+                display: none !important;
             }
             body {
                 font-size: 12pt;
+                margin: 0;
+                padding: 0;
+                background: #fff;
+            }
+            .container {
+                margin: 0;
+                max-width: 100%;
+            }
+            .header {
+                margin-bottom: 18px;
+                padding-bottom: 12px;
             }
             table {
                 page-break-inside: auto;
+                width: 100%;
+                margin: 12px 0;
             }
             tr {
                 page-break-inside: avoid;
@@ -89,15 +111,12 @@
             thead {
                 display: table-header-group;
             }
-            .footer {
-                position: fixed;
-                bottom: 0;
-                width: 100%;
+            tfoot {
+                display: table-footer-group;
             }
-            .print-date {
-                position: fixed;
-                top: 20px;
-                right: 20px;
+            .footer {
+                margin-top: 24px;
+                page-break-inside: avoid;
             }
         }
     </style>
@@ -121,13 +140,13 @@
             <h1 class="church-name">{{ church.name }}</h1>
             <h2 class="report-title">{% block report_title %}{% endblock %}</h2>
             <div class="report-period">{% block report_period %}{% endblock %}</div>
-            <div class="print-date">Generated on: {{ print_date|date:"F j, Y g:i A" }}</div>
+
         </div>
 
         {% block content %}{% endblock %}
 
         <div class="footer">
-            {{ church.name }} - Financial Report
+            {{ church.name }} - Contribution Report
             <br>
             {{ church.address }}
         </div>

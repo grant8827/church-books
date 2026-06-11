@@ -1,6 +1,9 @@
 {% extends "church_finances/print/base_print.html" %}
 
-{% block extra_head %}
+{% block report_title %}Monthly Transaction Report{% endblock %}
+{% block report_period %}{{ month_name }} {{ year }}{% endblock %}
+
+{% block extra_style %}
 <style>
     @media print {
         .no-print {
@@ -53,15 +56,10 @@
             <button onclick="window.print()" class="bg-green-500 text-white px-4 py-2 rounded">
                 Print Report
             </button>
+            <a href="javascript:history.back()" class="bg-gray-500 text-white px-4 py-2 rounded">
+                &larr; Back
+            </a>
         </div>
-    </div>
-
-    <!-- Report Header -->
-    <div class="text-center mb-8">
-        <h1 class="text-2xl font-bold">{{ church.name }}</h1>
-        <h2 class="text-xl">Monthly Transaction Report</h2>
-        <p class="text-gray-600">{{ month }} {{ year }}</p>
-        <p class="text-sm text-gray-500">Generated on {{ print_date|date:"F d, Y H:i" }}</p>
     </div>
 
     <!-- Transactions Table -->
@@ -111,7 +109,7 @@
     {% endif %}
 
     <!-- Signatures Section -->
-    <div class="mt-16 grid grid-cols-2 gap-8">
+    <div class="no-print report-signatures mt-16 grid grid-cols-2 gap-8">
         <div class="border-t pt-4">
             <p class="text-center">_____________________</p>
             <p class="text-center text-sm text-gray-600">Treasurer's Signature</p>
