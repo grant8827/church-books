@@ -5,6 +5,40 @@ import django.utils.timezone
 from django.db import migrations, models
 
 
+def _clear_member_fk(apps, schema_editor):
+    vendor = schema_editor.connection.vendor
+    if vendor == 'postgresql':
+        schema_editor.execute("""
+            DO $$
+            DECLARE
+                fk_name text;
+            BEGIN
+                SELECT tc.constraint_name INTO fk_name
+                FROM information_schema.table_constraints tc
+                JOIN information_schema.key_column_usage kcu
+                    ON tc.constraint_name = kcu.constraint_name
+                   AND tc.table_schema    = kcu.table_schema
+                WHERE tc.table_schema  = 'public'
+                  AND tc.table_name    = 'church_finances_contribution'
+                  AND kcu.column_name  = 'member_id'
+                  AND tc.constraint_type = 'FOREIGN KEY'
+                LIMIT 1;
+                IF fk_name IS NOT NULL THEN
+                    EXECUTE 'ALTER TABLE church_finances_contribution DROP CONSTRAINT ' || quote_ident(fk_name);
+                END IF;
+            END
+            $$;
+            ALTER TABLE church_finances_contribution ALTER COLUMN member_id DROP NOT NULL;
+            UPDATE church_finances_contribution SET member_id = NULL;
+            DELETE FROM church_finances_babychristening_parent_members;
+            DELETE FROM church_finances_child_parents;
+        """)
+    else:
+        schema_editor.execute("UPDATE church_finances_contribution SET member_id = NULL;")
+        schema_editor.execute("DELETE FROM church_finances_babychristening_parent_members;")
+        schema_editor.execute("DELETE FROM church_finances_child_parents;")
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -99,42 +133,9 @@ class Migration(migrations.Migration):
         # Step 2: Surgically clear all old ChurchMember-based data so the
         # subsequent AlterField operations can add new FK constraints to the
         # (empty) Member table without integrity errors.
-        #
-        # a) Drop FK constraint on contribution.member_id (name is dynamic),
-        #    make column nullable, then NULL out all existing values.
-        # b) Delete all rows in both M2M junction tables.
-        migrations.RunSQL(
-            sql="""
-            DO $$
-            DECLARE
-                fk_name text;
-            BEGIN
-                SELECT tc.constraint_name INTO fk_name
-                FROM information_schema.table_constraints tc
-                JOIN information_schema.key_column_usage kcu
-                    ON tc.constraint_name = kcu.constraint_name
-                   AND tc.table_schema    = kcu.table_schema
-                WHERE tc.table_schema  = 'public'
-                  AND tc.table_name    = 'church_finances_contribution'
-                  AND kcu.column_name  = 'member_id'
-                  AND tc.constraint_type = 'FOREIGN KEY'
-                LIMIT 1;
-
-                IF fk_name IS NOT NULL THEN
-                    EXECUTE 'ALTER TABLE church_finances_contribution DROP CONSTRAINT ' || quote_ident(fk_name);
-                END IF;
-            END
-            $$;
-
-            ALTER TABLE church_finances_contribution
-                ALTER COLUMN member_id DROP NOT NULL;
-
-            UPDATE church_finances_contribution SET member_id = NULL;
-
-            DELETE FROM church_finances_babychristening_parent_members;
-            DELETE FROM church_finances_child_parents;
-            """,
-            reverse_sql=migrations.RunSQL.noop,
+        migrations.RunPython(
+            code=lambda apps, schema_editor: _clear_member_fk(apps, schema_editor),
+            reverse_code=migrations.RunPython.noop,
         ),
         # Step 3: Now AlterField is safe — column is nullable, data is NULL,
         # M2M tables are empty — so adding new FK constraints will succeed.

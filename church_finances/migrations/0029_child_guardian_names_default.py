@@ -3,6 +3,12 @@
 from django.db import migrations, models
 
 
+def _set_guardian_names_default(apps, schema_editor):
+    schema_editor.execute("UPDATE cb_children SET guardian_names = '' WHERE guardian_names IS NULL;")
+    if schema_editor.connection.vendor == 'postgresql':
+        schema_editor.execute("ALTER TABLE cb_children ALTER COLUMN guardian_names SET DEFAULT '';")
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,19 +16,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            sql="""
-                UPDATE cb_children
-                SET guardian_names = ''
-                WHERE guardian_names IS NULL;
-
-                ALTER TABLE cb_children
-                ALTER COLUMN guardian_names SET DEFAULT '';
-            """,
-            reverse_sql="""
-                ALTER TABLE cb_children
-                ALTER COLUMN guardian_names DROP DEFAULT;
-            """,
+        migrations.RunPython(
+            code=_set_guardian_names_default,
+            reverse_code=migrations.RunPython.noop,
         ),
         migrations.AlterField(
             model_name='child',

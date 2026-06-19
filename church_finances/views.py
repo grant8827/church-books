@@ -1264,6 +1264,51 @@ def dashboard_user_register_view(request):
     })
 
 @login_required
+def manage_users_view(request):
+    church = get_user_church(request.user)
+    if not church or church.registered_by_id != request.user.pk:
+        raise PermissionDenied("Only the account owner can manage users.")
+
+    staff_members = (
+        ChurchMember.objects
+        .filter(church=church)
+        .exclude(user=request.user)
+        .select_related('user')
+        .order_by('role', 'user__first_name')
+    )
+    return render(request, 'church_finances/manage_users.html', {
+        'church': church,
+        'staff_members': staff_members,
+    })
+
+
+@login_required
+def remove_staff_user_view(request, member_id):
+    church = get_user_church(request.user)
+    if not church or church.registered_by_id != request.user.pk:
+        raise PermissionDenied("Only the account owner can remove users.")
+
+    church_member = get_object_or_404(ChurchMember, pk=member_id, church=church)
+    if church_member.user_id == request.user.pk:
+        error(request, "You cannot remove yourself.")
+        return redirect('manage_users')
+
+    if request.method == 'POST':
+        user_to_remove = church_member.user
+        name = user_to_remove.get_full_name() or user_to_remove.username
+        church_member.delete()
+        if not ChurchMember.objects.filter(user=user_to_remove).exists():
+            user_to_remove.delete()
+        success(request, f"{name} has been removed.")
+        return redirect('manage_users')
+
+    return render(request, 'church_finances/confirm_remove_user.html', {
+        'church_member': church_member,
+        'church': church,
+    })
+
+
+@login_required
 def profile_view(request):
     """User profile page – edit personal details and (if admin) church details."""
     church_member = request.user.churchmember_set.select_related('church').first()

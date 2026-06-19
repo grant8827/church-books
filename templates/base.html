@@ -442,6 +442,17 @@
                     </a>
                     <span class="sidebar-tooltip">Profile</span>
                 </div>
+                {% if user.churchmember_set.first.church.registered_by_id == user.id %}
+                <div class="sidebar-item">
+                    <a href="{% url 'manage_users' %}" class="sidebar-item-link flex items-center gap-3 text-white rounded-lg px-3 py-2.5 transition-colors group {% if request.resolver_match.url_name == 'manage_users' %}bg-blue-700{% else %}hover:bg-blue-700{% endif %}">
+                        <svg class="h-5 w-5 flex-shrink-0 text-blue-300 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        </svg>
+                        <span class="sidebar-label text-sm font-medium">Manage Users</span>
+                    </a>
+                    <span class="sidebar-tooltip">Manage Users</span>
+                </div>
+                {% endif %}
                 {% if not user.is_superuser %}
                 <div class="sidebar-item">
                     <a href="{% url 'upgrade_plan' %}" class="sidebar-item-link flex items-center gap-3 text-white rounded-lg px-3 py-2.5 transition-colors group {% if request.resolver_match.url_name == 'upgrade_plan' %}bg-green-700{% else %}hover:bg-green-700{% endif %}">
