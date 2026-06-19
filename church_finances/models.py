@@ -183,7 +183,21 @@ class Church(models.Model):
         if not self.trial_end_date:
             return False
         return timezone.now() > self.trial_end_date
-    
+
+    @property
+    def subscription_days_remaining(self):
+        """Return days remaining in active subscription, or None if not applicable"""
+        if self.subscription_status != 'active' or not self.subscription_end_date:
+            return None
+        remaining = self.subscription_end_date - timezone.now()
+        return max(0, remaining.days)
+
+    @property
+    def is_subscription_expiring_soon(self):
+        """True when an active subscription expires within 14 days"""
+        days = self.subscription_days_remaining
+        return days is not None and days <= 14
+
     @property
     def can_access_dashboard(self):
         """Check if church can access dashboard (trial active or paid subscription)"""

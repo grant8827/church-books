@@ -1503,6 +1503,10 @@ def dashboard_view(request):
         "trial_days_remaining": church.trial_days_remaining,
         "is_trial_expired": church.is_trial_expired and church.subscription_status != 'active',
         "trial_end_date": church.trial_end_date,
+        # Subscription expiry warning (14-day window)
+        "is_subscription_expiring_soon": church.is_subscription_expiring_soon,
+        "subscription_days_remaining": church.subscription_days_remaining,
+        "subscription_end_date": church.subscription_end_date,
     }
     return render(request, "church_finances/dashboard.html", context)
 
