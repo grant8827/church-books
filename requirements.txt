@@ -28,3 +28,6 @@ boto3==1.34.69
 
 # Stripe payments
 stripe==10.4.0
+
+# PDF generation
+weasyprint==69.0

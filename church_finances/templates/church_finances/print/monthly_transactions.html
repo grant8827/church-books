@@ -1,7 +1,7 @@
 {% extends "church_finances/print/base_print.html" %}
 
 {% block report_title %}Monthly Transaction Report{% endblock %}
-{% block report_period %}{{ month_name }} {{ year }}{% endblock %}
+{% block report_period %}{{ month_name|default:month }} {{ year }}{% endblock %}
 
 {% block extra_style %}
 <style>
@@ -23,43 +23,40 @@
 {% block content %}
 <div class="container mx-auto p-8">
     <!-- Print Controls - Only visible on screen -->
-    <div class="no-print mb-8 flex justify-between items-center">
-        <div class="flex space-x-4">
-            <form class="flex space-x-4" method="get">
-                <select name="month" class="rounded border-gray-300">
-                    <option value="1" {% if month == 1 %}selected{% endif %}>January</option>
-                    <option value="2" {% if month == 2 %}selected{% endif %}>February</option>
-                    <option value="3" {% if month == 3 %}selected{% endif %}>March</option>
-                    <option value="4" {% if month == 4 %}selected{% endif %}>April</option>
-                    <option value="5" {% if month == 5 %}selected{% endif %}>May</option>
-                    <option value="6" {% if month == 6 %}selected{% endif %}>June</option>
-                    <option value="7" {% if month == 7 %}selected{% endif %}>July</option>
-                    <option value="8" {% if month == 8 %}selected{% endif %}>August</option>
-                    <option value="9" {% if month == 9 %}selected{% endif %}>September</option>
-                    <option value="10" {% if month == 10 %}selected{% endif %}>October</option>
-                    <option value="11" {% if month == 11 %}selected{% endif %}>November</option>
-                    <option value="12" {% if month == 12 %}selected{% endif %}>December</option>
-                </select>
-                <select name="year" class="rounded border-gray-300">
-                    {% for y in "543210"|make_list %}
-                    {% with year_option=current_year|add:y %}
-                    <option value="{{ year_option }}" {% if year_option == year %}selected{% endif %}>
-                        {{ year_option }}
-                    </option>
-                    {% endwith %}
-                    {% endfor %}
-                </select>
-                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">
-                    Update
-                </button>
-            </form>
-            <button onclick="window.print()" class="bg-green-500 text-white px-4 py-2 rounded">
-                Print Report
+    <div class="no-print mb-8 flex flex-wrap gap-3 items-center">
+        <form class="flex flex-wrap gap-3 items-center" method="get">
+            <select name="month" class="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="1" {% if month == 1 %}selected{% endif %}>January</option>
+                <option value="2" {% if month == 2 %}selected{% endif %}>February</option>
+                <option value="3" {% if month == 3 %}selected{% endif %}>March</option>
+                <option value="4" {% if month == 4 %}selected{% endif %}>April</option>
+                <option value="5" {% if month == 5 %}selected{% endif %}>May</option>
+                <option value="6" {% if month == 6 %}selected{% endif %}>June</option>
+                <option value="7" {% if month == 7 %}selected{% endif %}>July</option>
+                <option value="8" {% if month == 8 %}selected{% endif %}>August</option>
+                <option value="9" {% if month == 9 %}selected{% endif %}>September</option>
+                <option value="10" {% if month == 10 %}selected{% endif %}>October</option>
+                <option value="11" {% if month == 11 %}selected{% endif %}>November</option>
+                <option value="12" {% if month == 12 %}selected{% endif %}>December</option>
+            </select>
+            <select name="year" class="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% for y in "543210"|make_list %}
+                {% with year_option=current_year|add:y %}
+                <option value="{{ year_option }}" {% if year_option == year %}selected{% endif %}>{{ year_option }}</option>
+                {% endwith %}
+                {% endfor %}
+            </select>
+            <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-150">
+                Update
             </button>
-            <a href="javascript:history.back()" class="bg-gray-500 text-white px-4 py-2 rounded">
-                &larr; Back
-            </a>
-        </div>
+        </form>
+        <a href="?month={{ month }}&year={{ year }}&pdf=1"
+           class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-150">
+            &#8595; Download PDF
+        </a>
+        <a href="javascript:history.back()" class="inline-flex items-center px-4 py-2 bg-slate-500 hover:bg-slate-600 active:bg-slate-700 text-white text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-150">
+            &larr; Back
+        </a>
     </div>
 
     <!-- Transactions Table -->

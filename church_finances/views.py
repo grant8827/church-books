@@ -13,7 +13,7 @@ from functools import wraps
 import random
 import string
 from datetime import timedelta
-from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, BabyChristening, CertificateTemplate, EmailOTP, SubscriptionPlan
+from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, BabyChristening, CertificateTemplate, EmailOTP, SubscriptionPlan, DeletedAccount
 from .forms import (
     CustomUserCreationForm, TransactionForm, ChurchRegistrationForm,
     ChurchMemberForm, MemberForm, ContributionForm, DashboardUserRegistrationForm,
@@ -31,13 +31,22 @@ from django.template.loader import get_template
 from django.views.decorators.http import require_POST, require_http_methods
 
 
-# Conditional import for PDF generation
+# WeasyPrint PDF generation
 try:
-    # Temporarily disabled due to import issues
-    # from xhtml2pdf import pisa
-    PDF_AVAILABLE = False
+    from weasyprint import HTML as WeasyHTML, CSS as WeasyCSS
+    PDF_AVAILABLE = True
 except ImportError:
     PDF_AVAILABLE = False
+
+def render_to_pdf(request, template_name, context, filename='document.pdf'):
+    """Render a Django template to a PDF response using WeasyPrint."""
+    html_string = render(request, template_name, context).content.decode('utf-8')
+    base_url = request.build_absolute_uri('/')
+    pdf_bytes = WeasyHTML(string=html_string, base_url=base_url).write_pdf()
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="{filename}"'
+    return response
+
 
 # Static page views
 def about_view(request):
@@ -765,7 +774,10 @@ def user_login_view(request):
         try:
             user = User.objects.get(username=username)
             if not user.is_active:
-                error(request, f"Your account '{username}' is inactive. Please contact an administrator or check if your church account is pending approval.")
+                if DeletedAccount.objects.filter(user=user).exists():
+                    error(request, "This account has been deleted. Please contact support if you believe this is a mistake.")
+                else:
+                    error(request, f"Your account '{username}' is inactive. Please contact an administrator or check if your church account is pending approval.")
                 form = AuthenticationForm()
                 return render(request, "church_finances/login.html", {"form": form})
         except User.DoesNotExist:
@@ -779,7 +791,7 @@ def user_login_view(request):
             try:
                 member = ChurchMember.objects.get(user=user)
                 if not member.is_active:
-                    error(request, "Your church membership is pending approval. Please contact an administrator.")
+                    error(request, "Your account has been suspended. Please contact your church administrator.")
                     return render(request, "church_finances/login.html", {"form": form})
 
                 if not member.church.is_approved:
@@ -1309,6 +1321,30 @@ def remove_staff_user_view(request, member_id):
 
 
 @login_required
+def suspend_staff_user_view(request, member_id):
+    church = get_user_church(request.user)
+    if not church or church.registered_by_id != request.user.pk:
+        raise PermissionDenied("Only the account owner can suspend users.")
+
+    church_member = get_object_or_404(ChurchMember, pk=member_id, church=church)
+    if church_member.user_id == request.user.pk:
+        error(request, "You cannot suspend yourself.")
+        return redirect('manage_users')
+
+    if request.method == 'POST':
+        name = church_member.user.get_full_name() or church_member.user.username
+        church_member.is_active = not church_member.is_active
+        church_member.save(update_fields=['is_active'])
+        if church_member.is_active:
+            success(request, f"{name} has been reactivated.")
+        else:
+            success(request, f"{name} has been suspended.")
+        return redirect('manage_users')
+
+    return redirect('manage_users')
+
+
+@login_required
 def profile_view(request):
     """User profile page – edit personal details and (if admin) church details."""
     church_member = request.user.churchmember_set.select_related('church').first()
@@ -1353,6 +1389,25 @@ def profile_view(request):
         'church_member': church_member,
         'is_church_admin': is_church_admin,
     })
+
+
+@login_required
+def delete_account_view(request):
+    if request.method != 'POST':
+        return redirect('profile')
+
+    password = request.POST.get('password', '')
+    if not request.user.check_password(password):
+        error(request, 'Incorrect password. Account was not deleted.')
+        return redirect('profile')
+
+    user = request.user
+    DeletedAccount.objects.get_or_create(user=user)
+    ChurchMember.objects.filter(user=user).update(is_active=False)
+    user.is_active = False
+    user.save(update_fields=['is_active'])
+    logout(request)
+    return redirect('login')
 
 
 @login_required
@@ -1634,16 +1689,21 @@ def contribution_print_monthly(request):
         'total': contributions.aggregate(Sum('amount'))['amount__sum'] or 0
     }
 
+    month_name = start_date.strftime('%B')
     context = {
         'church': church,
         'contributions': contributions,
         'totals': totals,
-        'month': start_date.strftime('%B'),
+        'month': month,
+        'month_name': month_name,
         'year': year,
         'current_year': timezone.now().year,
         'print_date': timezone.now()
     }
-    
+
+    if request.GET.get('pdf'):
+        return render_to_pdf(request, "church_finances/print/monthly_contributions.html", context,
+                             filename=f"contributions_{month_name}_{year}.pdf")
     return render(request, "church_finances/print/monthly_contributions.html", context)
 
 @login_required
@@ -1698,6 +1758,9 @@ def contribution_member_annual_summary(request):
         'print_date': timezone.now(),
     }
 
+    if request.GET.get('pdf'):
+        return render_to_pdf(request, "church_finances/print/member_annual_contributions.html", context,
+                             filename=f"member_contributions_{year}.pdf")
     return render(request, "church_finances/print/member_annual_contributions.html", context)
 
 @login_required
@@ -1736,7 +1799,56 @@ def contribution_member_detail(request, member_id):
         'print_date': timezone.now(),
     }
 
+    if request.GET.get('pdf'):
+        return render_to_pdf(request, "church_finances/print/member_contribution_detail.html", context,
+                             filename=f"{member.full_name.replace(' ', '_')}_contributions_{year}.pdf")
     return render(request, "church_finances/print/member_contribution_detail.html", context)
+
+@login_required
+def contribution_all_members_report(request):
+    """
+    Combined report: all members' individual contribution details on one page/PDF
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    year = int(request.GET.get('year', timezone.now().year))
+
+    members_with_contributions = Member.objects.filter(
+        church=church,
+        contribution__date__year=year
+    ).distinct().order_by('last_name', 'first_name')
+
+    members_data = []
+    for member in members_with_contributions:
+        contributions = Contribution.objects.filter(
+            church=church, member=member, date__year=year
+        ).order_by('date')
+        total_tithe = contributions.filter(contribution_type='tithe').aggregate(Sum('amount'))['amount__sum'] or 0
+        total_offering = contributions.filter(contribution_type='offering').aggregate(Sum('amount'))['amount__sum'] or 0
+        grand_total = contributions.aggregate(Sum('amount'))['amount__sum'] or 0
+        members_data.append({
+            'member': member,
+            'contributions': contributions,
+            'total_tithe': total_tithe,
+            'total_offering': total_offering,
+            'grand_total': grand_total,
+        })
+
+    context = {
+        'church': church,
+        'members_data': members_data,
+        'year': year,
+        'current_year': timezone.now().year,
+        'print_date': timezone.now(),
+    }
+
+    if request.GET.get('pdf'):
+        return render_to_pdf(request, "church_finances/print/all_members_report.html", context,
+                             filename=f"all_member_contributions_{year}.pdf")
+    return render(request, "church_finances/print/all_members_report.html", context)
 
 @login_required
 def contribution_print_yearly(request):
@@ -1780,6 +1892,9 @@ def contribution_print_yearly(request):
         'print_date': timezone.now()
     }
     
+    if request.GET.get('pdf'):
+        return render_to_pdf(request, "church_finances/print/yearly_contributions.html", context,
+                             filename=f"contributions_{year}.pdf")
     return render(request, "church_finances/print/yearly_contributions.html", context)
 
 @login_required
@@ -1816,16 +1931,21 @@ def transaction_print_monthly(request):
     }
     totals['net'] = totals['income'] - totals['expense']
 
+    month_name = start_date.strftime('%B')
     context = {
         'church': church,
         'transactions': transactions,
         'totals': totals,
-        'month': start_date.strftime('%B'),
+        'month': month,
+        'month_name': month_name,
         'year': year,
         'current_year': timezone.now().year,
         'print_date': timezone.now()
     }
-    
+
+    if request.GET.get('pdf'):
+        return render_to_pdf(request, "church_finances/print/monthly_transactions.html", context,
+                             filename=f"transactions_{month_name}_{year}.pdf")
     return render(request, "church_finances/print/monthly_transactions.html", context)
 
 @login_required
@@ -1874,6 +1994,9 @@ def transaction_print_yearly(request):
         'print_date': timezone.now()
     }
     
+    if request.GET.get('pdf'):
+        return render_to_pdf(request, "church_finances/print/yearly_transactions.html", context,
+                             filename=f"transactions_{year}.pdf")
     return render(request, "church_finances/print/yearly_transactions.html", context)
 
 def pending_approval_view(request):
@@ -2159,8 +2282,6 @@ def contribution_statement_pdf(request, year=None):
     total_amount = sum([item['total'] for item in contribution_summary])
     total_contributions = contributions.count()
 
-    # Generate PDF
-    template = get_template('church_finances/contribution_statement.html')
     context = {
         'member': member,
         'church': church,
@@ -2171,20 +2292,11 @@ def contribution_statement_pdf(request, year=None):
         'year': year,
         'statement_date': timezone.now(),
     }
-    
-    html = template.render(context)
-    result = io.BytesIO()
-    
+
     try:
-        pdf = pisa.pisaDocument(io.BytesIO(html.encode("UTF-8")), result)
-        
-        if not pdf.err:
-            response = HttpResponse(result.getvalue(), content_type='application/pdf')
-            response['Content-Disposition'] = f'inline; filename="contribution_statement_{year}_{member.full_name.replace(" ", "_")}.pdf"'
-            return response
-        else:
-            error(request, "Error generating PDF. Please try again or contact support.")
-            return redirect('member_contributions')
+        name = member.full_name.replace(' ', '_')
+        return render_to_pdf(request, 'church_finances/contribution_statement.html', context,
+                             filename=f"contribution_statement_{year}_{name}.pdf")
     except Exception as e:
         error(request, f"PDF generation failed: {str(e)}")
         return redirect('member_contributions')
@@ -3155,7 +3267,9 @@ def christening_certificate_view(request, christening_id):
         'church': church,
         'tmpl': tmpl,
     }
-    return render(request, "church_finances/christening_certificate.html", context)
+    name = christening.baby_full_name.replace(' ', '_')
+    return render_to_pdf(request, "church_finances/christening_certificate.html", context,
+                         filename=f"christening_{name}.pdf")
 
 
 @login_required
@@ -3177,4 +3291,6 @@ def baptism_certificate_view(request, member_id):
         'church': church,
         'tmpl': tmpl,
     }
-    return render(request, "church_finances/baptism_certificate.html", context)
+    name = member.full_name.replace(' ', '_')
+    return render_to_pdf(request, "church_finances/baptism_certificate.html", context,
+                         filename=f"baptism_{name}.pdf")

@@ -94,6 +94,7 @@ urlpatterns = [
     path("contributions/print/yearly/", views.contribution_print_yearly, name="contribution_print_yearly"),
     path("contributions/print/member-annual/", views.contribution_member_annual_summary, name="contribution_member_annual"),
     path("contributions/print/member-annual/<int:member_id>/", views.contribution_member_detail, name="contribution_member_detail"),
+    path("contributions/print/member-annual/all/", views.contribution_all_members_report, name="contribution_all_members_report"),
     
     # Enhanced Tithes & Offerings Management URLs
     path("tithes-offerings/", views.tithes_offerings_dashboard, name="tithes_offerings_dashboard"),
@@ -111,9 +112,11 @@ urlpatterns = [
     path("dashboard/register-staff/", views.dashboard_user_register_view, name="dashboard_user_register"),
     path("dashboard/manage-users/", views.manage_users_view, name="manage_users"),
     path("dashboard/manage-users/remove/<int:member_id>/", views.remove_staff_user_view, name="remove_staff_user"),
+    path("dashboard/manage-users/suspend/<int:member_id>/", views.suspend_staff_user_view, name="suspend_staff_user"),
     path("login/", views.user_login_view, name="login"),
     path("logout/", views.user_logout_view, name="logout"),
     path("profile/", views.profile_view, name="profile"),
+    path("profile/delete/", views.delete_account_view, name="delete_account"),
     path("dashboard/", views.dashboard_view, name="dashboard"),
     path("transactions/", views.transaction_list_view, name="transaction_list"),
     path("transactions/add/", views.transaction_create_view, name="transaction_create"),

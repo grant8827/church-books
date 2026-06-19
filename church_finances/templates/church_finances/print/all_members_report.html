@@ -1,0 +1,142 @@
+{% extends "church_finances/print/base_print.html" %}
+
+{% block report_title %}All Member Contribution Reports{% endblock %}
+{% block report_period %}Year {{ year }}{% endblock %}
+
+{% block extra_style %}
+<style>
+    .report-action-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .report-action-link {
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        margin: 0;
+    }
+
+    .page-break {
+        page-break-after: always;
+        break-after: page;
+    }
+    @media print {
+        .no-print {
+            display: none;
+        }
+        body {
+            padding: 0;
+            margin: 0;
+        }
+        @page {
+            margin: 2cm;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-8">
+    <!-- Print Controls - Only visible on screen -->
+    <div class="no-print mb-8 flex flex-wrap gap-3 items-center">
+        <form class="flex flex-wrap gap-3 items-center" method="get">
+            <select name="year" class="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% for y in "543210"|make_list %}
+                {% with year_option=current_year|add:y %}
+                <option value="{{ year_option }}" {% if year_option == year %}selected{% endif %}>{{ year_option }}</option>
+                {% endwith %}
+                {% endfor %}
+            </select>
+            <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-150">
+                Update
+            </button>
+        </form>
+        <div class="report-action-links">
+        <a href="?year={{ year }}&pdf=1"
+           class="report-action-link inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-150">
+            &#8595; Download PDF
+        </a>
+        <a href="javascript:history.back()" class="report-action-link inline-flex items-center px-4 py-2 bg-slate-500 hover:bg-slate-600 active:bg-slate-700 text-white text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-150">
+            &larr; Back
+        </a>
+        </div>
+    </div>
+
+    {% if members_data %}
+        {% for item in members_data %}
+        <div class="{% if not forloop.last %}page-break{% endif %}">
+            <!-- Member Header -->
+            <div class="mb-4 pb-2 border-b-2 border-gray-400">
+                <h2 class="text-xl font-bold">{{ item.member.full_name }}</h2>
+                <p class="text-sm text-gray-600">Individual Contribution Report &mdash; {{ year }}</p>
+            </div>
+
+            <!-- Contributions Table -->
+            <table class="min-w-full bg-white border border-gray-300 mb-4">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="border px-4 py-2 text-left">#</th>
+                        <th class="border px-4 py-2 text-left">Date</th>
+                        <th class="border px-4 py-2 text-left">Type</th>
+                        <th class="border px-4 py-2 text-left">Method</th>
+                        <th class="border px-4 py-2 text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for contribution in item.contributions %}
+                    <tr class="{% cycle 'bg-white' 'bg-gray-50' %}">
+                        <td class="border px-4 py-2">{{ forloop.counter }}</td>
+                        <td class="border px-4 py-2">{{ contribution.date|date:"F d, Y" }}</td>
+                        <td class="border px-4 py-2">
+                            <span class="px-2 py-1 rounded text-sm font-semibold
+                                {% if contribution.contribution_type == 'tithe' %}bg-green-100 text-green-800
+                                {% elif contribution.contribution_type == 'offering' %}bg-blue-100 text-blue-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ contribution.get_contribution_type_display }}
+                            </span>
+                        </td>
+                        <td class="border px-4 py-2">{{ contribution.get_payment_method_display|default:contribution.payment_method }}</td>
+                        <td class="border px-4 py-2 text-right">${{ contribution.amount|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="border px-4 py-4 text-center text-gray-500">
+                            No contributions recorded for {{ year }}.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="bg-gray-50">
+                        <td colspan="4" class="border px-4 py-2 text-right font-semibold">Total Tithes:</td>
+                        <td class="border px-4 py-2 text-right">${{ item.total_tithe|floatformat:2 }}</td>
+                    </tr>
+                    <tr class="bg-gray-50">
+                        <td colspan="4" class="border px-4 py-2 text-right font-semibold">Total Offerings:</td>
+                        <td class="border px-4 py-2 text-right">${{ item.total_offering|floatformat:2 }}</td>
+                    </tr>
+                    <tr class="font-bold bg-gray-200">
+                        <td colspan="4" class="border px-4 py-2 text-right">Grand Total:</td>
+                        <td class="border px-4 py-2 text-right">${{ item.grand_total|floatformat:2 }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <!-- Signatures -->
+            <div class="report-signatures mt-8 grid grid-cols-2 gap-8">
+                <div class="border-t pt-4">
+                    <p class="text-center">_____________________</p>
+                    <p class="text-center text-sm text-gray-600">Treasurer's Signature</p>
+                </div>
+                <div class="border-t pt-4">
+                    <p class="text-center">_____________________</p>
+                    <p class="text-center text-sm text-gray-600">Pastor's Signature</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <p class="text-center text-gray-500 py-8">No member contributions recorded for {{ year }}.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -972,3 +972,24 @@ class EmailOTP(models.Model):
     @property
     def is_expired(self):
         return timezone.now() > self.expires_at
+
+
+class DeletedAccount(models.Model):
+    """
+    Soft-delete marker. When a user deletes their account we set
+    User.is_active=False and create one of these records so the login
+    view can show a specific "account deleted" message rather than a
+    generic credential error.
+    """
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='deleted_account',
+    )
+    deleted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'cb_deleted_accounts'
+
+    def __str__(self):
+        return f"{self.user.username} deleted at {self.deleted_at:%Y-%m-%d %H:%M}"
