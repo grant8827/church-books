@@ -104,12 +104,14 @@ def subscription_view(request):
     Display subscription packages
     """
     plans = SubscriptionPlan.objects.filter(is_active=True).order_by('annual_price')
+    plans_by_slug = {p.slug: p for p in plans}
 
     context = {
         'paypal_client_id': getattr(settings, 'PAYPAL_CLIENT_ID', ''),
         'standard_plan_id': getattr(settings, 'PAYPAL_STANDARD_PLAN_ID', ''),
         'paypal_mode': getattr(settings, 'PAYPAL_MODE', 'sandbox'),
         'plans': plans,
+        'plans_by_slug': plans_by_slug,
     }
     
     # Add trial information if user is authenticated
