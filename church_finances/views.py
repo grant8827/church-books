@@ -487,10 +487,9 @@ def register_view(request):
                 with transaction.atomic():
                     user = user_form.save()
                     church = church_form.save(commit=False)
-                    church.is_approved = True  # Automatically approve for 30-day trial
                     church.subscription_type = selected_package
-                    church.subscription_status = 'pending'  # Still pending payment, but approved for trial
-                    church.registered_by = user  # Set the registering user
+                    church.subscription_status = 'pending'
+                    church.registered_by = user
                     # Attach subscription plan chosen on pricing page (if any)
                     plan_id_session = request.session.get('selected_plan_id')
                     if plan_id_session:
@@ -504,8 +503,18 @@ def register_view(request):
                     sub_amount = request.session.get('package_price')
                     if sub_amount:
                         church.subscription_amount = float(sub_amount)
-                    # Start the 30-day trial clock
-                    church.trial_end_date = timezone.now() + timedelta(days=30)
+                    # Start the 30-day trial only if the selected plan has it enabled
+                    trial_enabled = (
+                        church.subscription_plan is not None
+                        and church.subscription_plan.free_trial_enabled
+                    )
+                    if trial_enabled:
+                        church.is_approved = True
+                        church.is_trial_active = True
+                        church.trial_end_date = timezone.now() + timedelta(days=30)
+                    else:
+                        church.is_approved = False
+                        church.is_trial_active = False
                     church.save()
                     # Validate and save logo if uploaded
                     logo_file = request.FILES.get('church_logo')
@@ -519,12 +528,12 @@ def register_view(request):
                             error(request, 'Logo file is too large. Maximum size is 5 MB.')
                             return render(request, 'church_finances/register.html', {"user_form": user_form, "church_form": church_form})
                         church.save_logo(logo_file)
-                    # Create an active church member for immediate trial access
+                    # Create church member record
                     ChurchMember.objects.create(
                         user=user,
                         church=church,
-                        role='admin',  # Creator becomes church admin
-                        is_active=True  # Member is active for trial period
+                        role='admin',
+                        is_active=True
                     )
                     # Clear the subscription session data
                     request.session.pop('selected_package', None)
@@ -534,7 +543,10 @@ def register_view(request):
                     # Clear OTP session data after successful registration
                     request.session.pop('otp_verified', None)
                     request.session.pop('otp_email', None)
-                    success(request, f"Welcome to Church Books! Your 30-day free trial has started. You have {church.trial_days_remaining} days to explore all features.")
+                    if trial_enabled:
+                        success(request, f"Welcome to Church Books! Your 30-day free trial has started. You have {church.trial_days_remaining} days to explore all features.")
+                    else:
+                        success(request, "Registration successful! Please complete payment to activate your account.")
                     login(request, user)
                     
                     # Check if there's a redirect URL in session (e.g., from PayPal payment)

@@ -7,10 +7,11 @@ from .admin_site import church_admin_site
 
 @admin.register(SubscriptionPlan, site=church_admin_site)
 class SubscriptionPlanAdmin(admin.ModelAdmin):
-    list_display = ['name', 'slug', 'member_limit', 'annual_price', 'is_custom', 'is_active']
-    list_filter  = ['is_active', 'is_custom']
+    list_display = ['name', 'slug', 'member_limit', 'annual_price', 'is_custom', 'is_active', 'free_trial_enabled']
+    list_filter  = ['is_active', 'is_custom', 'free_trial_enabled']
     search_fields = ['name', 'slug']
     readonly_fields = ['slug']  # slug is the stable key used in code logic
+    list_editable = ['free_trial_enabled']
 
 
 @admin.register(Member, site=church_admin_site)

@@ -36,8 +36,12 @@ class SubscriptionPlan(models.Model):
         default=False,
         help_text="If True the price is calculated from declared_member_count, not a fixed value."
     )
-    description  = models.TextField(blank=True)
-    is_active    = models.BooleanField(default=True)
+    description        = models.TextField(blank=True)
+    is_active          = models.BooleanField(default=True)
+    free_trial_enabled = models.BooleanField(
+        default=True,
+        help_text="If enabled, new registrations on this plan receive a 30-day free trial."
+    )
 
     class Meta:
         db_table = 'cb_subscription_plans'
