@@ -88,10 +88,9 @@
                       ✓ Approve
                     </button>
                   </form>
-                  <form action="{% url 'reject_church' church.id %}" method="post">
+                  <form action="{% url 'reject_church' church.id %}" method="post" class="confirm-form" data-message="Permanently delete this church registration?">
                     {% csrf_token %}
-                    <button type="submit" onclick="return confirm('Permanently delete {{ church.name }}?')"
-                      class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium text-white bg-red-600 hover:bg-red-700">
+                    <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium text-white bg-red-600 hover:bg-red-700">
                       ✕ Reject
                     </button>
                   </form>
@@ -113,10 +112,9 @@
                           ✓ Approve Payment
                         </button>
                       </form>
-                      <form action="{% url 'deny_payment' church.id %}" method="post">
+                      <form action="{% url 'deny_payment' church.id %}" method="post" class="confirm-form" data-message="Deny this payment?">
                         {% csrf_token %}
-                        <button type="submit" onclick="return confirm('Deny this payment?')"
-                          class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium text-white bg-red-500 hover:bg-red-600">
+                        <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium text-white bg-red-500 hover:bg-red-600">
                           ✕ Deny Payment
                         </button>
                       </form>
@@ -193,10 +191,9 @@
                       ✓ Approve Payment
                     </button>
                   </form>
-                  <form action="{% url 'deny_payment' church.id %}" method="post">
+                  <form action="{% url 'deny_payment' church.id %}" method="post" class="confirm-form" data-message="Deny this payment?">
                     {% csrf_token %}
-                    <button type="submit" onclick="return confirm('Deny payment from {{ church.name }}?')"
-                      class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium text-white bg-red-500 hover:bg-red-600">
+                    <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium text-white bg-red-500 hover:bg-red-600">
                       ✕ Deny Payment
                     </button>
                   </form>
@@ -297,7 +294,7 @@
                     </form>
                     <!-- Delete -->
                     <form action="{% url 'admin_delete_church' church.id %}" method="post"
-                          onsubmit="return confirm('Permanently delete {{ church.name }} and ALL its data? This cannot be undone.')">
+                          class="confirm-form" data-message="Permanently delete this church and ALL its data? This cannot be undone.">
                       {% csrf_token %}
                       <button type="submit" class="w-full text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50">
                         Delete
@@ -320,10 +317,10 @@
 </div>
 
 <script>
+// Dropdown toggle
 function toggleDropdown(id) {
   const dd = document.getElementById(id);
   const isHidden = dd.classList.contains('hidden');
-  // Close all open dropdowns first
   document.querySelectorAll('[id^="dd-"]').forEach(el => el.classList.add('hidden'));
   if (isHidden) dd.classList.remove('hidden');
 }
@@ -331,6 +328,14 @@ document.addEventListener('click', function(e) {
   if (!e.target.closest('[id^="dd-"]') && !e.target.closest('button[onclick]')) {
     document.querySelectorAll('[id^="dd-"]').forEach(el => el.classList.add('hidden'));
   }
+});
+
+// Safe confirm dialogs — reads message from data-message attribute, never from interpolated JS strings
+document.querySelectorAll('form.confirm-form').forEach(function(form) {
+  form.addEventListener('submit', function(e) {
+    var msg = form.getAttribute('data-message') || 'Are you sure?';
+    if (!confirm(msg)) e.preventDefault();
+  });
 });
 </script>
 {% endblock %}

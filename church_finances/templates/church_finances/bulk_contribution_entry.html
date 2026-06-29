@@ -175,15 +175,16 @@
     </div>
 </div>
 
+{{ members_data|json_script:"members-data" }}
 <script>
 let rowCounter = 0;
 let members = [];
 let grandTotal = 0;
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize members data
+    // Initialize members data safely via json_script tag
     try {
-        members = {{ members_json|safe }};
+        members = JSON.parse(document.getElementById('members-data').textContent);
     } catch (e) {
         console.error('Error loading members data:', e);
         members = [];

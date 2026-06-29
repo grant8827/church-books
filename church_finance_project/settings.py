@@ -450,6 +450,11 @@ PAYPAL_BASE_URL = os.getenv('PAYPAL_BASE_URL', 'https://churchbooksmanagement.co
 PAYPAL_STANDARD_PLAN_ID = os.getenv('PAYPAL_STANDARD_PLAN_ID', 'P-XXXXXXXXXXXXXXXXXXXX')
 PAYPAL_PREMIUM_PLAN_ID = os.getenv('PAYPAL_PREMIUM_PLAN_ID', 'P-XXXXXXXXXXXXXXXXXXXX')
 USE_MOCK_PAYPAL = os.getenv('USE_MOCK_PAYPAL', 'False').lower() in ('true', '1', 'yes')
+if USE_MOCK_PAYPAL and not DEBUG:
+    raise RuntimeError(
+        "USE_MOCK_PAYPAL=True is not allowed in production (DEBUG=False). "
+        "Remove or unset USE_MOCK_PAYPAL in your environment variables."
+    )
 # Secret token to validate incoming PayPal webhook requests.
 # Add this as a query param when registering the webhook URL in PayPal:
 #   https://yoursite.com/finances/paypal/webhook/?token=<PAYPAL_WEBHOOK_TOKEN>

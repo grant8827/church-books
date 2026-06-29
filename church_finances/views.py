@@ -876,6 +876,7 @@ def user_login_view(request):
 
 
 @login_required
+@require_POST
 def user_logout_view(request):
     """
     Handles user logout.
@@ -2616,26 +2617,17 @@ def bulk_contribution_entry(request):
     # Get all church members for the dropdown
     church_members = Member.objects.filter(church=church, is_active=True).order_by('last_name', 'first_name')
     
-    # Prepare members data for JavaScript
-    import json
-    from django.utils.safestring import mark_safe
-    
-    members_data = []
-    for cm in church_members:
-        members_data.append({
-            'id': cm.id,
-            'name': cm.full_name
-        })
-    
+    members_data = [{'id': cm.id, 'name': cm.full_name} for cm in church_members]
+
     from datetime import date
-    
+
     context = {
         'member': member,
         'church': church,
         'church_members': church_members,
         'contribution_types': Contribution.CONTRIBUTION_TYPES,
         'payment_methods': Contribution.PAYMENT_METHODS,
-        'members_json': mark_safe(json.dumps(members_data)),
+        'members_data': members_data,
         'today': date.today().strftime('%Y-%m-%d'),
     }
     
