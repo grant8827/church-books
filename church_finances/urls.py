@@ -142,6 +142,7 @@ urlpatterns = [
     path("churches/<int:church_id>/verify-offline/", views.verify_offline_payment, name="verify_offline_payment"),
     path("churches/<int:church_id>/deny-payment/", views.deny_payment, name="deny_payment"),
     path("churches/<int:church_id>/admin-delete/", views.admin_delete_church, name="admin_delete_church"),
+    path("churches/<int:church_id>/admin-suspend/", views.admin_suspend_church, name="admin_suspend_church"),
     path("admin/quick-approve-user/<int:user_id>/", views.quick_approve_user_church, name="quick_approve_user_church"),
     
     # Children Management URLs

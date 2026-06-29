@@ -756,6 +756,24 @@ def admin_delete_church(request, church_id):
     return redirect('church_approval_list')
 
 
+@admin_required
+@require_POST
+def admin_suspend_church(request, church_id):
+    """Toggle a church between suspended and pending."""
+    church = get_object_or_404(Church, id=church_id)
+    if church.subscription_status == 'suspended':
+        church.subscription_status = 'pending'
+        church.is_approved = False
+        church.save(update_fields=['subscription_status', 'is_approved'])
+        success(request, f"'{church.name}' has been unsuspended (set to Pending).")
+    else:
+        church.subscription_status = 'suspended'
+        church.is_approved = False
+        church.save(update_fields=['subscription_status', 'is_approved'])
+        success(request, f"'{church.name}' has been suspended.")
+    return redirect('church_approval_list')
+
+
 # CSRF-related imports removed as CSRF protection is disabled
 from django.core.exceptions import PermissionDenied
 import logging
