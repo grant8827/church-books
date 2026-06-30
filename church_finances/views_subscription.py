@@ -207,10 +207,16 @@ def subscription_select(request):
         plan_id = getattr(settings, 'PAYPAL_STANDARD_PLAN_ID', '')
         request.session['paypal_plan_id'] = plan_id
 
-        messages.success(
-            request,
-            f"You have selected the {plan.name} plan. Please complete your registration to start your free trial."
-        )
+        if plan.free_trial_enabled:
+            messages.success(
+                request,
+                f"You have selected the {plan.name} plan. Please complete your registration to start your free trial."
+            )
+        else:
+            messages.success(
+                request,
+                f"You have selected the {plan.name} plan. Please complete your registration to proceed with payment."
+            )
         return redirect('register')
 
     return redirect('subscription')
