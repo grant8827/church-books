@@ -22,6 +22,8 @@ from .forms import (
 from django.contrib.auth.forms import AuthenticationForm
 from django.db import transaction
 from django.core.exceptions import PermissionDenied
+from django.core.mail import EmailMessage
+from django.conf import settings
 from django.utils import timezone
 from datetime import datetime, date
 from calendar import monthrange
@@ -61,14 +63,36 @@ def contact_view(request):
     """
     if request.method == 'POST':
         # Handle contact form submission
-        name = request.POST.get('name')
-        email = request.POST.get('email')
+        name = request.POST.get('name', '').strip()
+        email = request.POST.get('email', '').strip()
         church_name = request.POST.get('church_name', '')
-        subject = request.POST.get('subject')
-        message = request.POST.get('message')
+        subject = request.POST.get('subject', '').strip()
+        message = request.POST.get('message', '').strip()
+
+        email_subject = f"Contact Form: {subject or 'New Message'}"
+        email_body = (
+            "A new message was submitted through the Church Books contact form.\n\n"
+            f"Name: {name}\n"
+            f"Email: {email}\n"
+            f"Church Name: {church_name or 'Not provided'}\n"
+            f"Subject: {subject or 'Not provided'}\n\n"
+            "Message:\n"
+            f"{message}\n"
+        )
         
-        # In a real application, you would send an email here
-        # For now, we'll just show a success message
+        try:
+            contact_email = EmailMessage(
+                subject=email_subject,
+                body=email_body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=['info@churchbooksmanagement.com'],
+                reply_to=[email] if email else None,
+            )
+            contact_email.send(fail_silently=False)
+        except Exception:
+            error(request, "Sorry, we couldn't send your message right now. Please email info@churchbooksmanagement.com directly.")
+            return redirect('contact')
+
         success(request, f"Thank you, {name}! Your message has been sent. We'll get back to you soon.")
         return redirect('contact')
     
