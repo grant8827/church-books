@@ -763,6 +763,38 @@ class ChildAttendance(models.Model):
         return f"{self.child.full_name} - {self.activity_type} - {self.date} ({status})"
 
 
+class MemberAttendance(models.Model):
+    """
+    Track attendance for congregation members at church activities.
+    """
+    ACTIVITY_TYPES = (
+        ('sunday_service', 'Sunday Service'),
+        ('bible_study', 'Bible Study'),
+        ('prayer_meeting', 'Prayer Meeting'),
+        ('special_event', 'Special Event'),
+        ('other', 'Other Activity'),
+    )
+
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='attendance_records')
+    church = models.ForeignKey(Church, on_delete=models.CASCADE)
+    date = models.DateField()
+    activity_type = models.CharField(max_length=20, choices=ACTIVITY_TYPES)
+    activity_name = models.CharField(max_length=100, blank=True, help_text="Name of specific activity or event")
+    present = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
+    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'cb_member_attendance'
+        ordering = ['-date']
+        unique_together = ['member', 'date', 'activity_type']
+
+    def __str__(self):
+        status = "Present" if self.present else "Absent"
+        return f"{self.member.full_name} - {self.activity_type} - {self.date} ({status})"
+
+
 class BabyChristening(models.Model):
     """Model to track baby christenings/baptisms at the church"""
     

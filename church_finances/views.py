@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import login, logout
 from django.contrib.auth.models import User, Group
 from django.contrib.messages import success, error, info, warning
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Count
 from decimal import Decimal
 from django.http import HttpResponseNotAllowed, HttpResponse, JsonResponse
 from django.utils import timezone
@@ -17,7 +17,7 @@ import hashlib
 import time
 from urllib.parse import parse_qs
 from datetime import timedelta
-from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, BabyChristening, CertificateTemplate, EmailOTP, SubscriptionPlan, DeletedAccount, ManagedPaymentGateway
+from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, MemberAttendance, BabyChristening, CertificateTemplate, EmailOTP, SubscriptionPlan, DeletedAccount, ManagedPaymentGateway
 from .forms import (
     CustomUserCreationForm, TransactionForm, ChurchRegistrationForm,
     ChurchMemberForm, MemberForm, ContributionForm, DashboardUserRegistrationForm,
@@ -1791,6 +1791,157 @@ def member_edit_view(request, pk):
 
     return render(request, "church_finances/member_form.html", {"form": form})
 
+
+@login_required
+def member_attendance_record_view(request):
+    """
+    Take attendance for congregation members (one flat roster — members have no class grouping).
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    church_member = ChurchMember.objects.filter(user=request.user, church=church).first()
+    if not church_member or church_member.role not in ['admin', 'pastor', 'bishop', 'assistant_pastor', 'deacon']:
+        error(request, "You don't have permission to record attendance.")
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        date = request.POST.get('date')
+        activity_type = request.POST.get('activity_type')
+        activity_name = request.POST.get('activity_name', '')
+        attendance_data = request.POST.getlist('attendance')
+
+        try:
+            members = Member.objects.filter(church=church, is_active=True)
+            for member in members:
+                present = str(member.id) in attendance_data
+                MemberAttendance.objects.update_or_create(
+                    member=member,
+                    church=church,
+                    date=date,
+                    activity_type=activity_type,
+                    defaults={
+                        'activity_name': activity_name,
+                        'present': present,
+                        'recorded_by': request.user,
+                    }
+                )
+            success(request, f"Attendance recorded for {activity_type} on {date}.")
+            return redirect('member_attendance_record')
+        except Exception as e:
+            error(request, f"Error recording attendance: {str(e)}")
+
+    roster = Member.objects.filter(church=church, is_active=True).order_by('last_name', 'first_name')
+
+    context = {
+        'church': church,
+        'roster': roster,
+        'activity_types': MemberAttendance.ACTIVITY_TYPES,
+    }
+    return render(request, "church_finances/member_attendance_record.html", context)
+
+
+@login_required
+def member_attendance_history_view(request):
+    """
+    View past attendance sessions for congregation members.
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    church_member = ChurchMember.objects.filter(user=request.user, church=church).first()
+    if not church_member or church_member.role not in ['admin', 'pastor', 'bishop', 'assistant_pastor', 'deacon']:
+        error(request, "You don't have permission to view attendance records.")
+        return redirect('dashboard')
+
+    activity_type = request.GET.get('activity_type', '')
+    date = request.GET.get('date', '')
+
+    records = MemberAttendance.objects.filter(church=church)
+    if activity_type:
+        records = records.filter(activity_type=activity_type)
+    if date:
+        records = records.filter(date=date)
+
+    sessions_qs = (
+        records.values('date', 'activity_type', 'activity_name')
+        .annotate(total=Count('id'), present_count=Count('id', filter=Q(present=True)))
+        .order_by('-date', 'activity_type')
+    )
+    if not (activity_type or date):
+        sessions_qs = sessions_qs[:100]
+
+    activity_type_labels = dict(MemberAttendance.ACTIVITY_TYPES)
+    sessions = [
+        {
+            'date': s['date'],
+            'activity_type': s['activity_type'],
+            'activity_type_display': activity_type_labels.get(s['activity_type'], s['activity_type']),
+            'activity_name': s['activity_name'],
+            'total': s['total'],
+            'present_count': s['present_count'],
+        }
+        for s in sessions_qs
+    ]
+
+    context = {
+        'church': church,
+        'activity_types': MemberAttendance.ACTIVITY_TYPES,
+        'selected_activity_type': activity_type,
+        'selected_date': date,
+        'sessions': sessions,
+    }
+    return render(request, "church_finances/member_attendance_history.html", context)
+
+
+@login_required
+def member_attendance_session_detail_view(request):
+    """
+    Per-member breakdown for one attendance-taking session (date + activity).
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    church_member = ChurchMember.objects.filter(user=request.user, church=church).first()
+    if not church_member or church_member.role not in ['admin', 'pastor', 'bishop', 'assistant_pastor', 'deacon']:
+        error(request, "You don't have permission to view attendance records.")
+        return redirect('dashboard')
+
+    date = request.GET.get('date', '')
+    activity_type = request.GET.get('activity_type', '')
+    activity_name = request.GET.get('activity_name', '')
+
+    if not date or not activity_type:
+        error(request, "Missing session reference.")
+        return redirect('member_attendance_history')
+
+    records = MemberAttendance.objects.filter(
+        church=church, date=date, activity_type=activity_type, activity_name=activity_name,
+    ).select_related('member').order_by('member__last_name', 'member__first_name')
+
+    if not records.exists():
+        error(request, "No attendance session found for that date/activity.")
+        return redirect('member_attendance_history')
+
+    context = {
+        'church': church,
+        'date': date,
+        'activity_type': activity_type,
+        'activity_type_display': dict(MemberAttendance.ACTIVITY_TYPES).get(activity_type, activity_type),
+        'activity_name': activity_name,
+        'records': records,
+        'present_count': records.filter(present=True).count(),
+        'total_count': records.count(),
+    }
+    return render(request, "church_finances/member_attendance_session_detail.html", context)
+
+
 @login_required
 def contribution_list_view(request):
     """
@@ -3504,10 +3655,39 @@ def child_edit_view(request, child_id):
     return render(request, "church_finances/child_edit.html", context)
 
 
+def _children_for_class(church, class_value):
+    """Return active children for one Sunday School class ('unassigned' = no class set)."""
+    qs = Child.objects.filter(church=church, is_active=True).order_by('last_name', 'first_name')
+    if class_value == 'unassigned':
+        return qs.exclude(sunday_school_class__in=[v for v, _ in Child.SUNDAY_SCHOOL_CLASSES])
+    return qs.filter(sunday_school_class=class_value)
+
+
+def _class_choices(church):
+    """Sunday School class choices with live headcounts, for the class-picker dropdown."""
+    children = Child.objects.filter(church=church, is_active=True)
+    counts = {value: 0 for value, _ in Child.SUNDAY_SCHOOL_CLASSES}
+    unassigned_count = 0
+    for child in children:
+        if child.sunday_school_class in counts:
+            counts[child.sunday_school_class] += 1
+        else:
+            unassigned_count += 1
+
+    choices = [
+        {'value': value, 'label': label, 'count': counts[value]}
+        for value, label in Child.SUNDAY_SCHOOL_CLASSES
+        if counts[value]
+    ]
+    if unassigned_count:
+        choices.append({'value': 'unassigned', 'label': 'Unassigned', 'count': unassigned_count})
+    return choices
+
+
 @login_required
 def attendance_record_view(request):
     """
-    Record attendance for children
+    Take attendance for one Sunday School class at a time.
     """
     church = get_user_church(request.user)
     if not church:
@@ -3523,18 +3703,16 @@ def attendance_record_view(request):
         date = request.POST.get('date')
         activity_type = request.POST.get('activity_type')
         activity_name = request.POST.get('activity_name', '')
-        
+        selected_class = request.POST.get('sunday_school_class', '')
+
         attendance_data = request.POST.getlist('attendance')  # List of child IDs who were present
-        
+
         try:
-            children = Child.objects.filter(church=church, is_active=True)
-            
+            children = _children_for_class(church, selected_class)
+
             for child in children:
-                # Check if child was marked as present
                 present = str(child.id) in attendance_data
-                
-                # Create or update attendance record
-                attendance, created = ChildAttendance.objects.update_or_create(
+                ChildAttendance.objects.update_or_create(
                     child=child,
                     church=church,
                     date=date,
@@ -3545,21 +3723,146 @@ def attendance_record_view(request):
                         'recorded_by': request.user
                     }
                 )
-            
+
             success(request, f"Attendance recorded for {activity_type} on {date}.")
-            return redirect('attendance_record')
-            
+            return redirect(f"{reverse('attendance_record')}?sunday_school_class={selected_class}")
+
         except Exception as e:
             error(request, f"Error recording attendance: {str(e)}")
-    
-    children = Child.objects.filter(church=church, is_active=True).order_by('last_name', 'first_name')
-    
+
+    selected_class = request.GET.get('sunday_school_class', '')
+    class_choices = _class_choices(church)
+    roster = list(_children_for_class(church, selected_class)) if selected_class else []
+
     context = {
         'church': church,
-        'children': children,
+        'class_choices': class_choices,
+        'selected_class': selected_class,
+        'roster': roster,
         'activity_types': ChildAttendance.ACTIVITY_TYPES,
     }
     return render(request, "church_finances/attendance_record.html", context)
+
+
+@login_required
+def attendance_history_view(request):
+    """
+    View past attendance records for a class/date/activity.
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    church_member = ChurchMember.objects.filter(user=request.user, church=church).first()
+    if not church_member or church_member.role not in ['admin', 'pastor', 'bishop', 'assistant_pastor', 'deacon']:
+        error(request, "You don't have permission to view attendance records.")
+        return redirect('dashboard')
+
+    selected_class = request.GET.get('sunday_school_class', '')
+    activity_type = request.GET.get('activity_type', '')
+    date = request.GET.get('date', '')
+
+    records = ChildAttendance.objects.filter(church=church)
+
+    if selected_class == 'unassigned':
+        records = records.exclude(child__sunday_school_class__in=[v for v, _ in Child.SUNDAY_SCHOOL_CLASSES])
+    elif selected_class:
+        records = records.filter(child__sunday_school_class=selected_class)
+
+    if activity_type:
+        records = records.filter(activity_type=activity_type)
+
+    if date:
+        records = records.filter(date=date)
+
+    # One attendance-taking submission = one (date, activity_type, activity_name) group.
+    sessions_qs = (
+        records.values('date', 'activity_type', 'activity_name')
+        .annotate(total=Count('id'), present_count=Count('id', filter=Q(present=True)))
+        .order_by('-date', 'activity_type')
+    )
+    if not (selected_class or activity_type or date):
+        sessions_qs = sessions_qs[:100]  # No filters yet — show the most recent sessions only.
+
+    activity_type_labels = dict(ChildAttendance.ACTIVITY_TYPES)
+    class_labels = dict(Child.SUNDAY_SCHOOL_CLASSES)
+    sessions = []
+    for s in sessions_qs:
+        classes_in_session = (
+            ChildAttendance.objects.filter(
+                church=church, date=s['date'], activity_type=s['activity_type'], activity_name=s['activity_name'],
+            )
+            .values_list('child__sunday_school_class', flat=True)
+            .distinct()
+        )
+        labels = [class_labels.get(v, 'Unassigned') if v else 'Unassigned' for v in classes_in_session]
+        class_label = labels[0] if len(labels) == 1 else ('Mixed Classes' if len(labels) > 1 else 'Unassigned')
+
+        sessions.append({
+            'date': s['date'],
+            'activity_type': s['activity_type'],
+            'activity_type_display': activity_type_labels.get(s['activity_type'], s['activity_type']),
+            'activity_name': s['activity_name'],
+            'class_label': class_label,
+            'total': s['total'],
+            'present_count': s['present_count'],
+        })
+
+    context = {
+        'church': church,
+        'class_choices': _class_choices(church),
+        'selected_class': selected_class,
+        'activity_types': ChildAttendance.ACTIVITY_TYPES,
+        'selected_activity_type': activity_type,
+        'selected_date': date,
+        'sessions': sessions,
+    }
+    return render(request, "church_finances/attendance_history.html", context)
+
+
+@login_required
+def attendance_session_detail_view(request):
+    """
+    Per-child breakdown for one attendance-taking session (date + activity).
+    """
+    church = get_user_church(request.user)
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    church_member = ChurchMember.objects.filter(user=request.user, church=church).first()
+    if not church_member or church_member.role not in ['admin', 'pastor', 'bishop', 'assistant_pastor', 'deacon']:
+        error(request, "You don't have permission to view attendance records.")
+        return redirect('dashboard')
+
+    date = request.GET.get('date', '')
+    activity_type = request.GET.get('activity_type', '')
+    activity_name = request.GET.get('activity_name', '')
+
+    if not date or not activity_type:
+        error(request, "Missing session reference.")
+        return redirect('attendance_history')
+
+    records = ChildAttendance.objects.filter(
+        church=church, date=date, activity_type=activity_type, activity_name=activity_name,
+    ).select_related('child').order_by('child__last_name', 'child__first_name')
+
+    if not records.exists():
+        error(request, "No attendance session found for that date/activity.")
+        return redirect('attendance_history')
+
+    context = {
+        'church': church,
+        'date': date,
+        'activity_type': activity_type,
+        'activity_type_display': dict(ChildAttendance.ACTIVITY_TYPES).get(activity_type, activity_type),
+        'activity_name': activity_name,
+        'records': records,
+        'present_count': records.filter(present=True).count(),
+        'total_count': records.count(),
+    }
+    return render(request, "church_finances/attendance_session_detail.html", context)
 
 
 # ============== BABY CHRISTENING VIEWS ==============

@@ -162,6 +162,11 @@ urlpatterns = [
     path("children/<int:child_id>/", views.child_detail_view, name="child_detail"),
     path("children/<int:child_id>/edit/", views.child_edit_view, name="child_edit"),
     path("attendance/record/", views.attendance_record_view, name="attendance_record"),
+    path("attendance/history/", views.attendance_history_view, name="attendance_history"),
+    path("attendance/session/", views.attendance_session_detail_view, name="attendance_session_detail"),
+    path("members/attendance/record/", views.member_attendance_record_view, name="member_attendance_record"),
+    path("members/attendance/history/", views.member_attendance_history_view, name="member_attendance_history"),
+    path("members/attendance/session/", views.member_attendance_session_detail_view, name="member_attendance_session_detail"),
     
     # Baby Christening URLs
     path("christenings/", views.christenings_list_view, name="christenings_list"),

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Attendance Session - {{ date }} - Members{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <nav class="flex mb-4" aria-label="Breadcrumb">
+            <ol class="flex items-center space-x-2">
+                <li><a href="{% url 'dashboard' %}" class="text-blue-600 hover:text-blue-800">Dashboard</a></li>
+                <li class="text-gray-500">/</li>
+                <li><a href="{% url 'member_list' %}" class="text-blue-600 hover:text-blue-800">Members</a></li>
+                <li class="text-gray-500">/</li>
+                <li><a href="{% url 'member_attendance_history' %}" class="text-blue-600 hover:text-blue-800">Attendance History</a></li>
+                <li class="text-gray-500">/</li>
+                <li class="text-gray-600">{{ date }}</li>
+            </ol>
+        </nav>
+
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-calendar-day text-blue-600 mr-3"></i>{{ date }}
+                </h1>
+                <p class="text-gray-600 mt-2">
+                    {{ activity_type_display }}{% if activity_name %} &mdash; {{ activity_name }}{% endif %}
+                    &middot; {{ present_count }} / {{ total_count }} present
+                </p>
+            </div>
+            <a href="{% url 'member_attendance_history' %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i>Back to History
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white shadow-md rounded-lg overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for record in records %}
+                    <tr class="hover:bg-blue-50 transition-colors">
+                        <td class="px-6 py-3 font-semibold text-gray-900">{{ record.member.full_name }}</td>
+                        <td class="px-6 py-3">
+                            {% if record.present %}
+                                <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
+                                    <i class="fas fa-check mr-1"></i>Present
+                                </span>
+                            {% else %}
+                                <span class="bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded-full">
+                                    <i class="fas fa-times mr-1"></i>Absent
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
