@@ -187,6 +187,108 @@ class PayPalService:
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
+    # -----------------------------------------------------------------
+    # Partner Referrals / Multiparty (donor-tithing): church onboarding
+    # -----------------------------------------------------------------
+
+    def create_partner_referral(self, tracking_id, email, return_url):
+        """
+        Start PayPal Partner Referral onboarding so a church can receive donor
+        payments directly. Returns the referral response; the 'action_url'
+        link in response['links'] is where the church admin should be redirected.
+        Requires this app to be approved by PayPal for Partner Referrals.
+        """
+        access_token = self.get_access_token()
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {access_token}',
+        }
+        if getattr(settings, 'PAYPAL_BN_CODE', ''):
+            headers['PayPal-Partner-Attribution-Id'] = settings.PAYPAL_BN_CODE
+
+        payload = {
+            "tracking_id": tracking_id,
+            "partner_config_override": {"return_url": return_url},
+            "operations": [{
+                "operation": "API_INTEGRATION",
+                "api_integration_preference": {
+                    "rest_api_integration": {
+                        "integration_method": "PAYPAL",
+                        "integration_type": "THIRD_PARTY",
+                        "third_party_details": {"features": ["PAYMENT", "REFUND"]},
+                    }
+                },
+            }],
+            "products": ["EXPRESS_CHECKOUT"],
+            "legal_consents": [{"type": "SHARE_DATA_CONSENT", "granted": True}],
+        }
+        if email:
+            payload["email"] = email
+
+        response = requests.post(
+            f"{self.base_url}/v2/customer/partner-referrals",
+            headers=headers, data=json.dumps(payload),
+        )
+        if response.status_code not in (200, 201):
+            raise Exception(f"Failed to create partner referral: {response.text}")
+        return response.json()
+
+    def get_merchant_integration(self, tracking_id):
+        """
+        Look up onboarding status/merchant_id for a church by the tracking_id
+        used when the partner referral was created. Requires PAYPAL_PARTNER_ID.
+        """
+        partner_id = getattr(settings, 'PAYPAL_PARTNER_ID', '')
+        if not partner_id:
+            raise Exception('PAYPAL_PARTNER_ID is not configured.')
+
+        access_token = self.get_access_token()
+        headers = {'Authorization': f'Bearer {access_token}'}
+        response = requests.get(
+            f"{self.base_url}/v1/customer/partners/{partner_id}/merchant-integrations"
+            f"?tracking_id={tracking_id}",
+            headers=headers,
+        )
+        if response.status_code != 200:
+            raise Exception(f"Failed to fetch merchant integration: {response.text}")
+        return response.json()
+
+    def create_donation_order(self, amount, currency, payee_merchant_id, custom_id,
+                               return_url, cancel_url):
+        """
+        Create a Multiparty order that routes funds directly to the church's
+        connected PayPal merchant account (instant disbursement).
+        """
+        access_token = self.get_access_token()
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {access_token}',
+        }
+        if getattr(settings, 'PAYPAL_BN_CODE', ''):
+            headers['PayPal-Partner-Attribution-Id'] = settings.PAYPAL_BN_CODE
+
+        payload = {
+            "intent": "CAPTURE",
+            "purchase_units": [{
+                "custom_id": custom_id,
+                "amount": {"currency_code": currency, "value": f"{amount:.2f}"},
+                "payee": {"merchant_id": payee_merchant_id},
+                "payment_instruction": {"disbursement_mode": "INSTANT"},
+            }],
+            "application_context": {
+                "return_url": return_url,
+                "cancel_url": cancel_url,
+                "user_action": "PAY_NOW",
+            },
+        }
+        response = requests.post(
+            f"{self.base_url}/v2/checkout/orders",
+            headers=headers, data=json.dumps(payload),
+        )
+        if response.status_code not in (200, 201):
+            raise Exception(f"Failed to create donation order: {response.text}")
+        return response.json()
+
     def process_webhook(self, webhook_data):
         """
         Process PayPal webhook events

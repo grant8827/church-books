@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Tithe/Offering Payment - Church Books{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">Tithe/Offering Payment</h2>
+        <p class="text-sm text-gray-600 mb-6">Enter your church account number to route payment to the correct church portal.</p>
+
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Church Account Number</label>
+                <input type="text" name="church_account_number" value="{{ form_data.church_account_number|default:'' }}" required class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm" placeholder="Example: CB000123">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                    <input type="number" name="amount" step="0.01" min="1" value="{{ form_data.amount|default:'' }}" required class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm" placeholder="50.00">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Contribution Type</label>
+                    <select name="contribution_type" class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm">
+                        {% for value, label in contribution_types %}
+                            <option value="{{ value }}" {% if form_data.contribution_type == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Donor Name (optional)</label>
+                    <input type="text" name="donor_name" value="{{ form_data.donor_name|default:'' }}" class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm" placeholder="Your name">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Donor Email (optional)</label>
+                    <input type="email" name="donor_email" value="{{ form_data.donor_email|default:'' }}" class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm" placeholder="you@example.com">
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-4 rounded-lg shadow-sm transition">
+                Continue to Secure Payment
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

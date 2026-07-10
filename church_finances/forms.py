@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User, Group
-from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, BabyChristening
+from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, BabyChristening, ManagedPaymentGateway
 from django.db import transaction
 
 
@@ -685,3 +685,23 @@ class ChurchDetailForm(forms.ModelForm):
         labels = {
             'logo': 'Church Logo (PNG or JPG)',
         }
+
+
+class WiPaySetupForm(forms.ModelForm):
+    class Meta:
+        model = ManagedPaymentGateway
+        fields = ['wipay_account_id', 'wipay_country']
+        labels = {
+            'wipay_account_id': 'WiPay Account Number',
+            'wipay_country': 'Your WiPay Account Territory',
+        }
+        widgets = {
+            'wipay_account_id': forms.TextInput(attrs={'class': _TW, 'placeholder': 'Enter your WiPay account number'}),
+            'wipay_country': forms.Select(attrs={'class': _TW}),
+        }
+
+    def clean_wipay_account_id(self):
+        account_id = (self.cleaned_data.get('wipay_account_id') or '').strip()
+        if not account_id:
+            raise forms.ValidationError('WiPay account number is required.')
+        return account_id

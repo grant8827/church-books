@@ -136,6 +136,14 @@ class Church(models.Model):
         help_text='Actual annual subscription amount in USD (stored so custom price is preserved).'
     )
     registered_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='registered_churches', help_text='User who originally registered this church')
+    donation_account_number = models.CharField(
+        max_length=20,
+        unique=True,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text='Public account number used by donors to route online tithe/offering payments to this church.'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -966,6 +974,47 @@ class CertificateTemplate(models.Model):
                 is_active=True
             ).exclude(pk=self.pk).update(is_active=False)
         super().save(*args, **kwargs)
+
+
+class ManagedPaymentGateway(models.Model):
+    GATEWAY_CHOICES = [
+        ('stripe', 'Stripe Connect'),
+        ('paypal', 'PayPal Multiparty'),
+        ('wipay', 'WiPay Caribbean'),
+    ]
+
+    WIPAY_COUNTRIES = [
+        ('TT', 'Trinidad & Tobago'),
+        ('JM', 'Jamaica'),
+        ('BB', 'Barbados'),
+        ('GY', 'Guyana'),
+    ]
+
+    church = models.OneToOneField(Church, on_delete=models.CASCADE, related_name='gateway')
+    provider = models.CharField(max_length=20, choices=GATEWAY_CHOICES, default='wipay')
+    is_active = models.BooleanField(default=False)
+
+    # Existing-style field for providers that expose a connected account id.
+    connected_account_id = models.CharField(max_length=255, blank=True, null=True)
+
+    # WiPay-specific church-facing setup.
+    wipay_account_id = models.CharField(max_length=50, blank=True, null=True, help_text="Church's WiPay Account ID")
+    wipay_country = models.CharField(max_length=2, choices=WIPAY_COUNTRIES, blank=True, null=True)
+
+    # PayPal Partner Referral tracking ID, set when onboarding starts; used to look up
+    # the resulting merchant_id once the church finishes onboarding on PayPal's site.
+    paypal_tracking_id = models.CharField(max_length=64, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'cb_managed_payment_gateways'
+        verbose_name = 'Managed Payment Gateway'
+        verbose_name_plural = 'Managed Payment Gateways'
+
+    def __str__(self):
+        return f"{self.church.name} - {self.get_provider_display()}"
 
 
 class EmailOTP(models.Model):

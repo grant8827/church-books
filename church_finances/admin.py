@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
 from datetime import timedelta
-from .models import Church, Member, Contribution, Transaction, Child, BabyChristening, ChurchMember, SubscriptionPlan
+from .models import Church, Member, Contribution, Transaction, Child, BabyChristening, ChurchMember, SubscriptionPlan, ManagedPaymentGateway
 from .admin_site import church_admin_site
 
 
@@ -45,6 +45,14 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
 #     list_display = ['first_name', 'last_name', 'church', 'date_of_birth', 'is_active']
 #     list_filter = ['church', 'is_active', 'grade_level']
 #     search_fields = ['first_name', 'last_name']
+#     readonly_fields = ['created_at', 'updated_at']
+
+
+# @admin.register(ManagedPaymentGateway, site=church_admin_site)
+# class ManagedPaymentGatewayAdmin(admin.ModelAdmin):
+#     list_display = ['church', 'provider', 'wipay_account_id', 'wipay_country', 'is_active', 'updated_at']
+#     list_filter = ['provider', 'is_active', 'wipay_country']
+#     search_fields = ['church__name', 'wipay_account_id', 'connected_account_id']
 #     readonly_fields = ['created_at', 'updated_at']
 
 

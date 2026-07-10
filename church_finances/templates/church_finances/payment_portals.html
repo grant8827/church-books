@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment Portals - Church Books{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">Payment Portals</h2>
+
+    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-3">Public Donation Account</h3>
+        <p class="text-sm text-gray-600 mb-3">Share this account number with members for tithes and offerings.</p>
+        <div class="inline-flex items-center gap-3 bg-amber-50 border border-amber-200 px-4 py-3 rounded-lg">
+            <span class="text-xs uppercase tracking-wide text-amber-700 font-semibold">Account Number</span>
+            <span class="text-lg font-bold text-amber-900">{{ church.donation_account_number }}</span>
+        </div>
+    </div>
+
+    <p class="text-sm text-gray-600 mb-4">Connect exactly one gateway below — it becomes the active portal donors are routed to when they enter your account number.</p>
+
+    <div class="grid gap-6 md:grid-cols-3">
+
+        <div class="bg-white rounded-xl shadow-md p-6 flex flex-col">
+            <h3 class="text-lg font-semibold text-gray-800 mb-1">WiPay</h3>
+            <p class="text-sm text-gray-600 mb-4 flex-grow">Enter your WiPay Account Number and Territory. Church Books handles the routing and callback verification.</p>
+
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.wipay_account_id.id_for_label }}">{{ form.wipay_account_id.label }}</label>
+                    {{ form.wipay_account_id }}
+                    {% if form.wipay_account_id.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ form.wipay_account_id.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.wipay_country.id_for_label }}">{{ form.wipay_country.label }}</label>
+                    {{ form.wipay_country }}
+                    {% if form.wipay_country.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ form.wipay_country.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="pt-2 flex items-center justify-between">
+                    <p class="text-xs text-gray-500">
+                        {% if gateway.provider == 'wipay' and gateway.is_active %}
+                            <span class="text-green-700 font-semibold">Active</span>
+                        {% else %}
+                            <span class="text-gray-400 font-semibold">Not connected</span>
+                        {% endif %}
+                    </p>
+                    <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-5 rounded-lg shadow-sm transition text-sm">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-6 flex flex-col">
+            <h3 class="text-lg font-semibold text-gray-800 mb-1">Stripe</h3>
+            <p class="text-sm text-gray-600 mb-4 flex-grow">Connect your Stripe account — no keys to copy, donations route straight to you.</p>
+
+            <div class="pt-2 flex items-center justify-between">
+                <p class="text-xs text-gray-500">
+                    {% if stripe_connected %}
+                        <span class="text-green-700 font-semibold">Active</span>
+                    {% else %}
+                        <span class="text-gray-400 font-semibold">Not connected</span>
+                    {% endif %}
+                </p>
+                <a href="{% url 'initiate_stripe_connect' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-sm transition text-sm">
+                    {% if stripe_connected %}Reconnect{% else %}Connect with Stripe{% endif %}
+                </a>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-6 flex flex-col">
+            <h3 class="text-lg font-semibold text-gray-800 mb-1">PayPal</h3>
+            <p class="text-sm text-gray-600 mb-4 flex-grow">Connect your PayPal account — no keys to copy, donations route straight to you.</p>
+
+            <div class="pt-2 flex items-center justify-between">
+                <p class="text-xs text-gray-500">
+                    {% if paypal_connected %}
+                        <span class="text-green-700 font-semibold">Active</span>
+                    {% else %}
+                        <span class="text-gray-400 font-semibold">Not connected</span>
+                    {% endif %}
+                </p>
+                <a href="{% url 'initiate_paypal_connect' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-lg shadow-sm transition text-sm">
+                    {% if paypal_connected %}Reconnect{% else %}Connect with PayPal{% endif %}
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}Redirecting to WiPay - Church Books{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto text-center">
+    <div class="bg-white rounded-xl shadow-md p-8">
+        <h2 class="text-2xl font-bold text-gray-800 mb-3">Redirecting to WiPay</h2>
+        <p class="text-sm text-gray-600 mb-6">You are being securely redirected to complete your payment for {{ church.name }}.</p>
+
+        <form id="wipay-redirect-form" method="post" action="{{ endpoint }}">
+            {% for key, value in payload.items %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endfor %}
+            <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-6 rounded-lg shadow-sm transition">
+                Continue
+            </button>
+        </form>
+
+        <p class="text-xs text-gray-500 mt-4">If redirection does not happen automatically, click Continue.</p>
+    </div>
+</div>
+
+<script>
+setTimeout(function () {
+    var form = document.getElementById('wipay-redirect-form');
+    if (form) {
+        form.submit();
+    }
+}, 400);
+</script>
+{% endblock %}

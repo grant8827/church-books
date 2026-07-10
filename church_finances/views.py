@@ -9,15 +9,19 @@ from django.http import HttpResponseNotAllowed, HttpResponse, JsonResponse
 from django.utils import timezone
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
 from functools import wraps
 import random
 import string
+import hashlib
+import time
+from urllib.parse import parse_qs
 from datetime import timedelta
-from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, BabyChristening, CertificateTemplate, EmailOTP, SubscriptionPlan, DeletedAccount
+from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, BabyChristening, CertificateTemplate, EmailOTP, SubscriptionPlan, DeletedAccount, ManagedPaymentGateway
 from .forms import (
     CustomUserCreationForm, TransactionForm, ChurchRegistrationForm,
     ChurchMemberForm, MemberForm, ContributionForm, DashboardUserRegistrationForm,
-    PersonalProfileForm, ChurchDetailForm
+    PersonalProfileForm, ChurchDetailForm, WiPaySetupForm
 )
 from django.contrib.auth.forms import AuthenticationForm
 from django.db import transaction
@@ -29,19 +33,36 @@ from datetime import datetime, date
 from calendar import monthrange
 from collections import defaultdict
 import io
+import uuid
+import stripe as stripe_lib
 from django.template.loader import get_template
 from django.views.decorators.http import require_POST, require_http_methods
+from . import stripe_service
+from .paypal_service import PayPalService
 
 
 # WeasyPrint PDF generation
 try:
     from weasyprint import HTML as WeasyHTML, CSS as WeasyCSS
     PDF_AVAILABLE = True
-except ImportError:
+    PDF_IMPORT_ERROR = None
+except Exception as exc:
+    # WeasyPrint can fail with OSError when native GTK/Pango libs are missing.
+    WeasyHTML = None
+    WeasyCSS = None
     PDF_AVAILABLE = False
+    PDF_IMPORT_ERROR = str(exc)
+
 
 def render_to_pdf(request, template_name, context, filename='document.pdf'):
     """Render a Django template to a PDF response using WeasyPrint."""
+    if not PDF_AVAILABLE or WeasyHTML is None:
+        return HttpResponse(
+            "PDF generation is unavailable on this server. Missing WeasyPrint system dependencies.",
+            status=503,
+            content_type='text/plain',
+        )
+
     html_string = render(request, template_name, context).content.decode('utf-8')
     base_url = request.build_absolute_uri('/')
     pdf_bytes = WeasyHTML(string=html_string, base_url=base_url).write_pdf()
@@ -111,6 +132,596 @@ def choose_plan_view(request):
     redirect here rather than updating every template individually.
     """
     return redirect('subscription')
+
+
+def _ensure_donation_account_number(church):
+    if church.donation_account_number:
+        return church.donation_account_number
+
+    generated = f"CB{church.id:06d}"
+    if Church.objects.exclude(pk=church.pk).filter(donation_account_number=generated).exists():
+        generated = f"CB{church.id:06d}{random.randint(100, 999)}"
+    church.donation_account_number = generated
+    church.save(update_fields=['donation_account_number', 'updated_at'])
+    return generated
+
+
+def get_wipay_endpoint(country_code):
+    endpoints = {
+        'TT': 'https://tt.wipayfinancial.com/plugins/payments/request',
+        'JM': 'https://jm.wipayfinancial.com/plugins/payments/request',
+        'BB': 'https://bb.wipayfinancial.com/plugins/payments/request',
+        'GY': 'https://gy.wipayfinancial.com/plugins/payments/request',
+    }
+    return endpoints.get(country_code, 'https://tt.wipayfinancial.com/plugins/payments/request')
+
+
+def _require_church_admin(request):
+    """Return the requesting user's church if they administer it, else raise PermissionDenied."""
+    church_member = request.user.churchmember_set.select_related('church').first()
+    church = church_member.church if church_member else None
+    if not church:
+        raise PermissionDenied("Your church account is pending approval.")
+    is_church_admin = (
+        church_member is not None and church_member.role == 'admin'
+    ) or (
+        getattr(church, 'registered_by_id', None) == request.user.pk
+    )
+    if not is_church_admin:
+        raise PermissionDenied("Only church admins can manage payment portals.")
+    return church
+
+
+@login_required
+def payment_portals_view(request):
+    church_member = request.user.churchmember_set.select_related('church').first()
+    church = church_member.church if church_member else None
+    if not church:
+        info(request, "Your church account is pending approval.")
+        return render(request, "church_finances/pending_approval.html")
+
+    is_church_admin = (
+        church_member is not None and church_member.role == 'admin'
+    ) or (
+        getattr(church, 'registered_by_id', None) == request.user.pk
+    )
+    if not is_church_admin:
+        raise PermissionDenied("Only church admins can manage payment portals.")
+
+    _ensure_donation_account_number(church)
+    gateway, _ = ManagedPaymentGateway.objects.get_or_create(church=church, defaults={'provider': 'wipay'})
+
+    if request.method == 'POST':
+        form = WiPaySetupForm(request.POST, instance=gateway)
+        if form.is_valid():
+            gateway_obj = form.save(commit=False)
+            gateway_obj.provider = 'wipay'
+            gateway_obj.is_active = True
+            gateway_obj.save()
+            success(request, 'Payment portal settings saved. WiPay is now active for donor payments.')
+            return redirect('payment_portals')
+    else:
+        form = WiPaySetupForm(instance=gateway)
+
+    return render(request, 'church_finances/payment_portals.html', {
+        'church': church,
+        'gateway': gateway,
+        'form': form,
+        'stripe_connected': gateway.provider == 'stripe' and gateway.is_active,
+        'paypal_connected': gateway.provider == 'paypal' and gateway.is_active,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Stripe Connect (donor-tithing): church onboarding
+# ---------------------------------------------------------------------------
+
+@login_required
+def initiate_stripe_connect(request):
+    """Admin clicks 'Connect with Stripe' — create/reuse a Connect account and send them to onboard."""
+    church = _require_church_admin(request)
+    gateway, _ = ManagedPaymentGateway.objects.get_or_create(church=church, defaults={'provider': 'stripe'})
+
+    if not gateway.connected_account_id:
+        try:
+            # Church has no country field; Stripe Connect Standard defaults to US.
+            account = stripe_service.create_connect_account(
+                country='US',
+                email=request.user.email,
+            )
+        except Exception:
+            error(request, 'Unable to start Stripe onboarding right now. Please try again later.')
+            return redirect('payment_portals')
+        gateway.connected_account_id = account.id
+        gateway.provider = 'stripe'
+        gateway.save(update_fields=['connected_account_id', 'provider', 'updated_at'])
+
+    try:
+        account_link = stripe_service.create_account_link(
+            account_id=gateway.connected_account_id,
+            refresh_url=request.build_absolute_uri(reverse('stripe_connect_refresh')),
+            return_url=request.build_absolute_uri(reverse('stripe_connect_callback')),
+        )
+    except Exception:
+        error(request, 'Unable to generate the Stripe onboarding link. Please try again later.')
+        return redirect('payment_portals')
+
+    return redirect(account_link.url)
+
+
+@login_required
+def stripe_connect_refresh(request):
+    """Stripe sends the admin here if their onboarding link expired — just start again."""
+    return redirect('initiate_stripe_connect')
+
+
+@login_required
+def stripe_connect_callback(request):
+    """Admin returns here after completing (or abandoning) Stripe onboarding."""
+    church = _require_church_admin(request)
+    gateway = getattr(church, 'gateway', None)
+    if not gateway or not gateway.connected_account_id:
+        error(request, 'No Stripe onboarding in progress was found.')
+        return redirect('payment_portals')
+
+    try:
+        account = stripe_service.retrieve_connect_account(gateway.connected_account_id)
+    except Exception:
+        error(request, 'Unable to verify your Stripe account status. Please try again.')
+        return redirect('payment_portals')
+
+    if account.details_submitted and account.charges_enabled:
+        gateway.provider = 'stripe'
+        gateway.is_active = True
+        gateway.save(update_fields=['provider', 'is_active', 'updated_at'])
+        success(request, 'Stripe is now connected and active for donor payments.')
+    else:
+        warning(request, 'Stripe onboarding is not finished yet — please complete the remaining steps.')
+
+    return redirect('payment_portals')
+
+
+# ---------------------------------------------------------------------------
+# PayPal Partner Referral / Multiparty (donor-tithing): church onboarding
+# ---------------------------------------------------------------------------
+
+@login_required
+def initiate_paypal_connect(request):
+    """Admin clicks 'Connect with PayPal' — start Partner Referral onboarding."""
+    church = _require_church_admin(request)
+    gateway, _ = ManagedPaymentGateway.objects.get_or_create(church=church, defaults={'provider': 'paypal'})
+
+    tracking_id = f"church-{church.id}-{uuid.uuid4().hex[:12]}"
+    try:
+        paypal_service = PayPalService()
+        referral = paypal_service.create_partner_referral(
+            tracking_id=tracking_id,
+            email=request.user.email,
+            return_url=request.build_absolute_uri(reverse('paypal_connect_callback')),
+        )
+    except Exception:
+        error(request, 'Unable to start PayPal onboarding right now. Please try again later.')
+        return redirect('payment_portals')
+
+    action_url = next((l['href'] for l in referral.get('links', []) if l.get('rel') == 'action_url'), None)
+    if not action_url:
+        error(request, 'PayPal did not return an onboarding link. Please try again later.')
+        return redirect('payment_portals')
+
+    gateway.paypal_tracking_id = tracking_id
+    gateway.provider = 'paypal'
+    gateway.save(update_fields=['paypal_tracking_id', 'provider', 'updated_at'])
+
+    return redirect(action_url)
+
+
+@login_required
+def paypal_connect_callback(request):
+    """Admin returns here after completing (or abandoning) PayPal onboarding."""
+    church = _require_church_admin(request)
+    gateway = getattr(church, 'gateway', None)
+    if not gateway or not gateway.paypal_tracking_id:
+        error(request, 'No PayPal onboarding in progress was found.')
+        return redirect('payment_portals')
+
+    try:
+        paypal_service = PayPalService()
+        integration = paypal_service.get_merchant_integration(gateway.paypal_tracking_id)
+    except Exception:
+        error(request, 'Unable to verify your PayPal account status. Please try again.')
+        return redirect('payment_portals')
+
+    merchant_id = integration.get('merchant_id')
+    payments_receivable = integration.get('payments_receivable', False)
+    email_confirmed = integration.get('primary_email_confirmed', False)
+
+    if merchant_id and payments_receivable and email_confirmed:
+        gateway.provider = 'paypal'
+        gateway.connected_account_id = merchant_id
+        gateway.is_active = True
+        gateway.save(update_fields=['provider', 'connected_account_id', 'is_active', 'updated_at'])
+        success(request, 'PayPal is now connected and active for donor payments.')
+    else:
+        warning(request, 'PayPal onboarding is not finished yet — please complete the remaining steps.')
+
+    return redirect('payment_portals')
+
+
+_DONATION_CATEGORY_MAP = {
+    'tithe': 'tithes',
+    'offering': 'offerings',
+    'special_offering': 'offerings',
+    'building_fund': 'donations',
+    'missions': 'other_income',
+    'other': 'other_income',
+}
+
+
+def _record_online_donation(church, contribution_type, amount, reference_number, provider_label,
+                             order_id='', donor_name='', donor_email=''):
+    """
+    Idempotently record an online donation (any gateway) as a Contribution + the
+    matching Transaction. Safe to call more than once for the same reference_number
+    (e.g. a webhook retry) — returns the existing record instead of duplicating it.
+    """
+    existing = Contribution.objects.filter(church=church, reference_number=reference_number).first()
+    if existing is not None:
+        return existing
+
+    contribution_type = contribution_type if contribution_type in dict(Contribution.CONTRIBUTION_TYPES) else 'offering'
+    notes = f"Online donation via {provider_label}."
+    if order_id:
+        notes += f" Order: {order_id}."
+    if donor_email:
+        notes += f" Donor email: {donor_email}."
+
+    contribution = Contribution.objects.create(
+        church=church,
+        member=None,
+        date=timezone.now().date(),
+        contribution_type=contribution_type,
+        amount=amount,
+        payment_method='card',
+        contributor_name=donor_name,
+        reference_number=reference_number,
+        notes=notes.strip(),
+        recorded_by=None,
+    )
+    Transaction.objects.create(
+        church=church,
+        date=contribution.date,
+        type='income',
+        category=_DONATION_CATEGORY_MAP.get(contribution_type, 'other_income'),
+        amount=contribution.amount,
+        description=f"Online donation via {provider_label} ({contribution.get_contribution_type_display()}) - Ref {reference_number}",
+        recorded_by=None,
+    )
+    return contribution
+
+
+def donor_payment_portal(request):
+    contribution_types = Contribution.CONTRIBUTION_TYPES
+    if request.method == 'GET':
+        return render(request, 'church_finances/donor_payment_entry.html', {
+            'contribution_types': contribution_types,
+        })
+
+    account_num = (request.POST.get('church_account_number') or '').strip().upper()
+    amount = (request.POST.get('amount') or '').strip()
+    contribution_type = (request.POST.get('contribution_type') or '').strip()
+    donor_name = (request.POST.get('donor_name') or '').strip()
+    donor_email = (request.POST.get('donor_email') or '').strip()
+
+    if not account_num or not amount:
+        error(request, 'Church account number and amount are required.')
+        return render(request, 'church_finances/donor_payment_entry.html', {'form_data': request.POST, 'contribution_types': contribution_types})
+
+    try:
+        church = Church.objects.get(donation_account_number=account_num)
+    except Church.DoesNotExist:
+        error(request, 'No church was found for that account number.')
+        return render(request, 'church_finances/donor_payment_entry.html', {'form_data': request.POST, 'contribution_types': contribution_types})
+
+    try:
+        amount_value = float(amount)
+    except ValueError:
+        error(request, 'Enter a valid amount.')
+        return render(request, 'church_finances/donor_payment_entry.html', {'form_data': request.POST, 'contribution_types': contribution_types})
+
+    if amount_value <= 0:
+        error(request, 'Amount must be greater than zero.')
+        return render(request, 'church_finances/donor_payment_entry.html', {'form_data': request.POST, 'contribution_types': contribution_types})
+
+    allowed_types = {choice[0] for choice in Contribution.CONTRIBUTION_TYPES}
+    if contribution_type not in allowed_types:
+        contribution_type = 'offering'
+
+    gateway = getattr(church, 'gateway', None)
+    if not gateway or not gateway.is_active:
+        return render(request, 'church_finances/payment_failed.html', {
+            'message': 'This church has not activated online payment portals yet.',
+        })
+
+    if gateway.provider == 'wipay':
+        endpoint_url = get_wipay_endpoint(gateway.wipay_country)
+        currency_mapping = {'JM': 'JMD', 'TT': 'TTD', 'BB': 'BBD', 'GY': 'GYD'}
+        currency = currency_mapping.get(gateway.wipay_country, 'USD')
+        order_id = f"DONATION-{church.id}-{int(time.time())}-{random.randint(1000,9999)}"
+
+        callback_url = request.build_absolute_uri(reverse('wipay_callback'))
+        payload_data = f"church_id={church.id}&contribution_type={contribution_type}&donor_name={donor_name}&donor_email={donor_email}"
+
+        wipay_payload = {
+            'account_number': gateway.wipay_account_id,
+            'country_code': gateway.wipay_country,
+            'currency': currency,
+            'environment': getattr(settings, 'WIPAY_ENVIRONMENT', 'live'),
+            'fee_structure': 'customer_pay',
+            'method': 'credit_card',
+            'order_id': order_id,
+            'origin': 'ChurchBooksManagement',
+            'total': f"{amount_value:.2f}",
+            'response_url': callback_url,
+            'data': payload_data,
+        }
+
+        return render(request, 'church_finances/wipay_redirect.html', {
+            'payload': wipay_payload,
+            'endpoint': endpoint_url,
+            'church': church,
+        })
+
+    elif gateway.provider == 'stripe':
+        order_id = f"DONATION-{church.id}-{int(time.time())}-{random.randint(1000,9999)}"
+        success_url = request.build_absolute_uri(reverse('donation_stripe_success')) + '?session_id={CHECKOUT_SESSION_ID}'
+        cancel_url = request.build_absolute_uri(reverse('donor_payment_portal'))
+        try:
+            session = stripe_service.create_donation_checkout_session(
+                amount_cents=int(round(amount_value * 100)),
+                currency='usd',
+                church_name=church.name,
+                destination_account_id=gateway.connected_account_id,
+                success_url=success_url,
+                cancel_url=cancel_url,
+                metadata={
+                    'church_account_number': church.donation_account_number,
+                    'contribution_type': contribution_type,
+                    'donor_name': donor_name,
+                    'donor_email': donor_email,
+                    'order_id': order_id,
+                },
+            )
+        except Exception:
+            return render(request, 'church_finances/payment_failed.html', {
+                'message': 'Unable to start Stripe checkout right now. Please try again later.',
+            })
+        return redirect(session.url)
+
+    elif gateway.provider == 'paypal':
+        return_url = request.build_absolute_uri(reverse('donation_paypal_capture'))
+        cancel_url = request.build_absolute_uri(reverse('donor_payment_portal'))
+        try:
+            paypal_service = PayPalService()
+            order = paypal_service.create_donation_order(
+                amount=amount_value,
+                currency='USD',
+                payee_merchant_id=gateway.connected_account_id,
+                custom_id=f"{church.donation_account_number}:{contribution_type}",
+                return_url=return_url,
+                cancel_url=cancel_url,
+            )
+        except Exception:
+            return render(request, 'church_finances/payment_failed.html', {
+                'message': 'Unable to start PayPal checkout right now. Please try again later.',
+            })
+        approve_link = next((l['href'] for l in order.get('links', []) if l.get('rel') == 'approve'), None)
+        if not approve_link:
+            return render(request, 'church_finances/payment_failed.html', {
+                'message': 'Unable to start PayPal checkout right now. Please try again later.',
+            })
+        # Stash donor-supplied details keyed by order id so the return leg (same
+        # browser session) can attach them to the recorded contribution.
+        request.session[f'paypal_donation_{order["id"]}'] = {
+            'donor_name': donor_name,
+            'donor_email': donor_email,
+        }
+        return redirect(approve_link)
+
+    return render(request, 'church_finances/payment_failed.html', {
+        'message': 'This church does not currently support this payment provider.',
+    })
+
+
+def wipay_callback(request):
+    status = (request.GET.get('status') or '').lower()
+    transaction_id = (request.GET.get('transaction_id') or '').strip()
+    total = (request.GET.get('total') or '').strip()
+    order_id = (request.GET.get('order_id') or '').strip()
+    returned_hash = (request.GET.get('hash') or '').strip().lower()
+    custom_data = request.GET.get('data') or ''
+
+    if status != 'success':
+        return render(request, 'church_finances/payment_failed.html', {
+            'message': 'Payment was not successful. Please try again.',
+        })
+
+    secret = getattr(settings, 'PLATFORM_WIPAY_DEVELOPER_KEY', '')
+    if not secret:
+        return render(request, 'church_finances/payment_failed.html', {
+            'message': 'Payment configuration is incomplete. Please contact support.',
+        })
+
+    generated_hash = hashlib.md5(f"{transaction_id}{total}{secret}".encode('utf-8')).hexdigest()
+    if generated_hash != returned_hash:
+        return render(request, 'church_finances/payment_failed.html', {
+            'message': 'Payment verification failed. Please contact support if your card was charged.',
+        })
+
+    parsed_data = parse_qs(custom_data)
+    church_id = (parsed_data.get('church_id') or [''])[0]
+    contribution_type = (parsed_data.get('contribution_type') or ['offering'])[0]
+    donor_name = (parsed_data.get('donor_name') or [''])[0]
+    donor_email = (parsed_data.get('donor_email') or [''])[0]
+
+    if not church_id:
+        return render(request, 'church_finances/payment_failed.html', {
+            'message': 'Missing church reference in payment response.',
+        })
+
+    church = get_object_or_404(Church, id=church_id)
+    contribution = _record_online_donation(
+        church=church,
+        contribution_type=contribution_type,
+        amount=total,
+        reference_number=transaction_id,
+        provider_label='WiPay',
+        order_id=order_id,
+        donor_name=donor_name,
+        donor_email=donor_email,
+    )
+
+    return render(request, 'church_finances/payment_success.html', {
+        'church': church,
+        'total': total,
+        'transaction_id': transaction_id,
+        'order_id': order_id,
+        'contribution': contribution,
+    })
+
+
+def donation_stripe_success(request):
+    """Donor lands here immediately after a successful Stripe Checkout redirect."""
+    session_id = request.GET.get('session_id', '')
+    if not session_id:
+        return render(request, 'church_finances/payment_failed.html', {
+            'message': 'Missing payment session reference.',
+        })
+
+    try:
+        session = stripe_service.retrieve_checkout_session(session_id)
+    except Exception:
+        return render(request, 'church_finances/payment_failed.html', {
+            'message': 'Unable to verify your payment. Please contact support if you were charged.',
+        })
+
+    if session.payment_status != 'paid':
+        return render(request, 'church_finances/payment_failed.html', {
+            'message': 'Payment was not completed.',
+        })
+
+    metadata = session.metadata or {}
+    church_account_number = metadata.get('church_account_number', '')
+    church = get_object_or_404(Church, donation_account_number=church_account_number)
+
+    contribution = _record_online_donation(
+        church=church,
+        contribution_type=metadata.get('contribution_type', 'offering'),
+        amount=Decimal(session.amount_total) / 100,
+        reference_number=session.payment_intent or session_id,
+        provider_label='Stripe',
+        order_id=metadata.get('order_id', ''),
+        donor_name=metadata.get('donor_name', ''),
+        donor_email=metadata.get('donor_email', ''),
+    )
+
+    return render(request, 'church_finances/payment_success.html', {
+        'church': church,
+        'total': f"{contribution.amount:.2f}",
+        'transaction_id': session.payment_intent or session_id,
+        'order_id': metadata.get('order_id', ''),
+        'contribution': contribution,
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def donation_stripe_webhook(request):
+    """
+    Authoritative record-keeping path for Stripe donations — the donor-facing
+    success view above records it too, but this is idempotent so whichever
+    fires first wins and the other is a no-op.
+    """
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', '')
+
+    try:
+        event = stripe_service.construct_webhook_event(
+            payload, sig_header, webhook_secret=settings.STRIPE_DONATION_WEBHOOK_SECRET,
+        )
+    except stripe_lib.error.SignatureVerificationError:
+        return HttpResponse("Invalid signature", status=400)
+    except Exception as e:
+        return HttpResponse(f"Webhook error: {str(e)}", status=400)
+
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        metadata = session.get('metadata', {})
+        church_account_number = metadata.get('church_account_number')
+        if church_account_number:
+            church = Church.objects.filter(donation_account_number=church_account_number).first()
+            if church:
+                _record_online_donation(
+                    church=church,
+                    contribution_type=metadata.get('contribution_type', 'offering'),
+                    amount=Decimal(session.get('amount_total', 0)) / 100,
+                    reference_number=session.get('payment_intent') or session.get('id'),
+                    provider_label='Stripe',
+                    order_id=metadata.get('order_id', ''),
+                    donor_name=metadata.get('donor_name', ''),
+                    donor_email=metadata.get('donor_email', ''),
+                )
+
+    return HttpResponse("OK", status=200)
+
+
+def donation_paypal_capture(request):
+    """Donor lands here after approving payment on PayPal; capture + record it."""
+    order_id = request.GET.get('token', '')
+    if not order_id:
+        return render(request, 'church_finances/payment_failed.html', {
+            'message': 'Missing payment reference.',
+        })
+
+    paypal_service = PayPalService()
+    result = paypal_service.capture_payment(order_id)
+    if not result.get('success'):
+        return render(request, 'church_finances/payment_failed.html', {
+            'message': 'Unable to complete your PayPal payment. Please contact support if you were charged.',
+        })
+
+    order = result['order']
+    purchase_unit = (order.get('purchase_units') or [{}])[0]
+    captures = (purchase_unit.get('payments') or {}).get('captures') or []
+    if not captures or captures[0].get('status') != 'COMPLETED':
+        return render(request, 'church_finances/payment_failed.html', {
+            'message': 'Payment was not completed.',
+        })
+
+    capture = captures[0]
+    custom_id = purchase_unit.get('custom_id', '')
+    account_number, _, contribution_type = custom_id.partition(':')
+    church = get_object_or_404(Church, donation_account_number=account_number)
+
+    donor_info = request.session.pop(f'paypal_donation_{order_id}', {})
+
+    contribution = _record_online_donation(
+        church=church,
+        contribution_type=contribution_type or 'offering',
+        amount=capture['amount']['value'],
+        reference_number=capture['id'],
+        provider_label='PayPal',
+        order_id=order_id,
+        donor_name=donor_info.get('donor_name', ''),
+        donor_email=donor_info.get('donor_email', ''),
+    )
+
+    return render(request, 'church_finances/payment_success.html', {
+        'church': church,
+        'total': f"{contribution.amount:.2f}",
+        'transaction_id': capture['id'],
+        'order_id': order_id,
+        'contribution': contribution,
+    })
 
 def privacy_policy_view(request):
     """
@@ -815,8 +1426,18 @@ def user_login_view(request):
             error(request, 'Too many login attempts from your network. Please wait 5 minutes before trying again.')
             return render(request, 'church_finances/login.html', {'form': AuthenticationForm()})
 
-        username = request.POST.get('username', '').strip()
+        username = (request.POST.get('username', '') or '').strip()
         password = request.POST.get('password', '')
+
+        # Allow login by username or email, case-insensitive.
+        matched_user = User.objects.filter(username__iexact=username).first()
+        if matched_user is None and username:
+            matched_user = User.objects.filter(email__iexact=username).first()
+
+        auth_data = request.POST.copy()
+        if matched_user is not None:
+            auth_data['username'] = matched_user.username
+            username = matched_user.username  # normalize for lockout key below
 
         # 2. Per-username lockout: locked after 5 failed attempts for 15 minutes
         username_fail_key = f'login_fail_user_{username.lower()}'
@@ -824,9 +1445,10 @@ def user_login_view(request):
             error(request, 'This account has been temporarily locked due to too many failed attempts. Please try again in 15 minutes or reset your password.')
             return render(request, 'church_finances/login.html', {'form': AuthenticationForm()})
 
+
         # Check if user exists but is inactive
         try:
-            user = User.objects.get(username=username)
+            user = matched_user or User.objects.get(username=username)
             if not user.is_active:
                 if DeletedAccount.objects.filter(user=user).exists():
                     error(request, "This account has been deleted. Please contact support if you believe this is a mistake.")
@@ -837,7 +1459,7 @@ def user_login_view(request):
         except User.DoesNotExist:
             pass  # Will be handled by AuthenticationForm
 
-        form = AuthenticationForm(request, data=request.POST)
+        form = AuthenticationForm(request, data=auth_data)
         if form.is_valid():
             user = form.get_user()
 
@@ -889,7 +1511,11 @@ def user_login_view(request):
                     _send_lockout_notification(fail_user, request)
             except User.DoesNotExist:
                 pass  # Don't reveal whether the username exists
-            error(request, "Something went wrong. Please check your credentials and try again.")
+            non_field_errors = form.non_field_errors()
+            if non_field_errors:
+                error(request, non_field_errors[0])
+            else:
+                error(request, "Unable to sign in. Please check your username/email and password.")
     else:
         form = AuthenticationForm()
 

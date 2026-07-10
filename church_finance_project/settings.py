@@ -469,6 +469,22 @@ STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
 STRIPE_SECRET_KEY      = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET  = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 
+# Separate webhook secret for the donor-tithing Stripe Connect endpoint
+# (distinct Stripe Dashboard webhook from the subscription-billing one above).
+#   STRIPE_DONATION_WEBHOOK_SECRET = whsec_...
+STRIPE_DONATION_WEBHOOK_SECRET = os.getenv('STRIPE_DONATION_WEBHOOK_SECRET', '')
+
+# PayPal Partner/Multiparty configuration for donor-tithing onboarding.
+# Requires PayPal to have approved this app for Partner Referrals / Multiparty payments.
+#   PAYPAL_PARTNER_ID = the platform's own PayPal merchant/payer ID as a partner
+#   PAYPAL_BN_CODE    = PayPal-assigned Build Notation code for partner attribution (optional)
+PAYPAL_PARTNER_ID = os.getenv('PAYPAL_PARTNER_ID', '')
+PAYPAL_BN_CODE    = os.getenv('PAYPAL_BN_CODE', '')
+
+# WiPay platform configuration (used for donor portal routing and callback verification)
+PLATFORM_WIPAY_DEVELOPER_KEY = os.getenv('PLATFORM_WIPAY_DEVELOPER_KEY', '')
+WIPAY_ENVIRONMENT = os.getenv('WIPAY_ENVIRONMENT', 'live')
+
 # Security Settings for Production
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
