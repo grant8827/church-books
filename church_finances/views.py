@@ -299,8 +299,16 @@ def initiate_paypal_connect(request):
             email=request.user.email,
             return_url=request.build_absolute_uri(reverse('paypal_connect_callback')),
         )
-    except Exception:
-        error(request, 'Unable to start PayPal onboarding right now. Please try again later.')
+    except Exception as exc:
+        detail = str(exc)
+        if 'NOT_AUTHORIZED' in detail or 'insufficient permissions' in detail.lower():
+            error(
+                request,
+                'PayPal onboarding is blocked: this PayPal app does not have Partner Referrals permissions in live mode yet.'
+            )
+        else:
+            error(request, f'Unable to start PayPal onboarding: {detail}')
+        logging.getLogger(__name__).error('PayPal partner referral start failed: %s', detail, exc_info=True)
         return redirect('payment_portals')
 
     action_url = next((l['href'] for l in referral.get('links', []) if l.get('rel') == 'action_url'), None)
@@ -327,8 +335,10 @@ def paypal_connect_callback(request):
     try:
         paypal_service = PayPalService()
         integration = paypal_service.get_merchant_integration(gateway.paypal_tracking_id)
-    except Exception:
-        error(request, 'Unable to verify your PayPal account status. Please try again.')
+    except Exception as exc:
+        detail = str(exc)
+        error(request, f'Unable to verify your PayPal account status: {detail}')
+        logging.getLogger(__name__).error('PayPal merchant integration lookup failed: %s', detail, exc_info=True)
         return redirect('payment_portals')
 
     merchant_id = integration.get('merchant_id')
