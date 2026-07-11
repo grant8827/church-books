@@ -14,6 +14,7 @@ from functools import wraps
 import random
 import string
 import hashlib
+import json
 import time
 from urllib.parse import parse_qs
 from datetime import timedelta
@@ -459,7 +460,14 @@ def donor_payment_portal(request):
         order_id = f"DONATION-{church.id}-{int(time.time())}-{random.randint(1000,9999)}"
 
         callback_url = request.build_absolute_uri(reverse('wipay_callback'))
-        payload_data = f"church_id={church.id}&contribution_type={contribution_type}&donor_name={donor_name}&donor_email={donor_email}"
+        # WiPay requires the optional `data` field to be a valid JSON string.
+        # It returns this value unchanged on the callback.
+        payload_data = json.dumps({
+            'church_id': str(church.id),
+            'contribution_type': contribution_type,
+            'donor_name': donor_name,
+            'donor_email': donor_email,
+        }, separators=(',', ':'))
 
         wipay_payload = {
             'account_number': gateway.wipay_account_id,
@@ -567,11 +575,20 @@ def wipay_callback(request):
             'message': 'Payment verification failed. Please contact support if your card was charged.',
         })
 
-    parsed_data = parse_qs(custom_data)
-    church_id = (parsed_data.get('church_id') or [''])[0]
-    contribution_type = (parsed_data.get('contribution_type') or ['offering'])[0]
-    donor_name = (parsed_data.get('donor_name') or [''])[0]
-    donor_email = (parsed_data.get('donor_email') or [''])[0]
+    try:
+        parsed_data = json.loads(custom_data) if custom_data else {}
+        if not isinstance(parsed_data, dict):
+            parsed_data = {}
+    except (TypeError, ValueError):
+        # Accept callbacks from payment attempts created before `data` was
+        # changed from query-string encoding to the JSON WiPay requires.
+        legacy_data = parse_qs(custom_data)
+        parsed_data = {key: values[0] for key, values in legacy_data.items() if values}
+
+    church_id = str(parsed_data.get('church_id') or '')
+    contribution_type = str(parsed_data.get('contribution_type') or 'offering')
+    donor_name = str(parsed_data.get('donor_name') or '')
+    donor_email = str(parsed_data.get('donor_email') or '')
 
     if not church_id:
         return render(request, 'church_finances/payment_failed.html', {
