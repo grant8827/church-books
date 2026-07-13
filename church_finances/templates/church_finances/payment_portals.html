@@ -36,7 +36,16 @@
 
         <div class="bg-white rounded-xl shadow-md p-6 flex flex-col">
             <h3 class="text-lg font-semibold text-gray-800 mb-1">WiPay</h3>
-            <p class="text-sm text-gray-600 mb-4 flex-grow">Enter your WiPay Account Number and Territory. Church Books handles the routing and callback verification.</p>
+            <p class="text-sm text-gray-600">Enter your WiPay Account Number and Territory. Church Books handles the routing and callback verification.</p>
+            <details class="text-xs text-gray-600 mt-2 mb-4 flex-grow">
+                <summary class="text-amber-700 hover:text-amber-800 font-semibold cursor-pointer">Read more</summary>
+                <div class="mt-2 rounded-lg bg-amber-50 border border-amber-100 p-3 space-y-2">
+                    <p><strong>Best for:</strong> Churches with a verified WiPay Business Account in the Caribbean.</p>
+                    <p><strong>Supported territories here:</strong> Trinidad &amp; Tobago, Jamaica, Barbados, and Guyana.</p>
+                    <p>The selected territory must match the territory where the church's WiPay account is registered.</p>
+                    <a href="https://wipaycaribbean.com/developers/apis" target="_blank" rel="noopener noreferrer" class="inline-block text-amber-700 underline">View WiPay availability</a>
+                </div>
+            </details>
 
             <form method="post" class="space-y-4">
                 {% csrf_token %}
@@ -73,8 +82,20 @@
         </div>
 
         <div class="bg-white rounded-xl shadow-md p-6 flex flex-col">
-            <h3 class="text-lg font-semibold text-gray-800 mb-1">Stripe</h3>
-            <p class="text-sm text-gray-600 mb-4 flex-grow">Connect your Stripe account — no keys to copy, donations route straight to you.</p>
+            <div class="flex items-center justify-between gap-2 mb-1">
+                <h3 class="text-lg font-semibold text-gray-800">Stripe</h3>
+                {% if not stripe_connect_enabled %}<span class="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700">Coming soon</span>{% endif %}
+            </div>
+            <p class="text-sm text-gray-600">Connect your Stripe account — no keys to copy, donations route straight to you.</p>
+            <details class="text-xs text-gray-600 mt-2 mb-4 flex-grow">
+                <summary class="text-indigo-700 hover:text-indigo-800 font-semibold cursor-pointer">Read more</summary>
+                <div class="mt-2 rounded-lg bg-indigo-50 border border-indigo-100 p-3 space-y-2">
+                    <p><strong>Best for:</strong> Churches legally established in a country where Stripe supports business accounts.</p>
+                    <p><strong>Common supported countries:</strong> United States, Canada, United Kingdom, Australia, New Zealand, Brazil, Mexico, United Arab Emirates, Singapore, Malaysia, Japan, and most of the European Union.</p>
+                    <p>Trinidad &amp; Tobago, Jamaica, Barbados, and Guyana are not currently listed for standard Stripe Payments accounts. The church must use its genuine legal country and complete Stripe identity verification.</p>
+                    <a href="https://stripe.com/global" target="_blank" rel="noopener noreferrer" class="inline-block text-indigo-700 underline">View Stripe's current country list</a>
+                </div>
+            </details>
 
             <div class="pt-2 flex items-center justify-between">
                 <p class="text-xs text-gray-500">
@@ -84,7 +105,9 @@
                         <span class="text-gray-400 font-semibold">Not connected</span>
                     {% endif %}
                 </p>
-                {% if has_saved_gateway and gateway.provider != 'stripe' %}
+                {% if not stripe_connect_enabled %}
+                    <span class="bg-gray-300 text-gray-600 font-semibold py-2 px-5 rounded-lg text-sm cursor-not-allowed">Coming soon</span>
+                {% elif has_saved_gateway and gateway.provider != 'stripe' %}
                     <span class="bg-gray-300 text-gray-600 font-semibold py-2 px-5 rounded-lg text-sm cursor-not-allowed">Connect with Stripe</span>
                 {% else %}
                     <a href="{% url 'initiate_stripe_connect' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-sm transition text-sm">
@@ -95,8 +118,20 @@
         </div>
 
         <div class="bg-white rounded-xl shadow-md p-6 flex flex-col">
-            <h3 class="text-lg font-semibold text-gray-800 mb-1">PayPal</h3>
-            <p class="text-sm text-gray-600 mb-4 flex-grow">Connect your PayPal account — no keys to copy, donations route straight to you.</p>
+            <div class="flex items-center justify-between gap-2 mb-1">
+                <h3 class="text-lg font-semibold text-gray-800">PayPal</h3>
+                {% if not paypal_connect_enabled %}<span class="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">Coming soon</span>{% endif %}
+            </div>
+            <p class="text-sm text-gray-600">Connect your PayPal account — no keys to copy, donations route straight to you.</p>
+            <details class="text-xs text-gray-600 mt-2 mb-4 flex-grow">
+                <summary class="text-blue-700 hover:text-blue-800 font-semibold cursor-pointer">Read more</summary>
+                <div class="mt-2 rounded-lg bg-blue-50 border border-blue-100 p-3 space-y-2">
+                    <p><strong>Best for:</strong> Churches with a verified PayPal Business Account that can receive payments in their country.</p>
+                    <p>PayPal is available across more than 200 countries and regions, but receiving payments and available currencies vary by country.</p>
+                    <p>Church Books can enable this connection only after PayPal approves its Partner Referrals and Multiparty integration.</p>
+                    <a href="https://www.paypal.com/webapps/mpp/country-worldwide" target="_blank" rel="noopener noreferrer" class="inline-block text-blue-700 underline">View PayPal's country list</a>
+                </div>
+            </details>
 
             <div class="pt-2 flex items-center justify-between">
                 <p class="text-xs text-gray-500">
@@ -106,7 +141,9 @@
                         <span class="text-gray-400 font-semibold">Not connected</span>
                     {% endif %}
                 </p>
-                {% if has_saved_gateway and gateway.provider != 'paypal' %}
+                {% if not paypal_connect_enabled %}
+                    <span class="bg-gray-300 text-gray-600 font-semibold py-2 px-5 rounded-lg text-sm cursor-not-allowed">Coming soon</span>
+                {% elif has_saved_gateway and gateway.provider != 'paypal' %}
                     <span class="bg-gray-300 text-gray-600 font-semibold py-2 px-5 rounded-lg text-sm cursor-not-allowed">Connect with PayPal</span>
                 {% else %}
                     <a href="{% url 'initiate_paypal_connect' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-lg shadow-sm transition text-sm">

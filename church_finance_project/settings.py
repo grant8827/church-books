@@ -476,6 +476,7 @@ STRIPE_CURRENCY = os.getenv('STRIPE_CURRENCY', 'usd').strip().lower()
 # Optional. If omitted, Stripe defaults the connected account to the platform
 # country and asks the account owner to confirm it during onboarding.
 STRIPE_CONNECTED_ACCOUNT_COUNTRY = os.getenv('STRIPE_CONNECTED_ACCOUNT_COUNTRY', '').strip().upper()
+STRIPE_CONNECT_ENABLED = os.getenv('STRIPE_CONNECT_ENABLED', 'False').lower() in ('true', '1', 'yes')
 
 # Separate webhook secret for the donor-tithing Stripe Connect endpoint
 # (distinct Stripe Dashboard webhook from the subscription-billing one above).
@@ -488,6 +489,7 @@ STRIPE_DONATION_WEBHOOK_SECRET = os.getenv('STRIPE_DONATION_WEBHOOK_SECRET', '')
 #   PAYPAL_BN_CODE    = PayPal-assigned Build Notation code for partner attribution (optional)
 PAYPAL_PARTNER_ID = os.getenv('PAYPAL_PARTNER_ID', '')
 PAYPAL_BN_CODE    = os.getenv('PAYPAL_BN_CODE', '')
+PAYPAL_CONNECT_ENABLED = os.getenv('PAYPAL_CONNECT_ENABLED', 'False').lower() in ('true', '1', 'yes')
 
 # WiPay platform configuration (used for donor portal routing and callback verification)
 PLATFORM_WIPAY_DEVELOPER_KEY = os.getenv('PLATFORM_WIPAY_DEVELOPER_KEY', '')
