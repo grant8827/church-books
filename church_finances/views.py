@@ -15,6 +15,7 @@ import random
 import string
 import hashlib
 import json
+import logging
 import time
 from urllib.parse import parse_qs
 from datetime import timedelta
@@ -173,6 +174,70 @@ def _require_church_admin(request):
     return church
 
 
+def _gateway_has_saved_connection(gateway):
+    """Return whether switching providers could overwrite saved gateway state."""
+    return bool(
+        gateway.is_active
+        or gateway.connected_account_id
+        or gateway.paypal_tracking_id
+        or gateway.wipay_account_id
+        or gateway.wipay_country
+    )
+
+
+def _block_gateway_switch(request, gateway, requested_provider):
+    """Require an explicit disconnect before changing payment providers."""
+    if gateway.provider != requested_provider and _gateway_has_saved_connection(gateway):
+        warning(
+            request,
+            f'Disconnect {gateway.get_provider_display()} before connecting another payment portal.'
+        )
+        return True
+    return False
+
+
+def _stripe_configuration_error():
+    """Return a safe configuration error, or an empty string when usable."""
+    secret_key = (getattr(settings, 'STRIPE_SECRET_KEY', '') or '').strip()
+    publishable_key = (getattr(settings, 'STRIPE_PUBLISHABLE_KEY', '') or '').strip()
+    if not secret_key:
+        return 'STRIPE_SECRET_KEY is not configured.'
+    if not secret_key.startswith(('sk_test_', 'sk_live_')):
+        return 'STRIPE_SECRET_KEY is not a standard Stripe secret key.'
+    if publishable_key:
+        secret_mode = 'live' if secret_key.startswith('sk_live_') else 'test'
+        expected_prefix = f'pk_{secret_mode}_'
+        if not publishable_key.startswith(expected_prefix):
+            return 'Stripe publishable and secret keys use different modes.'
+    return ''
+
+
+def _log_stripe_error(stage, exc, church_id=None):
+    """Log actionable Stripe diagnostics without logging keys or payment data."""
+    request_id = getattr(exc, 'request_id', None)
+    if not request_id:
+        headers = getattr(exc, 'headers', None) or {}
+        request_id = headers.get('request-id') or headers.get('Request-Id')
+    logging.getLogger(__name__).error(
+        'Stripe %s failed: church_id=%s error_type=%s code=%s http_status=%s request_id=%s message=%s',
+        stage,
+        church_id,
+        type(exc).__name__,
+        getattr(exc, 'code', None),
+        getattr(exc, 'http_status', None),
+        request_id,
+        str(exc),
+        exc_info=True,
+    )
+    return request_id
+
+
+def _configured_url(request, setting_name, fallback_url):
+    """Use an explicitly configured absolute URL, otherwise use the request host."""
+    configured = (getattr(settings, setting_name, '') or '').strip()
+    return configured or request.build_absolute_uri(fallback_url)
+
+
 @login_required
 def payment_portals_view(request):
     church_member = request.user.churchmember_set.select_related('church').first()
@@ -193,6 +258,8 @@ def payment_portals_view(request):
     gateway, _ = ManagedPaymentGateway.objects.get_or_create(church=church, defaults={'provider': 'wipay'})
 
     if request.method == 'POST':
+        if _block_gateway_switch(request, gateway, 'wipay'):
+            return redirect('payment_portals')
         form = WiPaySetupForm(request.POST, instance=gateway)
         if form.is_valid():
             gateway_obj = form.save(commit=False)
@@ -208,9 +275,38 @@ def payment_portals_view(request):
         'church': church,
         'gateway': gateway,
         'form': form,
+        'has_saved_gateway': _gateway_has_saved_connection(gateway),
         'stripe_connected': gateway.provider == 'stripe' and gateway.is_active,
         'paypal_connected': gateway.provider == 'paypal' and gateway.is_active,
     })
+
+
+@login_required
+@require_POST
+def disconnect_payment_portal(request):
+    """Deactivate the church's gateway and remove its saved connection identifiers."""
+    church = _require_church_admin(request)
+    gateway = getattr(church, 'gateway', None)
+    if not gateway or not _gateway_has_saved_connection(gateway):
+        info(request, 'No payment portal is currently connected.')
+        return redirect('payment_portals')
+
+    provider_label = gateway.get_provider_display()
+    gateway.is_active = False
+    gateway.connected_account_id = None
+    gateway.paypal_tracking_id = None
+    gateway.wipay_account_id = None
+    gateway.wipay_country = None
+    gateway.save(update_fields=[
+        'is_active', 'connected_account_id', 'paypal_tracking_id',
+        'wipay_account_id', 'wipay_country', 'updated_at',
+    ])
+    logging.getLogger(__name__).info(
+        'Payment portal disconnected: church_id=%s provider=%s user_id=%s',
+        church.pk, gateway.provider, request.user.pk,
+    )
+    success(request, f'{provider_label} has been disconnected. You can now connect another payment portal.')
+    return redirect('payment_portals')
 
 
 # ---------------------------------------------------------------------------
@@ -222,16 +318,25 @@ def initiate_stripe_connect(request):
     """Admin clicks 'Connect with Stripe' — create/reuse a Connect account and send them to onboard."""
     church = _require_church_admin(request)
     gateway, _ = ManagedPaymentGateway.objects.get_or_create(church=church, defaults={'provider': 'stripe'})
+    if _block_gateway_switch(request, gateway, 'stripe'):
+        return redirect('payment_portals')
+
+    config_error = _stripe_configuration_error()
+    if config_error:
+        logging.getLogger(__name__).error('Stripe configuration invalid: %s', config_error)
+        error(request, 'Stripe is not configured correctly. Please contact support.')
+        return redirect('payment_portals')
 
     if not gateway.connected_account_id:
         try:
-            # Church has no country field; Stripe Connect Standard defaults to US.
             account = stripe_service.create_connect_account(
-                country='US',
                 email=request.user.email,
+                country=getattr(settings, 'STRIPE_CONNECTED_ACCOUNT_COUNTRY', '') or None,
             )
-        except Exception:
-            error(request, 'Unable to start Stripe onboarding right now. Please try again later.')
+        except Exception as exc:
+            request_id = _log_stripe_error('connected account creation', exc, church.pk)
+            reference = f' Reference: {request_id}' if request_id else ''
+            error(request, f'Unable to start Stripe onboarding right now.{reference}')
             return redirect('payment_portals')
         gateway.connected_account_id = account.id
         gateway.provider = 'stripe'
@@ -240,11 +345,13 @@ def initiate_stripe_connect(request):
     try:
         account_link = stripe_service.create_account_link(
             account_id=gateway.connected_account_id,
-            refresh_url=request.build_absolute_uri(reverse('stripe_connect_refresh')),
-            return_url=request.build_absolute_uri(reverse('stripe_connect_callback')),
+            refresh_url=_configured_url(request, 'STRIPE_CONNECT_REFRESH_URL', reverse('stripe_connect_refresh')),
+            return_url=_configured_url(request, 'STRIPE_CONNECT_RETURN_URL', reverse('stripe_connect_callback')),
         )
-    except Exception:
-        error(request, 'Unable to generate the Stripe onboarding link. Please try again later.')
+    except Exception as exc:
+        request_id = _log_stripe_error('account link creation', exc, church.pk)
+        reference = f' Reference: {request_id}' if request_id else ''
+        error(request, f'Unable to generate the Stripe onboarding link.{reference}')
         return redirect('payment_portals')
 
     return redirect(account_link.url)
@@ -267,8 +374,10 @@ def stripe_connect_callback(request):
 
     try:
         account = stripe_service.retrieve_connect_account(gateway.connected_account_id)
-    except Exception:
-        error(request, 'Unable to verify your Stripe account status. Please try again.')
+    except Exception as exc:
+        request_id = _log_stripe_error('connected account verification', exc, church.pk)
+        reference = f' Reference: {request_id}' if request_id else ''
+        error(request, f'Unable to verify your Stripe account status.{reference}')
         return redirect('payment_portals')
 
     if account.details_submitted and account.charges_enabled:
@@ -291,6 +400,8 @@ def initiate_paypal_connect(request):
     """Admin clicks 'Connect with PayPal' — start Partner Referral onboarding."""
     church = _require_church_admin(request)
     gateway, _ = ManagedPaymentGateway.objects.get_or_create(church=church, defaults={'provider': 'paypal'})
+    if _block_gateway_switch(request, gateway, 'paypal'):
+        return redirect('payment_portals')
 
     tracking_id = f"church-{church.id}-{uuid.uuid4().hex[:12]}"
     try:
@@ -491,12 +602,19 @@ def donor_payment_portal(request):
 
     elif gateway.provider == 'stripe':
         order_id = f"DONATION-{church.id}-{int(time.time())}-{random.randint(1000,9999)}"
-        success_url = request.build_absolute_uri(reverse('donation_stripe_success')) + '?session_id={CHECKOUT_SESSION_ID}'
-        cancel_url = request.build_absolute_uri(reverse('donor_payment_portal'))
+        success_url = _configured_url(
+            request, 'STRIPE_PAYMENT_SUCCESS_URL', reverse('donation_stripe_success')
+        )
+        if '{CHECKOUT_SESSION_ID}' not in success_url:
+            separator = '&' if '?' in success_url else '?'
+            success_url += f'{separator}session_id={{CHECKOUT_SESSION_ID}}'
+        cancel_url = _configured_url(
+            request, 'STRIPE_PAYMENT_CANCEL_URL', reverse('donor_payment_portal')
+        )
         try:
             session = stripe_service.create_donation_checkout_session(
                 amount_cents=int(round(amount_value * 100)),
-                currency='usd',
+                currency=getattr(settings, 'STRIPE_CURRENCY', 'usd'),
                 church_name=church.name,
                 destination_account_id=gateway.connected_account_id,
                 success_url=success_url,
@@ -509,9 +627,11 @@ def donor_payment_portal(request):
                     'order_id': order_id,
                 },
             )
-        except Exception:
+        except Exception as exc:
+            request_id = _log_stripe_error('donation checkout creation', exc, church.pk)
+            reference = f' Reference: {request_id}' if request_id else ''
             return render(request, 'church_finances/payment_failed.html', {
-                'message': 'Unable to start Stripe checkout right now. Please try again later.',
+                'message': f'Unable to start Stripe checkout right now.{reference}',
             })
         return redirect(session.url)
 
@@ -626,9 +746,11 @@ def donation_stripe_success(request):
 
     try:
         session = stripe_service.retrieve_checkout_session(session_id)
-    except Exception:
+    except Exception as exc:
+        request_id = _log_stripe_error('checkout session retrieval', exc)
+        reference = f' Reference: {request_id}' if request_id else ''
         return render(request, 'church_finances/payment_failed.html', {
-            'message': 'Unable to verify your payment. Please contact support if you were charged.',
+            'message': f'Unable to verify your payment.{reference} Please contact support if you were charged.',
         })
 
     if session.payment_status != 'paid':
@@ -1435,10 +1557,6 @@ def admin_suspend_church(request, church_id):
         success(request, f"'{church.name}' has been suspended.")
     return redirect('church_approval_list')
 
-
-# CSRF-related imports removed as CSRF protection is disabled
-from django.core.exceptions import PermissionDenied
-import logging
 
 logger = logging.getLogger(__name__)
 

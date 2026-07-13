@@ -468,6 +468,14 @@ PAYPAL_WEBHOOK_TOKEN = os.getenv('PAYPAL_WEBHOOK_TOKEN', '')
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
 STRIPE_SECRET_KEY      = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET  = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+STRIPE_CONNECT_RETURN_URL = os.getenv('STRIPE_CONNECT_RETURN_URL', '')
+STRIPE_CONNECT_REFRESH_URL = os.getenv('STRIPE_CONNECT_REFRESH_URL', '')
+STRIPE_PAYMENT_SUCCESS_URL = os.getenv('STRIPE_PAYMENT_SUCCESS_URL', '')
+STRIPE_PAYMENT_CANCEL_URL = os.getenv('STRIPE_PAYMENT_CANCEL_URL', '')
+STRIPE_CURRENCY = os.getenv('STRIPE_CURRENCY', 'usd').strip().lower()
+# Optional. If omitted, Stripe defaults the connected account to the platform
+# country and asks the account owner to confirm it during onboarding.
+STRIPE_CONNECTED_ACCOUNT_COUNTRY = os.getenv('STRIPE_CONNECTED_ACCOUNT_COUNTRY', '').strip().upper()
 
 # Separate webhook secret for the donor-tithing Stripe Connect endpoint
 # (distinct Stripe Dashboard webhook from the subscription-billing one above).

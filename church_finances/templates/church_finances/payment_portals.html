@@ -17,6 +17,21 @@
 
     <p class="text-sm text-gray-600 mb-4">Connect exactly one gateway below — it becomes the active portal donors are routed to when they enter your account number.</p>
 
+    {% if has_saved_gateway %}
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm font-semibold text-blue-900">{{ gateway.get_provider_display }} is your {% if gateway.is_active %}active payment portal{% else %}current payment portal setup{% endif %}.</p>
+                <p class="text-xs text-blue-700 mt-1">Disconnect it before connecting a different provider.</p>
+            </div>
+            <form method="post" action="{% url 'disconnect_payment_portal' %}" onsubmit="return confirm('Disconnect {{ gateway.get_provider_display|escapejs }}? Donors will not be able to use this portal until another one is connected.');">
+                {% csrf_token %}
+                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition text-sm">
+                    Disconnect
+                </button>
+            </form>
+        </div>
+    {% endif %}
+
     <div class="grid gap-6 md:grid-cols-3">
 
         <div class="bg-white rounded-xl shadow-md p-6 flex flex-col">
@@ -50,7 +65,7 @@
                             <span class="text-gray-400 font-semibold">Not connected</span>
                         {% endif %}
                     </p>
-                    <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-5 rounded-lg shadow-sm transition text-sm">
+                    <button type="submit" {% if has_saved_gateway and gateway.provider != 'wipay' %}disabled{% endif %} class="bg-amber-600 hover:bg-amber-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-2 px-5 rounded-lg shadow-sm transition text-sm">
                         Save
                     </button>
                 </div>
@@ -69,9 +84,13 @@
                         <span class="text-gray-400 font-semibold">Not connected</span>
                     {% endif %}
                 </p>
-                <a href="{% url 'initiate_stripe_connect' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-sm transition text-sm">
-                    {% if stripe_connected %}Reconnect{% else %}Connect with Stripe{% endif %}
-                </a>
+                {% if has_saved_gateway and gateway.provider != 'stripe' %}
+                    <span class="bg-gray-300 text-gray-600 font-semibold py-2 px-5 rounded-lg text-sm cursor-not-allowed">Connect with Stripe</span>
+                {% else %}
+                    <a href="{% url 'initiate_stripe_connect' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-sm transition text-sm">
+                        {% if stripe_connected %}Reconnect{% else %}Connect with Stripe{% endif %}
+                    </a>
+                {% endif %}
             </div>
         </div>
 
@@ -87,9 +106,13 @@
                         <span class="text-gray-400 font-semibold">Not connected</span>
                     {% endif %}
                 </p>
-                <a href="{% url 'initiate_paypal_connect' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-lg shadow-sm transition text-sm">
-                    {% if paypal_connected %}Reconnect{% else %}Connect with PayPal{% endif %}
-                </a>
+                {% if has_saved_gateway and gateway.provider != 'paypal' %}
+                    <span class="bg-gray-300 text-gray-600 font-semibold py-2 px-5 rounded-lg text-sm cursor-not-allowed">Connect with PayPal</span>
+                {% else %}
+                    <a href="{% url 'initiate_paypal_connect' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-lg shadow-sm transition text-sm">
+                        {% if paypal_connected %}Reconnect{% else %}Connect with PayPal{% endif %}
+                    </a>
+                {% endif %}
             </div>
         </div>
 

@@ -118,6 +118,7 @@ urlpatterns = [
     path("profile/", views.profile_view, name="profile"),
     path("profile/delete/", views.delete_account_view, name="delete_account"),
     path("payment-portals/", views.payment_portals_view, name="payment_portals"),
+    path("payment-portals/disconnect/", views.disconnect_payment_portal, name="disconnect_payment_portal"),
     path("payment-portals/stripe/connect/", views.initiate_stripe_connect, name="initiate_stripe_connect"),
     path("payment-portals/stripe/refresh/", views.stripe_connect_refresh, name="stripe_connect_refresh"),
     path("payment-portals/stripe/callback/", views.stripe_connect_callback, name="stripe_connect_callback"),

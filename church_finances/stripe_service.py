@@ -73,10 +73,13 @@ def construct_webhook_event(payload, sig_header, webhook_secret=None):
 # Stripe Connect (donor-tithing): church onboarding + destination-charge checkout
 # ---------------------------------------------------------------------------
 
-def create_connect_account(country, email):
+def create_connect_account(email, country=None):
     """Create a Standard Connect account for a church so donor funds route to them."""
     client = get_stripe_client()
-    return client.Account.create(type='standard', country=country, email=email)
+    params = {'type': 'standard', 'email': email}
+    if country:
+        params['country'] = country
+    return client.Account.create(**params)
 
 
 def create_account_link(account_id, refresh_url, return_url):
