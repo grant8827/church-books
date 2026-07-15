@@ -276,8 +276,6 @@ def payment_portals_view(request):
         'gateway': gateway,
         'form': form,
         'has_saved_gateway': _gateway_has_saved_connection(gateway),
-        'stripe_connect_enabled': getattr(settings, 'STRIPE_CONNECT_ENABLED', False),
-        'paypal_connect_enabled': getattr(settings, 'PAYPAL_CONNECT_ENABLED', False),
         'stripe_connected': gateway.provider == 'stripe' and gateway.is_active,
         'paypal_connected': gateway.provider == 'paypal' and gateway.is_active,
     })
@@ -319,9 +317,6 @@ def disconnect_payment_portal(request):
 def initiate_stripe_connect(request):
     """Admin clicks 'Connect with Stripe' — create/reuse a Connect account and send them to onboard."""
     church = _require_church_admin(request)
-    if not getattr(settings, 'STRIPE_CONNECT_ENABLED', False):
-        info(request, 'Stripe connections are coming soon.')
-        return redirect('payment_portals')
     gateway, _ = ManagedPaymentGateway.objects.get_or_create(church=church, defaults={'provider': 'stripe'})
     if _block_gateway_switch(request, gateway, 'stripe'):
         return redirect('payment_portals')
@@ -404,9 +399,6 @@ def stripe_connect_callback(request):
 def initiate_paypal_connect(request):
     """Admin clicks 'Connect with PayPal' — start Partner Referral onboarding."""
     church = _require_church_admin(request)
-    if not getattr(settings, 'PAYPAL_CONNECT_ENABLED', False):
-        info(request, 'PayPal connections are coming soon.')
-        return redirect('payment_portals')
     gateway, _ = ManagedPaymentGateway.objects.get_or_create(church=church, defaults={'provider': 'paypal'})
     if _block_gateway_switch(request, gateway, 'paypal'):
         return redirect('payment_portals')
