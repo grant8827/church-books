@@ -732,10 +732,15 @@ def wipay_callback(request):
             'message': 'WiPay returned an invalid payment amount.',
         })
 
+    # With fee_structure=customer_pay, WiPay may return the cardholder's
+    # fee-inclusive total. The contribution amount remains the original amount
+    # stored before redirect, and WiPay requires that original total for the
+    # response-hash calculation.
     if returned_total != attempt.amount:
-        return render(request, 'church_finances/payment_failed.html', {
-            'message': 'The returned payment amount does not match the original contribution request.',
-        })
+        logging.getLogger(__name__).info(
+            'WiPay callback total includes an adjustment: order_id=%s requested=%s returned=%s',
+            attempt.order_id, attempt.amount, returned_total,
+        )
 
     gateway = getattr(attempt.church, 'gateway', None)
     secret = gateway.get_wipay_api_key() if gateway and gateway.provider == 'wipay' else ''
@@ -744,7 +749,10 @@ def wipay_callback(request):
             'message': 'This church has not completed verified WiPay Business Account setup.',
         })
 
-    generated_hash = hashlib.md5(f"{transaction_id}{total}{secret}".encode('utf-8')).hexdigest()
+    original_total = f"{attempt.amount:.2f}"
+    generated_hash = hashlib.md5(
+        f"{transaction_id}{original_total}{secret}".encode('utf-8')
+    ).hexdigest()
     if generated_hash != returned_hash:
         return render(request, 'church_finances/payment_failed.html', {
             'message': 'Payment verification failed. Please contact support if your card was charged.',

@@ -1,4 +1,5 @@
 import hashlib
+from decimal import Decimal
 from types import SimpleNamespace
 
 from django.contrib.auth.models import User
@@ -79,7 +80,7 @@ class OnlineContributionRecordingTests(TestCase):
         return views._record_online_donation(
             church=self.church,
             contribution_type='tithe',
-            amount='25.00',
+            amount=Decimal('25.00'),
             reference_number=reference,
             provider_label='Stripe',
             donor_name='Test Member',
@@ -203,7 +204,7 @@ class WiPayCorrelatedCallbackTests(TestCase):
         self.attempt = WiPayDonationAttempt.objects.create(
             order_id='DONATION-test-order',
             church=self.church,
-            amount='25.00',
+            amount=Decimal('25.00'),
             currency='TTD',
             contribution_type='tithe',
             donor_name='Test Member',
@@ -231,7 +232,7 @@ class WiPayCorrelatedCallbackTests(TestCase):
         params.setdefault(
             'hash',
             hashlib.md5(
-                f"{params['transaction_id']}{params['total']}test-api-key".encode('utf-8')
+                f"{params['transaction_id']}{self.attempt.amount:.2f}test-api-key".encode('utf-8')
             ).hexdigest(),
         )
         return self.client.get(reverse('wipay_callback'), params)
@@ -247,13 +248,13 @@ class WiPayCorrelatedCallbackTests(TestCase):
         self.assertEqual(self.attempt.transaction_id, 'WIPAY-TRANSACTION-1')
         self.assertEqual(self.attempt.contribution.payment_method, 'cbm_online')
 
-    def test_amount_mismatch_is_rejected_without_contribution(self):
+    def test_fee_inclusive_returned_total_uses_original_amount_for_verification(self):
         response = self.callback(total='30.00')
 
-        self.assertContains(response, 'does not match the original contribution request')
+        self.assertContains(response, 'Payment Successful')
         self.attempt.refresh_from_db()
-        self.assertEqual(self.attempt.status, 'pending')
-        self.assertFalse(Contribution.objects.filter(church=self.church).exists())
+        self.assertEqual(self.attempt.status, 'completed')
+        self.assertEqual(self.attempt.contribution.amount, self.attempt.amount)
 
     def test_unknown_order_is_rejected(self):
         response = self.callback(order_id='UNKNOWN-ORDER')
