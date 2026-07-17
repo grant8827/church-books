@@ -497,13 +497,29 @@ def _record_online_donation(church, contribution_type, amount, reference_number,
     if donor_email:
         notes += f" Donor email: {donor_email}."
 
+    # Public portal payments do not require a member login. Attach the payment
+    # only when the submitted email identifies exactly one active member in the
+    # selected church; otherwise retain it safely as a guest contribution.
+    member = None
+    normalized_email = donor_email.strip()
+    if normalized_email:
+        matching_members = list(
+            Member.objects.filter(
+                church=church,
+                is_active=True,
+                email__iexact=normalized_email,
+            )[:2]
+        )
+        if len(matching_members) == 1:
+            member = matching_members[0]
+
     contribution = Contribution.objects.create(
         church=church,
-        member=None,
+        member=member,
         date=timezone.now().date(),
         contribution_type=contribution_type,
         amount=amount,
-        payment_method='card',
+        payment_method='cbm_online',
         contributor_name=donor_name,
         reference_number=reference_number,
         notes=notes.strip(),
@@ -2134,6 +2150,22 @@ def contribution_add_view(request):
             contribution = form.save(commit=False)
             contribution.church = church
             contribution.recorded_by = request.user
+
+            duplicate = Contribution.objects.filter(
+                church=church,
+                member=contribution.member,
+                amount=contribution.amount,
+                date=contribution.date,
+                contribution_type=contribution.contribution_type,
+                payment_method='cbm_online',
+            ).order_by('-created_at').first() if contribution.member_id else None
+
+            if duplicate and request.POST.get('confirm_cbm_duplicate') != 'yes':
+                return render(request, "church_finances/contribution_form.html", {
+                    "form": form,
+                    "cbm_duplicate": duplicate,
+                })
+
             contribution.save()
             _sync_contribution_transaction(church, contribution.date, contribution.contribution_type, request.user)
             success(request, "Contribution recorded successfully!")

@@ -35,8 +35,9 @@
                 </div>
             </div>
 
-            <form method="post" class="space-y-8">
+            <form method="post" class="space-y-8" id="contribution-form">
                 {% csrf_token %}
+                <input type="hidden" name="confirm_cbm_duplicate" id="confirm-cbm-duplicate" value="">
 
                 <!-- Contribution Category & Contributor -->
                 <div class="bg-blue-50 rounded-lg p-6 border-l-4 border-blue-400">
@@ -189,11 +190,55 @@
     </div>
 </div>
 
+{% if cbm_duplicate %}
+<div id="cbm-duplicate-modal" class="fixed inset-0 z-[300] flex items-center justify-center bg-black bg-opacity-60 px-4" role="dialog" aria-modal="true" aria-labelledby="cbm-duplicate-title">
+    <div class="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
+        <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+            <i class="fas fa-exclamation-triangle text-xl"></i>
+        </div>
+        <h2 id="cbm-duplicate-title" class="text-xl font-bold text-gray-900">Possible duplicate contribution</h2>
+        <p class="mt-3 text-gray-700">
+            <strong>{{ cbm_duplicate.member.full_name }}</strong> already has a
+            <strong>${{ cbm_duplicate.amount|floatformat:2 }}</strong>
+            {{ cbm_duplicate.get_contribution_type_display|lower }} contribution recorded through
+            <strong>CBM Online</strong> on {{ cbm_duplicate.date|date:"F j, Y" }}.
+        </p>
+        <p class="mt-2 text-sm text-gray-600">If this is a different transaction, choose Continue. Otherwise, choose Cancel.</p>
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" id="cancel-cbm-duplicate" class="rounded-lg border border-gray-300 bg-white px-5 py-2.5 font-semibold text-gray-700 hover:bg-gray-50">
+                Cancel
+            </button>
+            <button type="button" id="continue-cbm-duplicate" class="rounded-lg bg-green-600 px-5 py-2.5 font-semibold text-white hover:bg-green-700">
+                Continue
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
 (function () {
+    var duplicateModal = document.getElementById('cbm-duplicate-modal');
+    var cancelDuplicate = document.getElementById('cancel-cbm-duplicate');
+    var continueDuplicate = document.getElementById('continue-cbm-duplicate');
+    var contributionForm = document.getElementById('contribution-form');
+    var duplicateConfirmation = document.getElementById('confirm-cbm-duplicate');
+
+    if (cancelDuplicate && duplicateModal) {
+        cancelDuplicate.addEventListener('click', function () {
+            duplicateModal.classList.add('hidden');
+        });
+    }
+    if (continueDuplicate && contributionForm && duplicateConfirmation) {
+        continueDuplicate.addEventListener('click', function () {
+            duplicateConfirmation.value = 'yes';
+            contributionForm.submit();
+        });
+    }
+
     // Map contribution_type value → radio category
     var typeToCategory = {
         'tithe': 'tithe',

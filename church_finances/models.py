@@ -520,6 +520,7 @@ class Contribution(models.Model):
         ('cash', 'Cash'),
         ('check', 'Check'),
         ('card', 'Credit/Debit Card'),
+        ('cbm_online', 'CBM Online'),
         ('bank_transfer', 'Bank Transfer'),
         ('mobile_money', 'Mobile Money'),
     )
