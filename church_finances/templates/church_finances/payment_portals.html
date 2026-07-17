@@ -36,7 +36,7 @@
 
         <div class="bg-white rounded-xl shadow-md p-6 flex flex-col">
             <h3 class="text-lg font-semibold text-gray-800 mb-1">WiPay</h3>
-            <p class="text-sm text-gray-600">Enter your WiPay Account Number and Territory. Church Books handles the routing and callback verification.</p>
+            <p class="text-sm text-gray-600">Connect a verified WiPay Business Account for secure donor payments and callback verification.</p>
             <details class="text-xs text-gray-600 mt-2 mb-4 flex-grow">
                 <summary class="text-amber-700 hover:text-amber-800 font-semibold cursor-pointer">Read more</summary>
                 <div class="mt-2 rounded-lg bg-amber-50 border border-amber-100 p-3 space-y-2">
@@ -51,10 +51,32 @@
                 {% csrf_token %}
 
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.wipay_account_type.id_for_label }}">{{ form.wipay_account_type.label }}</label>
+                    {{ form.wipay_account_type }}
+                    {% if form.wipay_account_type.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ form.wipay_account_type.errors|join:", " }}</p>
+                    {% endif %}
+                    <p class="text-xs text-gray-500 mt-1">Personal accounts must be upgraded to a verified WiPay Business Account.</p>
+                </div>
+
+                <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.wipay_account_id.id_for_label }}">{{ form.wipay_account_id.label }}</label>
                     {{ form.wipay_account_id }}
                     {% if form.wipay_account_id.errors %}
                         <p class="text-red-600 text-xs mt-1">{{ form.wipay_account_id.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.wipay_api_key.id_for_label }}">{{ form.wipay_api_key.label }}</label>
+                    {{ form.wipay_api_key }}
+                    {% if gateway.has_wipay_api_key %}
+                        <p class="text-green-700 text-xs mt-1 font-semibold">API key securely configured. Leave blank to keep it.</p>
+                    {% else %}
+                        <p class="text-xs text-gray-500 mt-1">{{ form.wipay_api_key.help_text }}</p>
+                    {% endif %}
+                    {% if form.wipay_api_key.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ form.wipay_api_key.errors|join:", " }}</p>
                     {% endif %}
                 </div>
 

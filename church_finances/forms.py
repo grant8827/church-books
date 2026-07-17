@@ -688,20 +688,53 @@ class ChurchDetailForm(forms.ModelForm):
 
 
 class WiPaySetupForm(forms.ModelForm):
+    wipay_api_key = forms.CharField(
+        label='WiPay Payments API Key',
+        required=False,
+        strip=True,
+        widget=forms.PasswordInput(
+            render_value=False,
+            attrs={'class': _TW, 'placeholder': 'Enter API key or leave blank to keep the saved key'},
+        ),
+        help_text='Found in your verified WiPay Business Account under Developer → Payment API.',
+    )
+
     class Meta:
         model = ManagedPaymentGateway
-        fields = ['wipay_account_id', 'wipay_country']
+        fields = ['wipay_account_type', 'wipay_account_id', 'wipay_country']
         labels = {
+            'wipay_account_type': 'WiPay Account Type',
             'wipay_account_id': 'WiPay Account Number',
             'wipay_country': 'Your WiPay Account Territory',
         }
         widgets = {
+            'wipay_account_type': forms.Select(attrs={'class': _TW}),
             'wipay_account_id': forms.TextInput(attrs={'class': _TW, 'placeholder': 'Enter your WiPay account number'}),
             'wipay_country': forms.Select(attrs={'class': _TW}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('wipay_account_type') != 'business':
+            self.add_error(
+                'wipay_account_type',
+                'WiPay requires a verified Business Account for hosted payments and callback verification.',
+            )
+        if not cleaned_data.get('wipay_api_key') and not self.instance.has_wipay_api_key:
+            self.add_error('wipay_api_key', 'A WiPay Payments API key is required.')
+        return cleaned_data
 
     def clean_wipay_account_id(self):
         account_id = (self.cleaned_data.get('wipay_account_id') or '').strip()
         if not account_id:
             raise forms.ValidationError('WiPay account number is required.')
         return account_id
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        new_api_key = self.cleaned_data.get('wipay_api_key')
+        if new_api_key:
+            instance.set_wipay_api_key(new_api_key)
+        if commit:
+            instance.save()
+        return instance

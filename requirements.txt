@@ -16,6 +16,9 @@ whitenoise==6.5.0
 # Environment
 python-dotenv==1.0.0
 
+# Encryption for stored payment gateway credentials
+cryptography==41.0.7
+
 # HTTP requests
 requests==2.31.0
 

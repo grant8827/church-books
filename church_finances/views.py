@@ -17,7 +17,6 @@ import hashlib
 import json
 import logging
 import time
-from urllib.parse import parse_qs
 from datetime import timedelta
 from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, MemberAttendance, BabyChristening, CertificateTemplate, EmailOTP, SubscriptionPlan, DeletedAccount, ManagedPaymentGateway, WiPayDonationAttempt
 from .forms import (
@@ -297,9 +296,12 @@ def disconnect_payment_portal(request):
     gateway.paypal_tracking_id = None
     gateway.wipay_account_id = None
     gateway.wipay_country = None
+    gateway.wipay_account_type = 'business'
+    gateway.wipay_api_key_encrypted = ''
     gateway.save(update_fields=[
         'is_active', 'connected_account_id', 'paypal_tracking_id',
-        'wipay_account_id', 'wipay_country', 'updated_at',
+        'wipay_account_id', 'wipay_country', 'wipay_account_type',
+        'wipay_api_key_encrypted', 'updated_at',
     ])
     logging.getLogger(__name__).info(
         'Payment portal disconnected: church_id=%s provider=%s user_id=%s',
@@ -735,15 +737,19 @@ def wipay_callback(request):
             'message': 'The returned payment amount does not match the original contribution request.',
         })
 
-    secret = getattr(settings, 'PLATFORM_WIPAY_DEVELOPER_KEY', '')
-    verification_method = 'correlated_callback'
-    if secret:
-        generated_hash = hashlib.md5(f"{transaction_id}{total}{secret}".encode('utf-8')).hexdigest()
-        if generated_hash != returned_hash:
-            return render(request, 'church_finances/payment_failed.html', {
-                'message': 'Payment verification failed. Please contact support if your card was charged.',
-            })
-        verification_method = 'wipay_hash'
+    gateway = getattr(attempt.church, 'gateway', None)
+    secret = gateway.get_wipay_api_key() if gateway and gateway.provider == 'wipay' else ''
+    if not secret:
+        return render(request, 'church_finances/payment_failed.html', {
+            'message': 'This church has not completed verified WiPay Business Account setup.',
+        })
+
+    generated_hash = hashlib.md5(f"{transaction_id}{total}{secret}".encode('utf-8')).hexdigest()
+    if generated_hash != returned_hash:
+        return render(request, 'church_finances/payment_failed.html', {
+            'message': 'Payment verification failed. Please contact support if your card was charged.',
+        })
+    verification_method = 'wipay_hash'
 
     with transaction.atomic():
         attempt = WiPayDonationAttempt.objects.select_for_update().select_related('church').get(

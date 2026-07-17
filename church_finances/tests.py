@@ -1,3 +1,4 @@
+import hashlib
 from types import SimpleNamespace
 
 from django.contrib.auth.models import User
@@ -5,7 +6,8 @@ from django.test import RequestFactory, SimpleTestCase, TestCase, override_setti
 from django.urls import resolve, reverse
 
 from . import views
-from .models import Church, ChurchMember, Contribution, Member, Transaction, WiPayDonationAttempt
+from .forms import WiPaySetupForm
+from .models import Church, ChurchMember, Contribution, ManagedPaymentGateway, Member, Transaction, WiPayDonationAttempt
 
 
 class PaymentPortalSwitchingTests(SimpleTestCase):
@@ -190,7 +192,6 @@ class ManualContributionDuplicateWarningTests(TestCase):
         self.assertEqual(Contribution.objects.filter(church=self.church).count(), 2)
 
 
-@override_settings(PLATFORM_WIPAY_DEVELOPER_KEY='')
 class WiPayCorrelatedCallbackTests(TestCase):
     def setUp(self):
         self.church = Church.objects.create(
@@ -208,6 +209,16 @@ class WiPayCorrelatedCallbackTests(TestCase):
             donor_name='Test Member',
             donor_email='member@example.com',
         )
+        self.gateway = ManagedPaymentGateway.objects.create(
+            church=self.church,
+            provider='wipay',
+            is_active=True,
+            wipay_account_id='1234567890',
+            wipay_country='TT',
+            wipay_account_type='business',
+        )
+        self.gateway.set_wipay_api_key('test-api-key')
+        self.gateway.save(update_fields=['wipay_api_key_encrypted'])
 
     def callback(self, **overrides):
         params = {
@@ -217,6 +228,12 @@ class WiPayCorrelatedCallbackTests(TestCase):
             'order_id': self.attempt.order_id,
         }
         params.update(overrides)
+        params.setdefault(
+            'hash',
+            hashlib.md5(
+                f"{params['transaction_id']}{params['total']}test-api-key".encode('utf-8')
+            ).hexdigest(),
+        )
         return self.client.get(reverse('wipay_callback'), params)
 
     def test_matching_success_callback_records_contribution(self):
@@ -226,7 +243,7 @@ class WiPayCorrelatedCallbackTests(TestCase):
         self.assertContains(response, 'Payment Successful')
         self.attempt.refresh_from_db()
         self.assertEqual(self.attempt.status, 'completed')
-        self.assertEqual(self.attempt.verification_method, 'correlated_callback')
+        self.assertEqual(self.attempt.verification_method, 'wipay_hash')
         self.assertEqual(self.attempt.transaction_id, 'WIPAY-TRANSACTION-1')
         self.assertEqual(self.attempt.contribution.payment_method, 'cbm_online')
 
@@ -252,3 +269,61 @@ class WiPayCorrelatedCallbackTests(TestCase):
         self.assertContains(second, 'Payment Successful')
         self.assertEqual(Contribution.objects.filter(church=self.church).count(), 1)
         self.assertEqual(Transaction.objects.filter(church=self.church).count(), 1)
+
+    def test_invalid_hash_is_rejected(self):
+        response = self.callback(hash='not-the-correct-hash')
+
+        self.assertContains(response, 'Payment verification failed')
+        self.attempt.refresh_from_db()
+        self.assertEqual(self.attempt.status, 'pending')
+        self.assertFalse(Contribution.objects.filter(church=self.church).exists())
+
+
+class WiPayBusinessSetupTests(TestCase):
+    def setUp(self):
+        self.church = Church.objects.create(
+            name='Test Church',
+            address='1 Test Street',
+            phone='555-0100',
+            email='church@example.com',
+        )
+        self.gateway = ManagedPaymentGateway(church=self.church, provider='wipay')
+
+    def test_business_api_key_is_encrypted_and_not_rendered_back(self):
+        form = WiPaySetupForm({
+            'wipay_account_type': 'business',
+            'wipay_account_id': '1234567890',
+            'wipay_country': 'TT',
+            'wipay_api_key': 'secret-payment-api-key',
+        }, instance=self.gateway)
+
+        self.assertTrue(form.is_valid(), form.errors)
+        saved = form.save()
+        self.assertNotIn('secret-payment-api-key', saved.wipay_api_key_encrypted)
+        self.assertEqual(saved.get_wipay_api_key(), 'secret-payment-api-key')
+        self.assertNotIn('secret-payment-api-key', WiPaySetupForm(instance=saved).as_p())
+
+    def test_personal_account_is_rejected(self):
+        form = WiPaySetupForm({
+            'wipay_account_type': 'personal',
+            'wipay_account_id': '1234567890',
+            'wipay_country': 'TT',
+            'wipay_api_key': '',
+        }, instance=self.gateway)
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('verified Business Account', form.errors['wipay_account_type'][0])
+
+    def test_existing_encrypted_key_can_be_kept_when_form_is_resaved(self):
+        self.gateway.set_wipay_api_key('existing-api-key')
+        self.gateway.save()
+        form = WiPaySetupForm({
+            'wipay_account_type': 'business',
+            'wipay_account_id': '1234567890',
+            'wipay_country': 'TT',
+            'wipay_api_key': '',
+        }, instance=self.gateway)
+
+        self.assertTrue(form.is_valid(), form.errors)
+        saved = form.save()
+        self.assertEqual(saved.get_wipay_api_key(), 'existing-api-key')

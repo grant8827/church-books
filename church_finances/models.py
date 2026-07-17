@@ -1023,6 +1023,11 @@ class ManagedPaymentGateway(models.Model):
         ('GY', 'Guyana'),
     ]
 
+    WIPAY_ACCOUNT_TYPES = [
+        ('business', 'Verified Business Account'),
+        ('personal', 'Personal Account'),
+    ]
+
     church = models.OneToOneField(Church, on_delete=models.CASCADE, related_name='gateway')
     provider = models.CharField(max_length=20, choices=GATEWAY_CHOICES, default='wipay')
     is_active = models.BooleanField(default=False)
@@ -1033,6 +1038,8 @@ class ManagedPaymentGateway(models.Model):
     # WiPay-specific church-facing setup.
     wipay_account_id = models.CharField(max_length=50, blank=True, null=True, help_text="Church's WiPay Account ID")
     wipay_country = models.CharField(max_length=2, choices=WIPAY_COUNTRIES, blank=True, null=True)
+    wipay_account_type = models.CharField(max_length=20, choices=WIPAY_ACCOUNT_TYPES, default='business')
+    wipay_api_key_encrypted = models.TextField(blank=True)
 
     # PayPal Partner Referral tracking ID, set when onboarding starts; used to look up
     # the resulting merchant_id once the church finishes onboarding on PayPal's site.
@@ -1048,6 +1055,18 @@ class ManagedPaymentGateway(models.Model):
 
     def __str__(self):
         return f"{self.church.name} - {self.get_provider_display()}"
+
+    def set_wipay_api_key(self, value):
+        from .credential_crypto import encrypt_credential
+        self.wipay_api_key_encrypted = encrypt_credential(value)
+
+    def get_wipay_api_key(self):
+        from .credential_crypto import decrypt_credential
+        return decrypt_credential(self.wipay_api_key_encrypted)
+
+    @property
+    def has_wipay_api_key(self):
+        return bool(self.wipay_api_key_encrypted and self.get_wipay_api_key())
 
 
 class WiPayDonationAttempt(models.Model):
