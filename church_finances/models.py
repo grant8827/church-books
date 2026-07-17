@@ -1050,6 +1050,42 @@ class ManagedPaymentGateway(models.Model):
         return f"{self.church.name} - {self.get_provider_display()}"
 
 
+class WiPayDonationAttempt(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+
+    order_id = models.CharField(max_length=100, unique=True, db_index=True)
+    church = models.ForeignKey(Church, on_delete=models.CASCADE, related_name='wipay_donation_attempts')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=3)
+    contribution_type = models.CharField(max_length=20, choices=Contribution.CONTRIBUTION_TYPES)
+    donor_name = models.CharField(max_length=100, blank=True)
+    donor_email = models.EmailField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
+    transaction_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    verification_method = models.CharField(max_length=30, blank=True)
+    contribution = models.OneToOneField(
+        Contribution,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='wipay_attempt',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'cb_wipay_donation_attempts'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.order_id} - {self.status}"
+
+
 class EmailOTP(models.Model):
     """
     Stores a one-time password sent to an email address during registration.

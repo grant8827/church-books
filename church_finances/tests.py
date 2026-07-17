@@ -5,7 +5,7 @@ from django.test import RequestFactory, SimpleTestCase, TestCase, override_setti
 from django.urls import resolve, reverse
 
 from . import views
-from .models import Church, ChurchMember, Contribution, Member, Transaction
+from .models import Church, ChurchMember, Contribution, Member, Transaction, WiPayDonationAttempt
 
 
 class PaymentPortalSwitchingTests(SimpleTestCase):
@@ -188,3 +188,67 @@ class ManualContributionDuplicateWarningTests(TestCase):
 
         self.assertRedirects(response, reverse('contribution_list'))
         self.assertEqual(Contribution.objects.filter(church=self.church).count(), 2)
+
+
+@override_settings(PLATFORM_WIPAY_DEVELOPER_KEY='')
+class WiPayCorrelatedCallbackTests(TestCase):
+    def setUp(self):
+        self.church = Church.objects.create(
+            name='Test Church',
+            address='1 Test Street',
+            phone='555-0100',
+            email='church@example.com',
+        )
+        self.attempt = WiPayDonationAttempt.objects.create(
+            order_id='DONATION-test-order',
+            church=self.church,
+            amount='25.00',
+            currency='TTD',
+            contribution_type='tithe',
+            donor_name='Test Member',
+            donor_email='member@example.com',
+        )
+
+    def callback(self, **overrides):
+        params = {
+            'status': 'success',
+            'transaction_id': 'WIPAY-TRANSACTION-1',
+            'total': '25.00',
+            'order_id': self.attempt.order_id,
+        }
+        params.update(overrides)
+        return self.client.get(reverse('wipay_callback'), params)
+
+    def test_matching_success_callback_records_contribution(self):
+        response = self.callback()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Payment Successful')
+        self.attempt.refresh_from_db()
+        self.assertEqual(self.attempt.status, 'completed')
+        self.assertEqual(self.attempt.verification_method, 'correlated_callback')
+        self.assertEqual(self.attempt.transaction_id, 'WIPAY-TRANSACTION-1')
+        self.assertEqual(self.attempt.contribution.payment_method, 'cbm_online')
+
+    def test_amount_mismatch_is_rejected_without_contribution(self):
+        response = self.callback(total='30.00')
+
+        self.assertContains(response, 'does not match the original contribution request')
+        self.attempt.refresh_from_db()
+        self.assertEqual(self.attempt.status, 'pending')
+        self.assertFalse(Contribution.objects.filter(church=self.church).exists())
+
+    def test_unknown_order_is_rejected(self):
+        response = self.callback(order_id='UNKNOWN-ORDER')
+
+        self.assertContains(response, 'could not be matched')
+        self.assertFalse(Contribution.objects.filter(church=self.church).exists())
+
+    def test_repeat_callback_does_not_duplicate_contribution(self):
+        first = self.callback()
+        second = self.callback()
+
+        self.assertContains(first, 'Payment Successful')
+        self.assertContains(second, 'Payment Successful')
+        self.assertEqual(Contribution.objects.filter(church=self.church).count(), 1)
+        self.assertEqual(Transaction.objects.filter(church=self.church).count(), 1)

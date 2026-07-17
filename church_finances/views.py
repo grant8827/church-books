@@ -4,7 +4,7 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.models import User, Group
 from django.contrib.messages import success, error, info, warning
 from django.db.models import Sum, Q, Count
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.http import HttpResponseNotAllowed, HttpResponse, JsonResponse
 from django.utils import timezone
 from django.urls import reverse
@@ -19,7 +19,7 @@ import logging
 import time
 from urllib.parse import parse_qs
 from datetime import timedelta
-from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, MemberAttendance, BabyChristening, CertificateTemplate, EmailOTP, SubscriptionPlan, DeletedAccount, ManagedPaymentGateway
+from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, MemberAttendance, BabyChristening, CertificateTemplate, EmailOTP, SubscriptionPlan, DeletedAccount, ManagedPaymentGateway, WiPayDonationAttempt
 from .forms import (
     CustomUserCreationForm, TransactionForm, ChurchRegistrationForm,
     ChurchMemberForm, MemberForm, ContributionForm, DashboardUserRegistrationForm,
@@ -584,7 +584,17 @@ def donor_payment_portal(request):
         endpoint_url = get_wipay_endpoint(gateway.wipay_country)
         currency_mapping = {'JM': 'JMD', 'TT': 'TTD', 'BB': 'BBD', 'GY': 'GYD'}
         currency = currency_mapping.get(gateway.wipay_country, 'USD')
-        order_id = f"DONATION-{church.id}-{int(time.time())}-{random.randint(1000,9999)}"
+        order_id = f"DONATION-{church.id}-{uuid.uuid4().hex}"
+
+        WiPayDonationAttempt.objects.create(
+            order_id=order_id,
+            church=church,
+            amount=Decimal(str(amount_value)).quantize(Decimal('0.01')),
+            currency=currency,
+            contribution_type=contribution_type,
+            donor_name=donor_name,
+            donor_email=donor_email,
+        )
 
         callback_url = request.build_absolute_uri(reverse('wipay_callback'))
         # WiPay requires the optional `data` field to be a valid JSON string.
@@ -692,60 +702,87 @@ def wipay_callback(request):
     total = (request.GET.get('total') or '').strip()
     order_id = (request.GET.get('order_id') or '').strip()
     returned_hash = (request.GET.get('hash') or '').strip().lower()
-    custom_data = request.GET.get('data') or ''
+    if not order_id or not transaction_id or not total:
+        return render(request, 'church_finances/payment_failed.html', {
+            'message': 'The WiPay response is missing required transaction details.',
+        })
+
+    attempt = WiPayDonationAttempt.objects.select_related('church', 'contribution').filter(
+        order_id=order_id,
+    ).first()
+    if attempt is None:
+        return render(request, 'church_finances/payment_failed.html', {
+            'message': 'This payment could not be matched to a Church Books payment request.',
+        })
 
     if status != 'success':
+        if attempt.status == 'pending':
+            attempt.status = 'failed'
+            attempt.save(update_fields=['status', 'updated_at'])
         return render(request, 'church_finances/payment_failed.html', {
             'message': 'Payment was not successful. Please try again.',
         })
 
-    secret = getattr(settings, 'PLATFORM_WIPAY_DEVELOPER_KEY', '')
-    if not secret:
-        return render(request, 'church_finances/payment_failed.html', {
-            'message': 'Payment configuration is incomplete. Please contact support.',
-        })
-
-    generated_hash = hashlib.md5(f"{transaction_id}{total}{secret}".encode('utf-8')).hexdigest()
-    if generated_hash != returned_hash:
-        return render(request, 'church_finances/payment_failed.html', {
-            'message': 'Payment verification failed. Please contact support if your card was charged.',
-        })
-
     try:
-        parsed_data = json.loads(custom_data) if custom_data else {}
-        if not isinstance(parsed_data, dict):
-            parsed_data = {}
-    except (TypeError, ValueError):
-        # Accept callbacks from payment attempts created before `data` was
-        # changed from query-string encoding to the JSON WiPay requires.
-        legacy_data = parse_qs(custom_data)
-        parsed_data = {key: values[0] for key, values in legacy_data.items() if values}
-
-    church_id = str(parsed_data.get('church_id') or '')
-    contribution_type = str(parsed_data.get('contribution_type') or 'offering')
-    donor_name = str(parsed_data.get('donor_name') or '')
-    donor_email = str(parsed_data.get('donor_email') or '')
-
-    if not church_id:
+        returned_total = Decimal(total).quantize(Decimal('0.01'))
+    except (InvalidOperation, TypeError, ValueError):
         return render(request, 'church_finances/payment_failed.html', {
-            'message': 'Missing church reference in payment response.',
+            'message': 'WiPay returned an invalid payment amount.',
         })
 
-    church = get_object_or_404(Church, id=church_id)
-    contribution = _record_online_donation(
-        church=church,
-        contribution_type=contribution_type,
-        amount=total,
-        reference_number=transaction_id,
-        provider_label='WiPay',
-        order_id=order_id,
-        donor_name=donor_name,
-        donor_email=donor_email,
-    )
+    if returned_total != attempt.amount:
+        return render(request, 'church_finances/payment_failed.html', {
+            'message': 'The returned payment amount does not match the original contribution request.',
+        })
+
+    secret = getattr(settings, 'PLATFORM_WIPAY_DEVELOPER_KEY', '')
+    verification_method = 'correlated_callback'
+    if secret:
+        generated_hash = hashlib.md5(f"{transaction_id}{total}{secret}".encode('utf-8')).hexdigest()
+        if generated_hash != returned_hash:
+            return render(request, 'church_finances/payment_failed.html', {
+                'message': 'Payment verification failed. Please contact support if your card was charged.',
+            })
+        verification_method = 'wipay_hash'
+
+    with transaction.atomic():
+        attempt = WiPayDonationAttempt.objects.select_for_update().select_related('church').get(
+            pk=attempt.pk,
+        )
+        if attempt.status == 'completed' and attempt.contribution_id:
+            contribution = attempt.contribution
+        else:
+            transaction_in_use = WiPayDonationAttempt.objects.filter(
+                transaction_id=transaction_id,
+            ).exclude(pk=attempt.pk).exists()
+            if transaction_in_use:
+                return render(request, 'church_finances/payment_failed.html', {
+                    'message': 'This WiPay transaction has already been used for another contribution.',
+                })
+
+            contribution = _record_online_donation(
+                church=attempt.church,
+                contribution_type=attempt.contribution_type,
+                amount=attempt.amount,
+                reference_number=transaction_id,
+                provider_label='WiPay',
+                order_id=attempt.order_id,
+                donor_name=attempt.donor_name,
+                donor_email=attempt.donor_email,
+            )
+            attempt.status = 'completed'
+            attempt.transaction_id = transaction_id
+            attempt.verification_method = verification_method
+            attempt.contribution = contribution
+            attempt.completed_at = timezone.now()
+            attempt.save(update_fields=[
+                'status', 'transaction_id', 'verification_method', 'contribution',
+                'completed_at', 'updated_at',
+            ])
 
     return render(request, 'church_finances/payment_success.html', {
-        'church': church,
-        'total': total,
+        'church': attempt.church,
+        'total': attempt.amount,
         'transaction_id': transaction_id,
         'order_id': order_id,
         'contribution': contribution,
