@@ -3,12 +3,13 @@ from decimal import Decimal
 from types import SimpleNamespace
 
 from django.contrib.auth.models import User
+from django.core import mail
 from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from django.urls import resolve, reverse
 
 from . import views
-from .forms import WiPaySetupForm
-from .models import Church, ChurchMember, Contribution, ManagedPaymentGateway, Member, Transaction, WiPayDonationAttempt
+from .forms import HostedPaymentLinkForm, WiPaySetupForm
+from .models import Church, ChurchMember, Contribution, HostedDonationAttempt, ManagedPaymentGateway, Member, SupportTicket, SupportTicketReply, Transaction, WiPayDonationAttempt
 
 
 class PaymentPortalSwitchingTests(SimpleTestCase):
@@ -65,6 +66,117 @@ class StripeConfigurationTests(SimpleTestCase):
             views._configured_url(request, 'STRIPE_CONNECT_RETURN_URL', '/fallback/'),
             'https://example.com/stripe/return',
         )
+
+
+class HostedPaymentLinkFormTests(SimpleTestCase):
+    def test_accepts_provider_owned_urls(self):
+        self.assertTrue(HostedPaymentLinkForm(
+            {'payment_url': 'https://paypal.me/testchurch'}, provider='paypal',
+        ).is_valid())
+        self.assertTrue(HostedPaymentLinkForm(
+            {'payment_url': 'https://buy.stripe.com/test'}, provider='stripe',
+        ).is_valid())
+
+    def test_rejects_lookalike_url(self):
+        form = HostedPaymentLinkForm(
+            {'payment_url': 'https://paypal.com.example.test/church'}, provider='paypal',
+        )
+        self.assertFalse(form.is_valid())
+
+
+class HostedDonationWorkflowTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user('portal-admin', password='test-password')
+        self.church = Church.objects.create(
+            name='Hosted Link Church', address='1 Test Street', phone='555-0100',
+            email='hosted@example.com', donation_account_number='CBHOSTED1',
+        )
+        ChurchMember.objects.create(user=self.admin, church=self.church, role='admin')
+        self.gateway = ManagedPaymentGateway.objects.create(
+            church=self.church, provider='wipay', is_active=False,
+            paypal_payment_url='https://paypal.me/hostedchurch',
+            stripe_payment_url='https://buy.stripe.com/hostedchurch',
+        )
+
+    def test_donor_chooses_from_church_hosted_links(self):
+        response = self.client.post(reverse('donor_payment_portal'), {
+            'church_account_number': 'CBHOSTED1', 'amount': '25.00',
+            'contribution_type': 'tithe', 'donor_name': 'Test Donor',
+            'donor_email': 'donor@example.com',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Continue with Paypal')
+        self.assertContains(response, 'Continue with Stripe')
+
+    def test_redirect_creates_pending_attempt_not_contribution(self):
+        response = self.client.post(reverse('donor_payment_portal'), {
+            'church_account_number': 'CBHOSTED1', 'amount': '25.00',
+            'contribution_type': 'tithe', 'donor_name': 'Test Donor',
+            'donor_email': 'donor@example.com', 'payment_provider': 'paypal',
+        })
+        self.assertRedirects(response, 'https://paypal.me/hostedchurch', fetch_redirect_response=False)
+        self.assertEqual(HostedDonationAttempt.objects.filter(status='pending').count(), 1)
+        self.assertEqual(Contribution.objects.count(), 0)
+
+    def test_admin_confirmation_records_contribution_once(self):
+        attempt = HostedDonationAttempt.objects.create(
+            church=self.church, provider='stripe', amount='25.00',
+            contribution_type='tithe', donor_name='Test Donor',
+        )
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse('resolve_hosted_donation', args=[attempt.pk]), {
+            'action': 'confirm',
+        })
+        self.assertRedirects(response, reverse('payment_portals'))
+        attempt.refresh_from_db()
+        self.assertEqual(attempt.status, 'confirmed')
+        self.assertEqual(attempt.contribution.payment_method, 'cbm_online')
+        self.assertEqual(Contribution.objects.count(), 1)
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class SupportTicketWorkflowTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            'support-user', email='user@example.com', password='test-password',
+        )
+        self.superuser = User.objects.create_superuser(
+            'support-admin', email='admin@example.com', password='test-password',
+        )
+
+    def test_authenticated_user_can_submit_support_ticket(self):
+        self.client.force_login(self.user)
+        response = self.client.post(reverse('submit_support_ticket'), {
+            'category': 'login_problem', 'subject': 'Cannot sign in elsewhere',
+            'message': 'Please help me access the account.',
+        })
+        self.assertRedirects(response, reverse('dashboard'))
+        ticket = SupportTicket.objects.get()
+        self.assertEqual(ticket.user, self.user)
+        self.assertEqual(ticket.contact_email, 'user@example.com')
+        self.assertEqual(ticket.status, 'open')
+
+    def test_regular_user_cannot_open_superuser_inbox(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('support_ticket_inbox'))
+        self.assertEqual(response.status_code, 403)
+
+    def test_superuser_reply_is_saved_and_emailed(self):
+        ticket = SupportTicket.objects.create(
+            user=self.user, category='account_error', subject='Account error',
+            message='My account shows an error.', contact_email='user@example.com',
+        )
+        self.client.force_login(self.superuser)
+        response = self.client.post(reverse('support_ticket_detail', args=[ticket.pk]), {
+            'reply': 'We corrected the account. Please try again.',
+        })
+        self.assertRedirects(response, reverse('support_ticket_detail', args=[ticket.pk]))
+        ticket.refresh_from_db()
+        reply = SupportTicketReply.objects.get(ticket=ticket)
+        self.assertEqual(ticket.status, 'answered')
+        self.assertTrue(reply.email_sent)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['user@example.com'])
 
 
 class OnlineContributionRecordingTests(TestCase):

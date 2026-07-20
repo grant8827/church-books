@@ -1,4 +1,5 @@
 from django import forms
+from urllib.parse import urlparse
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User, Group
 from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, BabyChristening, ManagedPaymentGateway
@@ -738,3 +739,28 @@ class WiPaySetupForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class HostedPaymentLinkForm(forms.Form):
+    payment_url = forms.URLField(
+        label='Hosted payment link',
+        max_length=500,
+        widget=forms.URLInput(attrs={'class': _TW, 'placeholder': 'https://...'}),
+    )
+
+    def __init__(self, *args, provider, **kwargs):
+        self.provider = provider
+        super().__init__(*args, **kwargs)
+
+    def clean_payment_url(self):
+        value = self.cleaned_data['payment_url'].strip()
+        parsed = urlparse(value)
+        host = (parsed.hostname or '').lower()
+        allowed = {
+            'paypal': ('paypal.com', 'paypal.me'),
+            'stripe': ('stripe.com',),
+        }[self.provider]
+        if parsed.scheme != 'https' or not any(host == domain or host.endswith(f'.{domain}') for domain in allowed):
+            label = 'PayPal' if self.provider == 'paypal' else 'Stripe'
+            raise forms.ValidationError(f'Enter a secure {label} hosted payment URL.')
+        return value

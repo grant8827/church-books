@@ -18,11 +18,11 @@ import json
 import logging
 import time
 from datetime import timedelta
-from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, MemberAttendance, BabyChristening, CertificateTemplate, EmailOTP, SubscriptionPlan, DeletedAccount, ManagedPaymentGateway, WiPayDonationAttempt
+from .models import Transaction, Church, ChurchMember, Member, Contribution, Child, ChildAttendance, MemberAttendance, BabyChristening, CertificateTemplate, EmailOTP, SubscriptionPlan, DeletedAccount, ManagedPaymentGateway, WiPayDonationAttempt, HostedDonationAttempt, SupportTicket, SupportTicketReply
 from .forms import (
     CustomUserCreationForm, TransactionForm, ChurchRegistrationForm,
     ChurchMemberForm, MemberForm, ContributionForm, DashboardUserRegistrationForm,
-    PersonalProfileForm, ChurchDetailForm, WiPaySetupForm
+    PersonalProfileForm, ChurchDetailForm, WiPaySetupForm, HostedPaymentLinkForm
 )
 from django.contrib.auth.forms import AuthenticationForm
 from django.db import transaction
@@ -256,7 +256,34 @@ def payment_portals_view(request):
     _ensure_donation_account_number(church)
     gateway, _ = ManagedPaymentGateway.objects.get_or_create(church=church, defaults={'provider': 'wipay'})
 
-    if request.method == 'POST':
+    paypal_form = HostedPaymentLinkForm(
+        request.POST if request.method == 'POST' and request.POST.get('portal_action') == 'save_paypal' else None,
+        provider='paypal', initial={'payment_url': gateway.paypal_payment_url},
+    )
+    stripe_form = HostedPaymentLinkForm(
+        request.POST if request.method == 'POST' and request.POST.get('portal_action') == 'save_stripe' else None,
+        provider='stripe', initial={'payment_url': gateway.stripe_payment_url},
+    )
+
+    action = request.POST.get('portal_action') if request.method == 'POST' else ''
+    if action == 'save_paypal' and paypal_form.is_valid():
+        gateway.paypal_payment_url = paypal_form.cleaned_data['payment_url']
+        gateway.save(update_fields=['paypal_payment_url', 'updated_at'])
+        success(request, 'PayPal hosted payment link saved and activated.')
+        return redirect('payment_portals')
+    if action == 'save_stripe' and stripe_form.is_valid():
+        gateway.stripe_payment_url = stripe_form.cleaned_data['payment_url']
+        gateway.save(update_fields=['stripe_payment_url', 'updated_at'])
+        success(request, 'Stripe hosted payment link saved and activated.')
+        return redirect('payment_portals')
+    if action in ('remove_paypal', 'remove_stripe'):
+        provider = action.removeprefix('remove_')
+        setattr(gateway, f'{provider}_payment_url', '')
+        gateway.save(update_fields=[f'{provider}_payment_url', 'updated_at'])
+        success(request, f'{provider.title()} hosted payment link removed.')
+        return redirect('payment_portals')
+
+    if request.method == 'POST' and not action:
         if _block_gateway_switch(request, gateway, 'wipay'):
             return redirect('payment_portals')
         form = WiPaySetupForm(request.POST, instance=gateway)
@@ -274,6 +301,9 @@ def payment_portals_view(request):
         'church': church,
         'gateway': gateway,
         'form': form,
+        'paypal_form': paypal_form,
+        'stripe_form': stripe_form,
+        'pending_hosted_attempts': church.hosted_donation_attempts.filter(status='pending')[:20],
         'has_saved_gateway': _gateway_has_saved_connection(gateway),
         'stripe_connected': gateway.provider == 'stripe' and gateway.is_active,
         'paypal_connected': gateway.provider == 'paypal' and gateway.is_active,
@@ -308,6 +338,45 @@ def disconnect_payment_portal(request):
         church.pk, gateway.provider, request.user.pk,
     )
     success(request, f'{provider_label} has been disconnected. You can now connect another payment portal.')
+    return redirect('payment_portals')
+
+
+@login_required
+@require_POST
+def resolve_hosted_donation(request, attempt_id):
+    """Church admin confirms or cancels a hosted-link payment after reconciliation."""
+    church = _require_church_admin(request)
+    action = request.POST.get('action')
+    with transaction.atomic():
+        attempt = get_object_or_404(
+            HostedDonationAttempt.objects.select_for_update(),
+            pk=attempt_id, church=church,
+        )
+        if attempt.status != 'pending':
+            info(request, 'This hosted payment has already been resolved.')
+            return redirect('payment_portals')
+        if action == 'confirm':
+            contribution = _record_online_donation(
+                church=church,
+                contribution_type=attempt.contribution_type,
+                amount=attempt.amount,
+                reference_number=f'HOSTED-{attempt.pk}',
+                provider_label=attempt.get_provider_display(),
+                order_id=f'Pending request {attempt.pk}',
+                donor_name=attempt.donor_name,
+                donor_email=attempt.donor_email,
+            )
+            attempt.status = 'confirmed'
+            attempt.contribution = contribution
+            success(request, 'Payment confirmed and added to contributions.')
+        elif action == 'cancel':
+            attempt.status = 'cancelled'
+            warning(request, 'Pending hosted payment cancelled without recording a contribution.')
+        else:
+            error(request, 'Choose Confirm or Cancel.')
+            return redirect('payment_portals')
+        attempt.resolved_at = timezone.now()
+        attempt.save(update_fields=['status', 'contribution', 'resolved_at'])
     return redirect('payment_portals')
 
 
@@ -551,6 +620,7 @@ def donor_payment_portal(request):
     contribution_type = (request.POST.get('contribution_type') or '').strip()
     donor_name = (request.POST.get('donor_name') or '').strip()
     donor_email = (request.POST.get('donor_email') or '').strip()
+    selected_provider = (request.POST.get('payment_provider') or '').strip().lower()
 
     if not account_num or not amount:
         error(request, 'Church account number and amount are required.')
@@ -577,12 +647,45 @@ def donor_payment_portal(request):
         contribution_type = 'offering'
 
     gateway = getattr(church, 'gateway', None)
-    if not gateway or not gateway.is_active:
+    verified_provider = gateway.provider if gateway and gateway.is_active else ''
+    hosted_urls = {
+        'paypal': gateway.paypal_payment_url if gateway else '',
+        'stripe': gateway.stripe_payment_url if gateway else '',
+    }
+    available_providers = [provider for provider, url in hosted_urls.items() if url]
+    if verified_provider == 'wipay':
+        available_providers.insert(0, 'wipay')
+
+    if not available_providers:
         return render(request, 'church_finances/payment_failed.html', {
             'message': 'This church has not activated online payment portals yet.',
         })
 
-    if gateway.provider == 'wipay':
+    if not selected_provider and len(available_providers) > 1:
+        return render(request, 'church_finances/donor_payment_choice.html', {
+            'church': church,
+            'available_providers': available_providers,
+            'form_data': request.POST,
+        })
+    if not selected_provider:
+        selected_provider = available_providers[0]
+    if selected_provider not in available_providers:
+        return render(request, 'church_finances/payment_failed.html', {
+            'message': 'The selected payment portal is not active for this church.',
+        })
+
+    if selected_provider in hosted_urls and hosted_urls[selected_provider]:
+        HostedDonationAttempt.objects.create(
+            church=church,
+            provider=selected_provider,
+            amount=Decimal(str(amount_value)).quantize(Decimal('0.01')),
+            contribution_type=contribution_type,
+            donor_name=donor_name,
+            donor_email=donor_email,
+        )
+        return redirect(hosted_urls[selected_provider])
+
+    if selected_provider == 'wipay':
         endpoint_url = get_wipay_endpoint(gateway.wipay_country)
         currency_mapping = {'JM': 'JMD', 'TT': 'TTD', 'BB': 'BBD', 'GY': 'GYD'}
         currency = currency_mapping.get(gateway.wipay_country, 'USD')
@@ -964,6 +1067,94 @@ def admin_required(function):
             raise PermissionDenied("You must be a superuser to access this page.")
         return function(request, *args, **kwargs)
     return wrapper
+
+
+@login_required
+@require_POST
+def submit_support_ticket(request):
+    category = (request.POST.get('category') or '').strip()
+    subject = (request.POST.get('subject') or '').strip()
+    message_text = (request.POST.get('message') or '').strip()
+    allowed_categories = dict(SupportTicket.CATEGORY_CHOICES)
+    if category not in allowed_categories or not message_text:
+        error(request, 'Choose a support reason and enter a message.')
+        return redirect(request.META.get('HTTP_REFERER') or 'dashboard')
+    email_address = (request.user.email or '').strip()
+    if not email_address:
+        error(request, 'Add an email address to your profile before contacting technical support.')
+        return redirect('profile')
+    church_member = request.user.churchmember_set.select_related('church').first()
+    ticket = SupportTicket.objects.create(
+        user=request.user,
+        church=church_member.church if church_member else None,
+        category=category,
+        subject=subject or allowed_categories[category],
+        message=message_text,
+        contact_email=email_address,
+    )
+    success(request, f'Your support message was sent. Ticket #{ticket.pk}.')
+    return redirect(request.META.get('HTTP_REFERER') or 'dashboard')
+
+
+@admin_required
+def support_ticket_inbox(request):
+    status_filter = (request.GET.get('status') or '').strip()
+    tickets = SupportTicket.objects.select_related('user', 'church')
+    if status_filter in dict(SupportTicket.STATUS_CHOICES):
+        tickets = tickets.filter(status=status_filter)
+    return render(request, 'church_finances/support_ticket_inbox.html', {
+        'tickets': tickets,
+        'status_filter': status_filter,
+        'open_count': SupportTicket.objects.filter(status='open').count(),
+    })
+
+
+@admin_required
+def support_ticket_detail(request, ticket_id):
+    ticket = get_object_or_404(
+        SupportTicket.objects.select_related('user', 'church').prefetch_related('replies__replied_by'),
+        pk=ticket_id,
+    )
+    if request.method == 'POST':
+        reply_text = (request.POST.get('reply') or '').strip()
+        if not reply_text:
+            error(request, 'Enter a reply before sending.')
+            return redirect('support_ticket_detail', ticket_id=ticket.pk)
+        reply = SupportTicketReply.objects.create(
+            ticket=ticket, replied_by=request.user, message=reply_text,
+        )
+        ticket.status = 'answered'
+        ticket.save(update_fields=['status', 'updated_at'])
+        try:
+            EmailMessage(
+                subject=f'Church Books Technical Support — Ticket #{ticket.pk}',
+                body=(
+                    f'Hello {ticket.user.get_full_name() or ticket.user.username},\n\n'
+                    f'{reply_text}\n\n'
+                    f'Your original question: {ticket.subject}\n\n'
+                    'Church Books Technical Support'
+                ),
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', None),
+                to=[ticket.contact_email],
+            ).send(fail_silently=False)
+            reply.email_sent = True
+            reply.save(update_fields=['email_sent'])
+            success(request, f'Reply saved and emailed to {ticket.contact_email}.')
+        except Exception:
+            logging.getLogger(__name__).exception('Support reply email failed: ticket_id=%s', ticket.pk)
+            warning(request, 'Reply was saved, but the email could not be sent. Check the email configuration.')
+        return redirect('support_ticket_detail', ticket_id=ticket.pk)
+    return render(request, 'church_finances/support_ticket_detail.html', {'ticket': ticket})
+
+
+@admin_required
+@require_POST
+def close_support_ticket(request, ticket_id):
+    ticket = get_object_or_404(SupportTicket, pk=ticket_id)
+    ticket.status = 'closed'
+    ticket.save(update_fields=['status', 'updated_at'])
+    success(request, f'Ticket #{ticket.pk} closed.')
+    return redirect('support_ticket_detail', ticket_id=ticket.pk)
 
 def get_user_church(user):
     """Helper function to get the user's church"""

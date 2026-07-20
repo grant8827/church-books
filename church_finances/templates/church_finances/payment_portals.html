@@ -15,7 +15,7 @@
         </div>
     </div>
 
-    <p class="text-sm text-gray-600 mb-4">Connect exactly one gateway below — it becomes the active portal donors are routed to when they enter your account number.</p>
+    <p class="text-sm text-gray-600 mb-4">Configure WiPay for verified automatic recording, or add church-owned PayPal and Stripe hosted payment links. Donors choose from the portals you activate.</p>
 
     {% if has_saved_gateway %}
         <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -105,70 +105,65 @@
 
         <div class="bg-white rounded-xl shadow-md p-6 flex flex-col">
             <h3 class="text-lg font-semibold text-gray-800 mb-1">Stripe</h3>
-            <p class="text-sm text-gray-600">Connect your Stripe account — no keys to copy, donations route straight to you.</p>
+            <p class="text-sm text-gray-600">Paste the church's Stripe Payment Link. Donations go directly to the church's Stripe account.</p>
             <details class="text-xs text-gray-600 mt-2 mb-4 flex-grow">
                 <summary class="text-indigo-700 hover:text-indigo-800 font-semibold cursor-pointer">Read more</summary>
                 <div class="mt-2 rounded-lg bg-indigo-50 border border-indigo-100 p-3 space-y-2">
-                    <p><strong>Best for:</strong> Churches legally established in a country where Stripe supports business accounts.</p>
-                    <p><strong>Common supported countries:</strong> United States, Canada, United Kingdom, Australia, New Zealand, Brazil, Mexico, United Arab Emirates, Singapore, Malaysia, Japan, and most of the European Union.</p>
-                    <p>Trinidad &amp; Tobago, Jamaica, Barbados, and Guyana are not currently listed for standard Stripe Payments accounts. The church must use its genuine legal country and complete Stripe identity verification.</p>
-                    <a href="https://stripe.com/global" target="_blank" rel="noopener noreferrer" class="inline-block text-indigo-700 underline">View Stripe's current country list</a>
+                    <p>Create a customer-chosen-price Payment Link in the church's Stripe Dashboard, then paste its secure URL below.</p>
+                    <p>Hosted-link payments require church-admin verification before Church Books records the contribution.</p>
                 </div>
             </details>
 
-            <div class="pt-2 flex items-center justify-between">
-                <p class="text-xs text-gray-500">
-                    {% if stripe_connected %}
-                        <span class="text-green-700 font-semibold">Active</span>
-                    {% elif has_saved_gateway and gateway.provider == 'stripe' %}
-                        <span class="text-amber-700 font-semibold">Setup incomplete</span>
-                    {% else %}
-                        <span class="text-gray-400 font-semibold">Not connected</span>
-                    {% endif %}
-                </p>
-                {% if has_saved_gateway and gateway.provider != 'stripe' %}
-                    <span class="bg-gray-300 text-gray-600 font-semibold py-2 px-5 rounded-lg text-sm cursor-not-allowed">Connect with Stripe</span>
-                {% else %}
-                    <a href="{% url 'initiate_stripe_connect' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-sm transition text-sm">
-                        {% if stripe_connected %}Reconnect{% elif has_saved_gateway and gateway.provider == 'stripe' %}Continue Stripe setup{% else %}Connect with Stripe{% endif %}
-                    </a>
-                {% endif %}
-            </div>
+            <form method="post" class="space-y-3">
+                {% csrf_token %}<input type="hidden" name="portal_action" value="save_stripe">
+                {{ stripe_form.payment_url }}
+                {% if stripe_form.payment_url.errors %}<p class="text-red-600 text-xs">{{ stripe_form.payment_url.errors|join:", " }}</p>{% endif %}
+                <div class="flex items-center justify-between">
+                    <span class="text-xs {% if gateway.stripe_payment_url %}text-green-700{% else %}text-gray-400{% endif %} font-semibold">{% if gateway.stripe_payment_url %}Active{% else %}Not configured{% endif %}</span>
+                    <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Save Stripe Link</button>
+                </div>
+            </form>
+            {% if gateway.stripe_payment_url %}<form method="post" class="mt-2">{% csrf_token %}<input type="hidden" name="portal_action" value="remove_stripe"><button class="text-xs text-red-600 hover:underline">Remove Stripe link</button></form>{% endif %}
         </div>
 
         <div class="bg-white rounded-xl shadow-md p-6 flex flex-col">
             <h3 class="text-lg font-semibold text-gray-800 mb-1">PayPal</h3>
-            <p class="text-sm text-gray-600">Connect your PayPal account — no keys to copy, donations route straight to you.</p>
+            <p class="text-sm text-gray-600">Paste the church's PayPal.Me or hosted donation link. Donations go directly to its PayPal account.</p>
             <details class="text-xs text-gray-600 mt-2 mb-4 flex-grow">
                 <summary class="text-blue-700 hover:text-blue-800 font-semibold cursor-pointer">Read more</summary>
                 <div class="mt-2 rounded-lg bg-blue-50 border border-blue-100 p-3 space-y-2">
-                    <p><strong>Best for:</strong> Churches with a verified PayPal Business Account that can receive payments in their country.</p>
-                    <p>PayPal is available across more than 200 countries and regions, but receiving payments and available currencies vary by country.</p>
-                    <p>Church Books can enable this connection only after PayPal approves its Partner Referrals and Multiparty integration.</p>
-                    <a href="https://www.paypal.com/webapps/mpp/country-worldwide" target="_blank" rel="noopener noreferrer" class="inline-block text-blue-700 underline">View PayPal's country list</a>
+                    <p>Create a PayPal.Me or hosted donation page in the church's PayPal account, then paste its secure URL below.</p>
+                    <p>Hosted-link payments require church-admin verification before Church Books records the contribution.</p>
                 </div>
             </details>
 
-            <div class="pt-2 flex items-center justify-between">
-                <p class="text-xs text-gray-500">
-                    {% if paypal_connected %}
-                        <span class="text-green-700 font-semibold">Active</span>
-                    {% elif has_saved_gateway and gateway.provider == 'paypal' %}
-                        <span class="text-amber-700 font-semibold">Setup incomplete</span>
-                    {% else %}
-                        <span class="text-gray-400 font-semibold">Not connected</span>
-                    {% endif %}
-                </p>
-                {% if has_saved_gateway and gateway.provider != 'paypal' %}
-                    <span class="bg-gray-300 text-gray-600 font-semibold py-2 px-5 rounded-lg text-sm cursor-not-allowed">Connect with PayPal</span>
-                {% else %}
-                    <a href="{% url 'initiate_paypal_connect' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-lg shadow-sm transition text-sm">
-                        {% if paypal_connected %}Reconnect{% elif has_saved_gateway and gateway.provider == 'paypal' %}Continue PayPal setup{% else %}Connect with PayPal{% endif %}
-                    </a>
-                {% endif %}
-            </div>
+            <form method="post" class="space-y-3">
+                {% csrf_token %}<input type="hidden" name="portal_action" value="save_paypal">
+                {{ paypal_form.payment_url }}
+                {% if paypal_form.payment_url.errors %}<p class="text-red-600 text-xs">{{ paypal_form.payment_url.errors|join:", " }}</p>{% endif %}
+                <div class="flex items-center justify-between">
+                    <span class="text-xs {% if gateway.paypal_payment_url %}text-green-700{% else %}text-gray-400{% endif %} font-semibold">{% if gateway.paypal_payment_url %}Active{% else %}Not configured{% endif %}</span>
+                    <button class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">Save PayPal Link</button>
+                </div>
+            </form>
+            {% if gateway.paypal_payment_url %}<form method="post" class="mt-2">{% csrf_token %}<input type="hidden" name="portal_action" value="remove_paypal"><button class="text-xs text-red-600 hover:underline">Remove PayPal link</button></form>{% endif %}
         </div>
 
     </div>
+
+    {% if pending_hosted_attempts %}
+    <div class="bg-white rounded-xl shadow-md p-6 mt-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-1">Payments Awaiting Verification</h3>
+        <p class="text-sm text-gray-600 mb-4">Compare each request with the church's PayPal or Stripe report before confirming it.</p>
+        <div class="space-y-3">
+            {% for attempt in pending_hosted_attempts %}
+            <div class="border rounded-lg p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div class="text-sm"><span class="font-semibold">{{ attempt.donor_name|default:"Guest donor" }}</span> · {{ attempt.get_provider_display }} · {{ attempt.get_contribution_type_display }} · {{ attempt.amount|floatformat:2 }}<div class="text-xs text-gray-500">{{ attempt.created_at }}</div></div>
+                <form method="post" action="{% url 'resolve_hosted_donation' attempt.id %}" class="flex gap-2">{% csrf_token %}<button name="action" value="cancel" class="bg-gray-200 text-gray-700 px-3 py-2 rounded text-sm">Cancel</button><button name="action" value="confirm" class="bg-green-600 text-white px-3 py-2 rounded text-sm">Confirm</button></form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

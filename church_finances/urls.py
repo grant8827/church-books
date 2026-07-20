@@ -11,6 +11,10 @@ urlpatterns = [
     path('pricing/', views.pricing_view, name='pricing'),
     path('privacy-policy/', views.privacy_policy_view, name='privacy_policy'),
     path('terms-of-service/', views.terms_of_service_view, name='terms_of_service'),
+    path('support/submit/', views.submit_support_ticket, name='submit_support_ticket'),
+    path('support/inbox/', views.support_ticket_inbox, name='support_ticket_inbox'),
+    path('support/<int:ticket_id>/', views.support_ticket_detail, name='support_ticket_detail'),
+    path('support/<int:ticket_id>/close/', views.close_support_ticket, name='close_support_ticket'),
     path('choose-plan/', views.choose_plan_view, name='choose_plan'),
     
     # Subscription URLs
@@ -119,6 +123,7 @@ urlpatterns = [
     path("profile/delete/", views.delete_account_view, name="delete_account"),
     path("payment-portals/", views.payment_portals_view, name="payment_portals"),
     path("payment-portals/disconnect/", views.disconnect_payment_portal, name="disconnect_payment_portal"),
+    path("payment-portals/hosted/<int:attempt_id>/resolve/", views.resolve_hosted_donation, name="resolve_hosted_donation"),
     path("payment-portals/stripe/connect/", views.initiate_stripe_connect, name="initiate_stripe_connect"),
     path("payment-portals/stripe/refresh/", views.stripe_connect_refresh, name="stripe_connect_refresh"),
     path("payment-portals/stripe/callback/", views.stripe_connect_callback, name="stripe_connect_callback"),

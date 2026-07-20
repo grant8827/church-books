@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Technical Support Inbox - Church Books{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+    <div><h1 class="text-2xl font-bold text-gray-900">Technical Support Inbox</h1><p class="text-sm text-gray-600">{{ open_count }} open ticket{{ open_count|pluralize }}</p></div>
+    <div class="flex gap-2 text-sm">
+      <a href="{% url 'support_ticket_inbox' %}" class="px-3 py-2 rounded {% if not status_filter %}bg-blue-700 text-white{% else %}bg-gray-200 text-gray-700{% endif %}">All</a>
+      <a href="?status=open" class="px-3 py-2 rounded {% if status_filter == 'open' %}bg-blue-700 text-white{% else %}bg-gray-200 text-gray-700{% endif %}">Open</a>
+      <a href="?status=answered" class="px-3 py-2 rounded {% if status_filter == 'answered' %}bg-blue-700 text-white{% else %}bg-gray-200 text-gray-700{% endif %}">Answered</a>
+      <a href="?status=closed" class="px-3 py-2 rounded {% if status_filter == 'closed' %}bg-blue-700 text-white{% else %}bg-gray-200 text-gray-700{% endif %}">Closed</a>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl shadow overflow-hidden">
+    {% for ticket in tickets %}
+      <a href="{% url 'support_ticket_detail' ticket.id %}" class="block border-b last:border-b-0 p-4 hover:bg-gray-50">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div><span class="font-semibold text-gray-900">#{{ ticket.id }} {{ ticket.subject }}</span><p class="text-sm text-gray-600">{{ ticket.user.get_full_name|default:ticket.user.username }}{% if ticket.church %} · {{ ticket.church.name }}{% endif %} · {{ ticket.get_category_display }}</p></div>
+          <div class="sm:text-right"><span class="inline-flex px-2 py-1 rounded-full text-xs font-semibold {% if ticket.status == 'open' %}bg-red-100 text-red-700{% elif ticket.status == 'answered' %}bg-green-100 text-green-700{% else %}bg-gray-100 text-gray-600{% endif %}">{{ ticket.get_status_display }}</span><p class="text-xs text-gray-500 mt-1">{{ ticket.updated_at }}</p></div>
+        </div>
+      </a>
+    {% empty %}<p class="p-8 text-center text-gray-500">No support tickets found.</p>{% endfor %}
+  </div>
+</div>
+{% endblock %}

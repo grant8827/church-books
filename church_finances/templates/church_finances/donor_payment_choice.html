@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}Choose Payment Portal - Church Books{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto">
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">Choose Payment Portal</h2>
+        <p class="text-sm text-gray-600 mb-6">Your donation will be sent directly to {{ church.name }}.</p>
+        <div class="space-y-3">
+            {% for provider in available_providers %}
+                <form method="post" action="{% url 'donor_payment_portal' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="church_account_number" value="{{ form_data.church_account_number }}">
+                    <input type="hidden" name="amount" value="{{ form_data.amount }}">
+                    <input type="hidden" name="contribution_type" value="{{ form_data.contribution_type }}">
+                    <input type="hidden" name="donor_name" value="{{ form_data.donor_name }}">
+                    <input type="hidden" name="donor_email" value="{{ form_data.donor_email }}">
+                    <input type="hidden" name="payment_provider" value="{{ provider }}">
+                    <button type="submit" class="w-full text-white font-semibold py-3 px-4 rounded-lg shadow-sm transition {% if provider == 'paypal' %}bg-blue-600 hover:bg-blue-700{% elif provider == 'stripe' %}bg-indigo-600 hover:bg-indigo-700{% else %}bg-amber-600 hover:bg-amber-700{% endif %}">
+                        Continue with {{ provider|title }}
+                    </button>
+                </form>
+            {% endfor %}
+        </div>
+        <p class="text-xs text-gray-500 mt-5">PayPal and Stripe hosted-link payments must be verified by the church before they are added as confirmed contributions.</p>
+    </div>
+</div>
+{% endblock %}

@@ -1045,6 +1045,11 @@ class ManagedPaymentGateway(models.Model):
     # the resulting merchant_id once the church finishes onboarding on PayPal's site.
     paypal_tracking_id = models.CharField(max_length=64, blank=True, null=True)
 
+    # Church-owned hosted checkout pages. These require no platform API keys;
+    # the church verifies the resulting payment before it becomes a contribution.
+    paypal_payment_url = models.URLField(max_length=500, blank=True)
+    stripe_payment_url = models.URLField(max_length=500, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -1103,6 +1108,72 @@ class WiPayDonationAttempt(models.Model):
 
     def __str__(self):
         return f"{self.order_id} - {self.status}"
+
+
+class HostedDonationAttempt(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending verification'),
+        ('confirmed', 'Confirmed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    PROVIDER_CHOICES = [('paypal', 'PayPal'), ('stripe', 'Stripe')]
+
+    church = models.ForeignKey(Church, on_delete=models.CASCADE, related_name='hosted_donation_attempts')
+    provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    contribution_type = models.CharField(max_length=20, choices=Contribution.CONTRIBUTION_TYPES)
+    donor_name = models.CharField(max_length=100, blank=True)
+    donor_email = models.EmailField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
+    contribution = models.OneToOneField(
+        Contribution, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='hosted_payment_attempt',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'cb_hosted_donation_attempts'
+        ordering = ['-created_at']
+
+
+class SupportTicket(models.Model):
+    CATEGORY_CHOICES = [
+        ('pricing', 'Pricing question'),
+        ('account_error', 'Account error'),
+        ('login_problem', 'Login problem'),
+        ('payment', 'Payment or subscription'),
+        ('feature_help', 'Help using a feature'),
+        ('bug', 'Something is not working'),
+        ('other', 'Other technical support'),
+    ]
+    STATUS_CHOICES = [('open', 'Open'), ('answered', 'Answered'), ('closed', 'Closed')]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='support_tickets')
+    church = models.ForeignKey(Church, on_delete=models.SET_NULL, null=True, blank=True, related_name='support_tickets')
+    category = models.CharField(max_length=30, choices=CATEGORY_CHOICES)
+    subject = models.CharField(max_length=150)
+    message = models.TextField()
+    contact_email = models.EmailField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open', db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'cb_support_tickets'
+        ordering = ['-updated_at']
+
+
+class SupportTicketReply(models.Model):
+    ticket = models.ForeignKey(SupportTicket, on_delete=models.CASCADE, related_name='replies')
+    replied_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='support_replies')
+    message = models.TextField()
+    email_sent = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'cb_support_ticket_replies'
+        ordering = ['created_at']
 
 
 class EmailOTP(models.Model):
