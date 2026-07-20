@@ -107,9 +107,18 @@
             <h3 class="text-lg font-semibold text-gray-800 mb-1">Stripe</h3>
             <p class="text-sm text-gray-600">Paste the church's Stripe Payment Link. Donations go directly to the church's Stripe account.</p>
             <details class="text-xs text-gray-600 mt-2 mb-4 flex-grow">
-                <summary class="text-indigo-700 hover:text-indigo-800 font-semibold cursor-pointer">Read more</summary>
-                <div class="mt-2 rounded-lg bg-indigo-50 border border-indigo-100 p-3 space-y-2">
-                    <p>Create a customer-chosen-price Payment Link in the church's Stripe Dashboard, then paste its secure URL below.</p>
+                <summary class="text-indigo-700 hover:text-indigo-800 font-semibold cursor-pointer">How to create your Stripe link</summary>
+                <div class="mt-2 rounded-lg bg-indigo-50 border border-indigo-100 p-3 space-y-3">
+                    <ol class="list-decimal pl-4 space-y-1.5">
+                        <li>Sign in to the church's Stripe Dashboard.</li>
+                        <li>Open <strong>Payments → Payment Links</strong> and select <strong>New</strong>.</li>
+                        <li>Select <strong>Customers choose what to pay</strong>. This lets each member enter their tithe or offering amount.</li>
+                        <li>Enter a title such as <strong>Tithes and Offerings</strong>, choose the church's currency, and optionally set a minimum amount.</li>
+                        <li>Select <strong>Create link</strong>, then copy the public link beginning with <strong>https://buy.stripe.com/</strong>.</li>
+                        <li>Paste that link below and select <strong>Save Stripe Link</strong>.</li>
+                    </ol>
+                    <a href="https://docs.stripe.com/payment-links/create" target="_blank" rel="noopener noreferrer" class="inline-block text-indigo-700 font-semibold underline">Open Stripe's Payment Link instructions</a>
+                    <p><strong>Before saving:</strong> Open the copied link in a private browser window and confirm it displays the correct church name.</p>
                     <p>Hosted-link payments require church-admin verification before Church Books records the contribution.</p>
                 </div>
             </details>
@@ -130,9 +139,17 @@
             <h3 class="text-lg font-semibold text-gray-800 mb-1">PayPal</h3>
             <p class="text-sm text-gray-600">Paste the church's PayPal.Me or hosted donation link. Donations go directly to its PayPal account.</p>
             <details class="text-xs text-gray-600 mt-2 mb-4 flex-grow">
-                <summary class="text-blue-700 hover:text-blue-800 font-semibold cursor-pointer">Read more</summary>
-                <div class="mt-2 rounded-lg bg-blue-50 border border-blue-100 p-3 space-y-2">
-                    <p>Create a PayPal.Me or hosted donation page in the church's PayPal account, then paste its secure URL below.</p>
+                <summary class="text-blue-700 hover:text-blue-800 font-semibold cursor-pointer">How to create your PayPal link</summary>
+                <div class="mt-2 rounded-lg bg-blue-50 border border-blue-100 p-3 space-y-3">
+                    <ol class="list-decimal pl-4 space-y-1.5">
+                        <li>Sign in to the PayPal account that should receive the church's donations.</li>
+                        <li>For the simplest option, create or copy the account's <strong>PayPal.Me</strong> link. A typical link looks like <strong>https://paypal.me/ChurchName</strong>.</li>
+                        <li>For a PayPal Business account, you can instead open <strong>Payment Links and Buttons</strong>, create a link, and use <strong>Name Your Price</strong> when available.</li>
+                        <li>Copy the <strong>Pay Link</strong>—do not copy button HTML, an email address, or the PayPal dashboard address.</li>
+                        <li>Paste the public link below and select <strong>Save PayPal Link</strong>.</li>
+                    </ol>
+                    <div class="flex flex-wrap gap-x-3 gap-y-1"><a href="https://www.paypal.com/paypalme/" target="_blank" rel="noopener noreferrer" class="text-blue-700 font-semibold underline">Create a PayPal.Me link</a><a href="https://developer.paypal.com/studio/checkout/payment-links-and-buttons/payment-links-and-buy-buttons" target="_blank" rel="noopener noreferrer" class="text-blue-700 font-semibold underline">PayPal Payment Link instructions</a></div>
+                    <p><strong>Before saving:</strong> Open the copied link in a private browser window and confirm it displays the correct church or PayPal recipient.</p>
                     <p>Hosted-link payments require church-admin verification before Church Books records the contribution.</p>
                 </div>
             </details>
