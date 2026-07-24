@@ -229,11 +229,36 @@ if BUILD_TIME_COLLECTSTATIC and RUNNING_COLLECTSTATIC:
        # }
    # }
 else:
-    # All other cases: try Railway DATABASE_URL first, then POSTGRES_* variables
+    # Railway's PG* reference variables use its private service network. Prefer
+    # those over DATABASE_URL, which may point at the higher-latency TCP proxy.
     database_url = os.getenv('DATABASE_URL')
-    
-    if database_url:
-        print(f"Using Railway DATABASE_URL for PostgreSQL connection")
+    pg_host = os.getenv('PGHOST') or os.getenv('POSTGRES_HOST')
+    pg_port = os.getenv('PGPORT') or os.getenv('POSTGRES_PORT') or '5432'
+    pg_db = os.getenv('PGDATABASE') or os.getenv('POSTGRES_DB')
+    pg_user = os.getenv('PGUSER') or os.getenv('POSTGRES_USER')
+    pg_password = os.getenv('PGPASSWORD') or os.getenv('POSTGRES_PASSWORD')
+    has_component_config = all([pg_host, pg_port, pg_db, pg_user, pg_password])
+
+    if has_component_config:
+        source = 'Railway PG* variables' if os.getenv('PGHOST') else 'POSTGRES_* variables'
+        print(f"Using {source} for PostgreSQL connection")
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'HOST': pg_host,
+                'PORT': pg_port,
+                'NAME': pg_db,
+                'USER': pg_user,
+                'PASSWORD': pg_password,
+                'CONN_MAX_AGE': 60,
+                'CONN_HEALTH_CHECKS': True,
+                'OPTIONS': {
+                    'options': '-c search_path=public',
+                },
+            }
+        }
+    elif database_url:
+        print("Using DATABASE_URL for PostgreSQL connection")
         DATABASES = {
             'default': dj_database_url.config(
                 default=database_url,
@@ -242,48 +267,13 @@ else:
             )
         }
     else:
-        # Fallback to individual POSTGRES_* variables
-        pg_host = os.getenv('POSTGRES_HOST')
-        pg_port = os.getenv('POSTGRES_PORT', '5432')
-        pg_db = os.getenv('POSTGRES_DB')
-        pg_user = os.getenv('POSTGRES_USER')
-        pg_password = os.getenv('POSTGRES_PASSWORD')
-
-        # Debug: Show what PostgreSQL variables we found
-        print(f"PostgreSQL Variables Debug:")
-        print(f"  POSTGRES_HOST: {'***' if pg_host else 'Not set'}")
-        print(f"  POSTGRES_PORT: {pg_port}")
-        print(f"  POSTGRES_DB: {'***' if pg_db else 'Not set'}")
-        print(f"  POSTGRES_USER: {'***' if pg_user else 'Not set'}")
-        print(f"  POSTGRES_PASSWORD: {'***' if pg_password else 'Not set'}")
-
-        # Use PostgreSQL if credentials are available, otherwise fall back to SQLite
-        if not all([pg_host, pg_port, pg_db, pg_user, pg_password]):
-            missing_vars = [var for var, val in [('POSTGRES_HOST', pg_host), ('POSTGRES_PORT', pg_port), ('POSTGRES_DB', pg_db), ('POSTGRES_USER', pg_user), ('POSTGRES_PASSWORD', pg_password)] if not val]
-            print(f"Using SQLite for local development/testing - Missing PostgreSQL variables: {missing_vars}")
-            DATABASES = {
-                'default': {
-                    'ENGINE': 'django.db.backends.sqlite3',
-                    'NAME': BASE_DIR / 'db.sqlite3',
-                }
+        print("Using SQLite for local development/testing")
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
             }
-        else:
-            print(f"Using PostgreSQL database: {pg_user}@{pg_host}:{pg_port}/{pg_db}")
-            DATABASES = {
-                'default': {
-                    'ENGINE': 'django.db.backends.postgresql',
-                    'HOST': pg_host,
-                    'PORT': pg_port,
-                    'NAME': pg_db,
-                    'USER': pg_user,
-                    'PASSWORD': pg_password,
-                    'CONN_MAX_AGE': 60,
-                    'CONN_HEALTH_CHECKS': True,
-                    'OPTIONS': {
-                        'options': '-c search_path=public',
-                    },
-                }
-            }
+        }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

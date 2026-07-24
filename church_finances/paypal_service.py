@@ -7,6 +7,8 @@ from django.utils import timezone
 from .models import Church, PayPalSubscription, PayPalWebhook
 
 class PayPalService:
+    REQUEST_TIMEOUT = (5, 20)
+
     def __init__(self):
         # PayPal API URLs
         if settings.PAYPAL_MODE == 'sandbox':
@@ -35,7 +37,9 @@ class PayPalService:
         
         data = 'grant_type=client_credentials'
         
-        response = requests.post(url, headers=headers, data=data)
+        response = requests.post(
+            url, headers=headers, data=data, timeout=self.REQUEST_TIMEOUT
+        )
         
         if response.status_code == 200:
             return response.json().get('access_token')
@@ -111,7 +115,8 @@ class PayPalService:
             response = requests.post(
                 f"{self.base_url}/v2/checkout/orders",
                 headers=headers,
-                json=payment_data
+                json=payment_data,
+                timeout=self.REQUEST_TIMEOUT,
             )
             
             if response.status_code == 201:
@@ -152,7 +157,8 @@ class PayPalService:
             
             response = requests.post(
                 f"{self.base_url}/v2/checkout/orders/{order_id}/capture",
-                headers=headers
+                headers=headers,
+                timeout=self.REQUEST_TIMEOUT,
             )
             
             if response.status_code == 201:
@@ -176,7 +182,8 @@ class PayPalService:
             
             response = requests.get(
                 f"{self.base_url}/v2/checkout/orders/{order_id}",
-                headers=headers
+                headers=headers,
+                timeout=self.REQUEST_TIMEOUT,
             )
             
             if response.status_code == 200:
@@ -228,6 +235,7 @@ class PayPalService:
         response = requests.post(
             f"{self.base_url}/v2/customer/partner-referrals",
             headers=headers, data=json.dumps(payload),
+            timeout=self.REQUEST_TIMEOUT,
         )
         if response.status_code not in (200, 201):
             raise Exception(f"Failed to create partner referral: {response.text}")
@@ -248,6 +256,7 @@ class PayPalService:
             f"{self.base_url}/v1/customer/partners/{partner_id}/merchant-integrations"
             f"?tracking_id={tracking_id}",
             headers=headers,
+            timeout=self.REQUEST_TIMEOUT,
         )
         if response.status_code != 200:
             raise Exception(f"Failed to fetch merchant integration: {response.text}")
@@ -284,6 +293,7 @@ class PayPalService:
         response = requests.post(
             f"{self.base_url}/v2/checkout/orders",
             headers=headers, data=json.dumps(payload),
+            timeout=self.REQUEST_TIMEOUT,
         )
         if response.status_code not in (200, 201):
             raise Exception(f"Failed to create donation order: {response.text}")

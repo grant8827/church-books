@@ -47,26 +47,31 @@ run_startup_tasks() {
 # Ensure the local media directory exists (used when USE_S3 is not set / Railway Volume)
 mkdir -p "${MEDIA_ROOT:-media}/church_logos"
 
-# Run setup work in the background so Railway can reach /startup/ quickly.
-run_startup_tasks &
-startup_tasks_pid=$!
-
-echo "Startup tasks running in background with PID $startup_tasks_pid"
+# Finish schema and account setup before accepting traffic. Running these jobs
+# beside Gunicorn made fresh deployments compete with live requests for CPU and
+# database connections.
+run_startup_tasks
 
 echo "=== Starting Gunicorn Server ==="
 echo "Server will be available at http://0.0.0.0:$PORT"
 echo "Health check endpoint: /healthz"
 
-# Start Gunicorn with better configuration for Railway
+# Two workers with four threads each allow up to eight concurrent requests
+# without the memory cost of eight separate Django/WeasyPrint processes.
+WEB_CONCURRENCY="${WEB_CONCURRENCY:-2}"
+GUNICORN_THREADS="${GUNICORN_THREADS:-4}"
+
 exec "$PYTHON_BIN" -m gunicorn church_finance_project.wsgi:application \
     --bind 0.0.0.0:$PORT \
-    --workers 2 \
-    --worker-class sync \
-    --worker-connections 1000 \
+    --workers "$WEB_CONCURRENCY" \
+    --worker-class gthread \
+    --threads "$GUNICORN_THREADS" \
     --max-requests 1000 \
     --max-requests-jitter 100 \
-    --timeout 30 \
-    --keep-alive 2 \
+    --timeout 45 \
+    --graceful-timeout 30 \
+    --keep-alive 5 \
+    --worker-tmp-dir /dev/shm \
     --log-level info \
     --access-logfile - \
     --error-logfile -
