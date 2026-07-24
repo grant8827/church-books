@@ -204,13 +204,13 @@
                 </button>
                 <!-- Logo -->
                 <a href="{% url 'home' %}" class="flex items-center rounded-md px-3 py-1 hover:opacity-90 transition-opacity h-[100px]">
-                    {% if user.churchmember_set.first.church.logo_base64 %}
-                        <img src="{{ user.churchmember_set.first.church.logo_base64 }}" class="h-[100px] w-auto rounded" alt="{{ user.churchmember_set.first.church.name }} Logo">
-                    {% elif user.churchmember_set.first.church.logo %}
-                        <img src="{{ user.churchmember_set.first.church.logo.url }}" class="h-[100px] w-auto rounded" alt="{{ user.churchmember_set.first.church.name }} Logo">
-                    {% elif user.churchmember_set.first.church %}
+                    {% if request.church.logo_base64 %}
+                        <img src="{{ request.church.logo_base64 }}" class="h-[100px] w-auto rounded" alt="{{ request.church.name }} Logo">
+                    {% elif request.church.logo %}
+                        <img src="{{ request.church.logo.url }}" class="h-[100px] w-auto rounded" alt="{{ request.church.name }} Logo">
+                    {% elif request.church %}
                         <span class="text-white font-bold text-center leading-tight px-2" style="font-size: clamp(0.75rem, 2vw, 1.1rem); max-width: 200px; word-break: break-word;">
-                            {{ user.churchmember_set.first.church.name }}
+                            {{ request.church.name }}
                         </span>
                     {% else %}
                         <img src="{% static 'images/church-books-management2.png' %}" class="h-[90px] w-auto" style="border-radius: 20px;" alt="Church Books Logo">
@@ -367,7 +367,7 @@
                 <span class="sidebar-tooltip">Tithes &amp; Offerings</span>
                 <div id="tithes-submenu" class="sidebar-submenu pl-11 pr-2">
                     <a href="{% url 'tithes_offerings_dashboard' %}" class="block text-blue-200 hover:text-white text-sm py-1.5 px-2 rounded hover:bg-blue-700 transition-colors">Overview</a>
-                    {% if user.churchmember_set.first and user.churchmember_set.first.role == 'member' %}
+                    {% if request.church_member and request.church_member.role == 'member' %}
                         <a href="{% url 'member_contributions' %}" class="block text-blue-200 hover:text-white text-sm py-1.5 px-2 rounded hover:bg-blue-700 transition-colors">My Contributions</a>
                         <a href="{% url 'quick_tithe_entry' %}" class="block text-blue-200 hover:text-white text-sm py-1.5 px-2 rounded hover:bg-blue-700 transition-colors">Quick Entry</a>
                     {% else %}
@@ -459,7 +459,7 @@
                     </a>
                     <span class="sidebar-tooltip">Profile</span>
                 </div>
-                {% if user.churchmember_set.first.church.registered_by_id == user.id %}
+                {% if request.church.registered_by_id == user.id %}
                 <div class="sidebar-item">
                     <a href="{% url 'payment_portals' %}" class="sidebar-item-link flex w-full items-center gap-3 text-white rounded-lg px-3 py-2.5 transition-colors group {% if request.resolver_match.url_name == 'payment_portals' %}bg-blue-700{% else %}hover:bg-blue-700{% endif %}">
                         <svg class="h-5 w-5 flex-shrink-0 text-blue-300 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -471,7 +471,7 @@
                     <span class="sidebar-tooltip">Payment Portals</span>
                 </div>
                 {% endif %}
-                {% if user.churchmember_set.first.church.registered_by_id == user.id %}
+                {% if request.church.registered_by_id == user.id %}
                 <div class="sidebar-item">
                     <a href="{% url 'manage_users' %}" class="sidebar-item-link flex items-center gap-3 text-white rounded-lg px-3 py-2.5 transition-colors group {% if request.resolver_match.url_name == 'manage_users' %}bg-blue-700{% else %}hover:bg-blue-700{% endif %}">
                         <svg class="h-5 w-5 flex-shrink-0 text-blue-300 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -539,8 +539,8 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 text-slate-300">
                     <div>
                         <h3 class="text-white text-lg font-semibold mb-3">
-                            {% if user.is_authenticated and user.churchmember_set.first and user.churchmember_set.first.church %}
-                                {{ user.churchmember_set.first.church.name }}
+                            {% if user.is_authenticated and request.church %}
+                                {{ request.church.name }}
                             {% else %}
                                 Church Books
                             {% endif %}
@@ -584,8 +584,8 @@
                 <div class="border-t border-slate-700 mt-8 pt-5 text-center text-slate-400 text-sm">
                     {% now "Y" as current_year %}
                     Copyright &copy; {{ current_year }}
-                    {% if user.is_authenticated and user.churchmember_set.first and user.churchmember_set.first.church %}
-                        {{ user.churchmember_set.first.church.name }}
+                    {% if user.is_authenticated and request.church %}
+                        {{ request.church.name }}
                     {% else %}
                         Church Books
                     {% endif %}

@@ -1162,13 +1162,18 @@ def get_user_church(user):
     if not user or not user.is_authenticated or user.is_anonymous:
         return None
         
-    try:
-        member = ChurchMember.objects.filter(user=user, is_active=True).first()
-        if member is None:
-            return None
-        return member.church if member.church.is_approved else None
-    except ChurchMember.DoesNotExist:
+    member = getattr(user, '_active_church_member', None)
+    if not hasattr(user, '_active_church_member'):
+        member = (
+            ChurchMember.objects
+            .filter(user=user, is_active=True)
+            .select_related('church', 'church__subscription_plan')
+            .first()
+        )
+        user._active_church_member = member
+    if member is None:
         return None
+    return member.church if member.church.is_approved else None
 
 
 # ---------------------------------------------------------------------------
@@ -2696,45 +2701,42 @@ def dashboard_view(request):
         info(request, "Your church account is pending approval.")
         return render(request, "church_finances/pending_approval.html")
 
-    # Get transactions for this church only
-    total_income = (
-        Transaction.objects.filter(church=church, type="income")
-        .aggregate(Sum("amount"))["amount__sum"] or 0
+    transaction_summary = Transaction.objects.filter(church=church).aggregate(
+        total_income=Sum("amount", filter=Q(type="income")),
+        total_expense=Sum("amount", filter=Q(type="expense")),
+        total_count=Count("pk"),
     )
-    total_expense = (
-        Transaction.objects.filter(church=church, type="expense")
-        .aggregate(Sum("amount"))["amount__sum"] or 0
-    )
+    total_income = transaction_summary["total_income"] or 0
+    total_expense = transaction_summary["total_expense"] or 0
     net_balance = total_income - total_expense
 
     recent_transactions = Transaction.objects.filter(church=church)[:10]
 
-    # Get church member info
-    try:
-        church_member = ChurchMember.objects.get(user=request.user, church=church)
-        church_role = church_member.role
-    except ChurchMember.DoesNotExist:
+    church_member = getattr(request, 'church_member', None)
+    if not church_member or church_member.church_id != church.id:
         # If no ChurchMember relationship exists, user shouldn't have access
         info(request, "Your church membership is not properly configured. Please contact support.")
         return render(request, "church_finances/pending_approval.html")
+    church_role = church_member.role
     
     # Get counts for dashboard cards
     total_members = Member.objects.filter(church=church, is_active=True).count()
-    total_transactions = Transaction.objects.filter(church=church).count()
-    total_contributions = Contribution.objects.filter(church=church).count()
+    total_transactions = transaction_summary["total_count"]
     total_children = Child.objects.filter(church=church, is_active=True).count()
     total_christenings = BabyChristening.objects.filter(church=church, is_active=True).count()
     
     # Calculate this month's contributions
     now = timezone.now()
     first_day_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    this_month_contributions = (
-        Contribution.objects.filter(
-            church=church,
-            date__gte=first_day_of_month,
-            date__lte=now
-        ).aggregate(total=Sum('amount'))['total'] or 0
+    contribution_summary = Contribution.objects.filter(church=church).aggregate(
+        total_count=Count("pk"),
+        month_total=Sum(
+            "amount",
+            filter=Q(date__gte=first_day_of_month, date__lte=now),
+        ),
     )
+    total_contributions = contribution_summary["total_count"]
+    this_month_contributions = contribution_summary["month_total"] or 0
 
     context = {
         "total_income": total_income,

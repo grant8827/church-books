@@ -121,10 +121,10 @@ else:
 
 # Session Settings
 # 8 hours is appropriate for a financial app handling donation/member data.
-# SESSION_SAVE_EVERY_REQUEST ensures the idle timeout resets on activity.
+# Session data is written only when it changes, avoiding a write per page view.
 SESSION_COOKIE_AGE = 28800  # 8 hours
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
-SESSION_SAVE_EVERY_REQUEST = True
+SESSION_SAVE_EVERY_REQUEST = False
 
 # Additional security settings for production
 if not DEBUG:
@@ -278,6 +278,7 @@ else:
                     'USER': pg_user,
                     'PASSWORD': pg_password,
                     'CONN_MAX_AGE': 60,
+                    'CONN_HEALTH_CHECKS': True,
                     'OPTIONS': {
                         'options': '-c search_path=public',
                     },

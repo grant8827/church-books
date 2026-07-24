@@ -104,23 +104,34 @@ class TrialExpirationMiddleware:
         ]
     
     def __call__(self, request):
+        # Resolve the active membership and church once for the entire request.
+        request.church_member = None
+        request.church = None
+
         # Skip middleware for non-authenticated users
         if not request.user.is_authenticated:
             return self.get_response(request)
-        
-        # Skip middleware for superusers
-        if request.user.is_superuser:
-            return self.get_response(request)
-        
-        # Check if path is allowed
-        path = request.path
-        if any(path.startswith(allowed) for allowed in self.allowed_paths):
-            return self.get_response(request)
-        
+
         # Check if user has a church membership
         try:
             from .models import ChurchMember
-            member = ChurchMember.objects.filter(user=request.user).first()
+            member = (
+                ChurchMember.objects
+                .filter(user=request.user, is_active=True)
+                .select_related('church', 'church__subscription_plan')
+                .first()
+            )
+            request.church_member = member
+            request.church = member.church if member else None
+            request.user._active_church_member = member
+
+            # These requests skip trial enforcement but still reuse the
+            # membership resolved above in views and templates.
+            path = request.path
+            if request.user.is_superuser or any(
+                path.startswith(allowed) for allowed in self.allowed_paths
+            ):
+                return self.get_response(request)
             
             if member and member.church:
                 church = member.church
